@@ -1,26 +1,29 @@
-package com.vcampus.vo;
+package com.vcampus.common.vo;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
- * 用户账户实体值对象 (Value Object)
- * @author Serissia
+ * 统一用户档案与一卡通实体
+ *
+ * @author vCampus Team
+ * @version 1.0
  */
 public class UserVO implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
-    /** 一卡通号 / 学号 / 教工号 */
+    /** 一卡通号 / 学工号 */
     private String uid;
     /** 登录密码 */
     private String password;
-    /** 角色: STUDENT, TEACHER, ADMIN */
-    private String role;
     /** 真实姓名 */
     private String name;
+    /** 身份角色 */
+    private UserRole role;
     /** 一卡通账户余额 */
     private BigDecimal balance;
-    /** 状态: 1正常, 0冻结 */
+    /** 账号状态: 1-正常, 0-冻结 */
     private Integer status;
 
     public UserVO() {
@@ -31,7 +34,7 @@ public class UserVO implements Serializable {
         this.password = password;
     }
 
-    public UserVO(String uid, String password, String role) {
+    public UserVO(String uid, String password, UserRole role) {
         this.uid = uid;
         this.password = password;
         this.role = role;
@@ -45,6 +48,19 @@ public class UserVO implements Serializable {
         this.uid = uid;
     }
 
+    /**
+     * 兼容别名获取账号
+     *
+     * @return 账号
+     */
+    public String getAccountNumber() {
+        return uid;
+    }
+
+    public void setAccountNumber(String accountNumber) {
+        this.uid = accountNumber;
+    }
+
     public String getPassword() {
         return password;
     }
@@ -53,20 +69,20 @@ public class UserVO implements Serializable {
         this.password = password;
     }
 
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
-
     public String getName() {
         return name;
     }
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
     }
 
     public BigDecimal getBalance() {
@@ -89,8 +105,9 @@ public class UserVO implements Serializable {
     public String toString() {
         return "UserVO{" +
                 "uid='" + uid + '\'' +
-                ", role='" + role + '\'' +
+                ", password='" + password + '\'' +
                 ", name='" + name + '\'' +
+                ", role=" + role +
                 ", balance=" + balance +
                 ", status=" + status +
                 '}';

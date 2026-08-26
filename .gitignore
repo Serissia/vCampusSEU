@@ -1,4 +1,7 @@
 target/
+out/
+/server/src/main/resources/db.properties
+!/server/src/main/resources/db.properties.default
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

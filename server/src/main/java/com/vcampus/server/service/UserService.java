@@ -1,13 +1,14 @@
-package com.vcampus.server.dao;
+package com.vcampus.server.service;
 
 import com.vcampus.common.vo.UserVO;
 
 /**
- * 统一用户身份验证 DAO 接口
+ * 统一用户身份验证业务接口
  *
  * @author Serissia
+ * @version 1.0
  */
-public interface UserDao {
+public interface UserService {
 
     /**
      * 用户登录凭证认证
