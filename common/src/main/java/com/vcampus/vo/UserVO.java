@@ -1,4 +1,4 @@
-package vo;
+package com.vcampus.vo;
 
 import java.io.Serializable;
 import java.math.BigDecimal;

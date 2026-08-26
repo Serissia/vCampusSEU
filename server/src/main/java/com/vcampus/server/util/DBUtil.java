@@ -1,4 +1,4 @@
-package server.util;
+package com.vcampus.server.util;
 
 import java.io.IOException;
 import java.io.InputStream;

@@ -1,11 +1,11 @@
-package server.net;
+package com.vcampus.server.net;
 
-import message.Message;
-import message.MessageType;
-import message.ResponseCode;
-import vo.UserVO;
-import server.dao.UserDao;
-import server.dao.impl.UserDaoImpl;
+import com.vcampus.message.Message;
+import com.vcampus.message.MessageType;
+import com.vcampus.message.ResponseCode;
+import com.vcampus.server.dao.UserDao;
+import com.vcampus.server.dao.impl.UserDaoImpl;
+import com.vcampus.vo.UserVO;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

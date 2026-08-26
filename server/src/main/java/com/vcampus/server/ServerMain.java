@@ -1,6 +1,6 @@
-package server;
+package com.vcampus.server;
 
-import server.net.ServerThread;
+import com.vcampus.server.net.ServerThread;
 
 import java.io.IOException;
 import java.net.ServerSocket;

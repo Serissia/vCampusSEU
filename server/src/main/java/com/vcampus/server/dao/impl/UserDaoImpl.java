@@ -1,8 +1,8 @@
-package server.dao.impl;
+package com.vcampus.server.dao.impl;
 
-import vo.UserVO;
-import server.dao.UserDao;
-import server.util.DBUtil;
+import com.vcampus.server.dao.UserDao;
+import com.vcampus.server.util.DBUtil;
+import com.vcampus.vo.UserVO;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

@@ -1,4 +1,4 @@
-package message;
+package com.vcampus.message;
 
 import java.io.Serializable;
 

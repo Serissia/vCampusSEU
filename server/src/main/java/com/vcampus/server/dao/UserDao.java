@@ -1,6 +1,6 @@
-package server.dao;
+package com.vcampus.server.dao;
 
-import vo.UserVO;
+import com.vcampus.vo.UserVO;
 
 /**
  * 用户数据访问接口
