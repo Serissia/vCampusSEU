@@ -32,7 +32,9 @@ CREATE TABLE `tbl_course` (
     `course_name` VARCHAR(64) NOT NULL COMMENT '课程名称',
     `teacher_id` VARCHAR(32) NOT NULL COMMENT '任课教师工号',
     `teacher_name` VARCHAR(32) NOT NULL COMMENT '任课教师姓名',
-    `credits` INT NOT NULL DEFAULT 2 COMMENT '学分',
+    `credits` FLOAT NOT NULL DEFAULT 2.0 COMMENT '学分',
+    `open_semester` VARCHAR(32) NOT NULL COMMENT '开课学期',
+    `status` VARCHAR(16) NOT NULL DEFAULT '待审核' COMMENT '状态: 开课, 已停开, 待审核',
     `max_capacity` INT NOT NULL DEFAULT 60 COMMENT '课程总容量',
     `current_num` INT NOT NULL DEFAULT 0 COMMENT '已选人数',
     `time_slot` VARCHAR(64) NOT NULL COMMENT '上课时间',
@@ -112,9 +114,9 @@ INSERT INTO `tbl_user` (`uid`, `password`, `role`, `name`, `balance`) VALUES
 INSERT INTO `tbl_student` (`uid`, `gender`, `department`, `major`, `class_name`, `phone`) VALUES
 ('213000001', '男', '计算机科学与工程学院', '软件工程', '2101班', '13800000000');
 
-INSERT INTO `tbl_course` (`course_id`, `course_name`, `teacher_id`, `teacher_name`, `credits`, `max_capacity`, `current_num`, `time_slot`, `classroom`) VALUES
-('CS101', 'Java程序设计', '100001', '李教授', 3, 50, 0, '周一 1-2节', '九龙湖计算机楼101'),
-('CS102', '数据结构与算法', '100001', '李教授', 4, 40, 0, '周三 3-4节', '九龙湖计算机楼203');
+INSERT INTO `tbl_course` (`course_id`, `course_name`, `teacher_id`, `teacher_name`, `credits`, `open_semester`, `status`, `max_capacity`, `current_num`, `time_slot`, `classroom`) VALUES
+('CS101', 'Java程序设计', '100001', '李教授', 3.0, '2026-2027-1', '开课', 50, 0, '周一 1-2节', '九龙湖计算机楼101'),
+('CS102', '数据结构与算法', '100001', '李教授', 4.0, '2026-2027-1', '开课', 40, 0, '周三 3-4节', '九龙湖计算机楼203');
 
 INSERT INTO `tbl_book` (`isbn`, `title`, `author`, `publisher`, `total_num`, `current_num`) VALUES
 ('9787111213826', 'Java编程思想', 'Bruce Eckel', '机械工业出版社', 10, 10),
