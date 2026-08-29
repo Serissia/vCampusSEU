@@ -15,6 +15,8 @@ import com.vcampus.server.service.impl.CourseServiceImpl;
 import com.vcampus.server.service.impl.GradeServiceImpl;
 import com.vcampus.server.service.impl.UserServiceImpl;
 
+import java.math.BigDecimal;
+
 /**
  * 服务端消息路由与业务调度中心。
  *
@@ -28,7 +30,10 @@ public class Dispatcher {
     private final UserService userService = new UserServiceImpl();
 
     /**
-     * [重要] 根据 Message.type 将请求分发到对应业务服务，并统一构造响应报文。
+     * 根据 Message.type 将请求分发到对应业务服务，并统一构造响应报文。
+     *
+     * @param request 客户端请求消息
+     * @return 响应消息
      */
     public Message dispatch(Message request) {
         Message response = new Message();
@@ -40,6 +45,12 @@ public class Dispatcher {
             switch (request.getType()) {
                 case LOGIN:
                     handleLogin(request, response);
+                    break;
+                case CHANGE_PASSWORD:
+                    handlePasswordChange(request, response);
+                    break;
+                case UPDATE_USER_INFO:
+                    handleUpdateUserInfo(request, response);
                     break;
                 case COURSE_ADD:
                     response.setCode(courseService.addCourse((CourseVO) request.getData())
@@ -107,7 +118,59 @@ public class Dispatcher {
     }
 
     /**
-     * 选退课请求的数据载荷统一为课程代码字符串。
+     * 处理修改密码请求（接收 String[]{oldPassword, newPassword}）
+     */
+    private void handlePasswordChange(Message request, Message response) {
+        if (request.getData() instanceof String[]) {
+            String[] pwdData = (String[]) request.getData();
+            if (pwdData.length >= 2) {
+                String oldPwd = pwdData[0];
+                String newPwd = pwdData[1];
+                boolean ok = userService.changePassword(request.getUid(), oldPwd, newPwd);
+                if (ok) {
+                    response.setCode(ResponseCode.SUCCESS);
+                    response.setData("密码修改成功");
+                } else {
+                    response.setCode(ResponseCode.FAIL);
+                    response.setData("原密码错误或新密码与原密码相同");
+                }
+                return;
+            }
+        }
+        response.setCode(ResponseCode.INVALID_REQUEST);
+        response.setData("修改密码请求参数不合法");
+    }
+
+    /**
+     * 处理用户信息更新（如充值新余额，支持传入 BigDecimal 或 UserVO）
+     */
+    private void handleUpdateUserInfo(Message request, Message response) {
+        BigDecimal newBalance = null;
+        if (request.getData() instanceof BigDecimal) {
+            newBalance = (BigDecimal) request.getData();
+        } else if (request.getData() instanceof UserVO) {
+            newBalance = ((UserVO) request.getData()).getBalance();
+        }
+
+        if (newBalance != null) {
+            boolean ok = userService.updateBalance(request.getUid(), newBalance);
+            if (ok) {
+                UserVO updatedUser = userService.queryByUid(request.getUid());
+                response.setCode(ResponseCode.SUCCESS);
+                response.setData(updatedUser);
+            } else {
+                response.setCode(ResponseCode.FAIL);
+                response.setData("更新用户余额失败");
+            }
+            return;
+        }
+        response.setCode(ResponseCode.INVALID_REQUEST);
+        response.setData("更新信息参数错误");
+    }
+
+    /**
+     * 处理选课或退课请求
+     * @author xingyi852
      */
     private ResponseCode handleSelection(Message request) {
         String courseCode = String.valueOf(request.getData()).trim();

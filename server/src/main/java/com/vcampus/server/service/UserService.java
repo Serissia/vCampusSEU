@@ -2,11 +2,12 @@ package com.vcampus.server.service;
 
 import com.vcampus.common.vo.UserVO;
 
+import java.math.BigDecimal;
+
 /**
- * 统一用户身份验证业务接口
+ * 用户业务接口
  *
  * @author Serissia
- * @version 1.0
  */
 public interface UserService {
 
@@ -26,4 +27,23 @@ public interface UserService {
      * @return 用户基本信息
      */
     UserVO queryByUid(String uid);
+
+    /**
+     * 修改用户密码（服务端校验原密码与新密码差异）
+     *
+     * @param uid         用户账号
+     * @param oldPassword 原密码
+     * @param newPassword 新密码
+     * @return 是否修改成功
+     */
+    boolean changePassword(String uid, String oldPassword, String newPassword);
+
+    /**
+     * 更新一卡通账户余额（充值/扣费）
+     *
+     * @param uid        用户账号
+     * @param newBalance 新余额
+     * @return 是否更新成功
+     */
+    boolean updateBalance(String uid, BigDecimal newBalance);
 }

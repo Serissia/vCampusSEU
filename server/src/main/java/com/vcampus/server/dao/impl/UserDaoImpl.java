@@ -5,16 +5,16 @@ import com.vcampus.common.vo.UserVO;
 import com.vcampus.server.dao.UserDao;
 import com.vcampus.server.util.DBUtil;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
- * 用户数据访问 JDBC 实现
+ * 用户 DAO 实现类
  *
  * @author Serissia
- * @version 1.0
  */
 public class UserDaoImpl implements UserDao {
 
@@ -91,5 +91,27 @@ public class UserDaoImpl implements UserDao {
             DBUtil.close(conn, pstmt, rs);
         }
         return user;
+    }
+
+    @Override
+    public boolean updatePassword(String uid, String newPassword) throws SQLException {
+        String sql = "UPDATE tbl_user SET password = ? WHERE uid = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, newPassword);
+            pstmt.setString(2, uid);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean updateBalance(String uid, BigDecimal newBalance) throws SQLException {
+        String sql = "UPDATE tbl_user SET balance = ? WHERE uid = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setBigDecimal(1, newBalance);
+            pstmt.setString(2, uid);
+            return pstmt.executeUpdate() > 0;
+        }
     }
 }
