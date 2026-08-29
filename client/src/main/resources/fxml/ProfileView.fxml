@@ -14,7 +14,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<ScrollPane fitToWidth="true" styleClass="profile-scroll-pane"
+<ScrollPane fx:id="rootScrollPane" fitToWidth="true" styleClass="profile-scroll-pane"
             xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.vcampus.client.controller.ProfileController">
     <stylesheets>

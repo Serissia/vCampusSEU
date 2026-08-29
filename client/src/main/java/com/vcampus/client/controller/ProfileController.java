@@ -2,10 +2,12 @@ package com.vcampus.client.controller;
 
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.common.vo.UserVO;
+import com.vcampus.client.util.ScrollSpeedUtil;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 
 import java.math.BigDecimal;
@@ -14,8 +16,7 @@ import java.math.BigDecimal;
  * 个人信息中心控制器
  * 负责个人档案展示、一卡通在线充值、密码修改等交互
  *
- * @author vCampus Team
- * @version 1.0
+ * @author Serissia
  */
 public class ProfileController {
 
@@ -47,6 +48,16 @@ public class ProfileController {
     private Label metaNameText;
     @FXML
     private Label metaRoleText;
+    @FXML
+    private ScrollPane rootScrollPane;
+
+    @FXML
+    public void initialize() {
+        // 为当前个人信息面板的滚动容器启用加速
+        if (rootScrollPane != null) {
+            ScrollSpeedUtil.applyCustomScrollSpeed(rootScrollPane);
+        }
+    }
 
     private UserVO currentUser;
     private MainController mainController;
