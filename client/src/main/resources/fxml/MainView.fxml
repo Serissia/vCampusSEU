@@ -69,7 +69,7 @@
             </ScrollPane>
             <!-- 底部版本标识 -->
             <VBox alignment="CENTER" prefHeight="48.0" styleClass="sidebar-footer">
-                <Label text="vCampusSEU v1.0" styleClass="version-label" />
+                <Label text="vCampusSEU v1.1" styleClass="version-label" />
             </VBox>
         </VBox>
     </left>
