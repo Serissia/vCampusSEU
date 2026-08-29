@@ -1,0 +1,110 @@
+/* 登录界面样式 */
+
+/* 左侧画卷容器 */
+.login-artwork-container {
+    -fx-background-color: #2D3A29;
+}
+
+.artwork-overlay {
+    -fx-padding: 60px 30px 30px 30px;
+    -fx-background-color: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.45) 100%);
+}
+
+.artwork-title-cn {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #FFFFFF;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 8, 0, 0, 2);
+}
+
+.artwork-title-en {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255, 255, 255, 0.85);
+    -fx-letter-spacing: 2px;
+}
+
+.carousel-dots .dot {
+    -fx-pref-width: 8px;
+    -fx-pref-height: 8px;
+    -fx-background-radius: 4px;
+    -fx-background-color: rgba(255, 255, 255, 0.4);
+}
+
+.carousel-dots .dot.active {
+    -fx-pref-width: 22px;
+    -fx-background-color: #FFFFFF;
+}
+
+/* 右侧表单容器 */
+.login-form-container {
+    -fx-background-color: -fx-bg-surface;
+}
+
+.login-main-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.title-accent-bar {
+    -fx-background-color: -fx-primary;
+    -fx-background-radius: 2px;
+    -fx-max-width: 32px;
+}
+
+.input-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+/* 下划线极简输入框（使用 -fx-border-base） */
+.modern-underline-field {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent -fx-border-base transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-font-size: 14px;
+    -fx-text-fill: -fx-text-main;
+    -fx-prompt-text-fill: -fx-text-muted;
+    -fx-padding: 8px 0;
+}
+
+.modern-underline-field:focused {
+    -fx-border-color: transparent transparent -fx-primary transparent;
+    -fx-border-width: 0 0 2px 0;
+}
+
+.forget-pwd-link {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-primary;
+    -fx-underline: false;
+    -fx-padding: 0;
+}
+
+.forget-pwd-link:hover {
+    -fx-underline: true;
+}
+
+.error-message-label {
+    -fx-text-fill: -fx-danger;
+    -fx-font-size: 12px;
+}
+
+/* 主登录按钮 */
+.login-primary-btn {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4px;
+    -fx-cursor: hand;
+}
+
+.login-primary-btn:hover {
+    -fx-background-color: -fx-primary-hover;
+}
+
+.login-primary-btn:pressed {
+    -fx-background-color: -fx-primary-pressed;
+}

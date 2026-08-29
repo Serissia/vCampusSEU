@@ -1,0 +1,25 @@
+/* 全局颜色与字阶设计规范 */
+.root {
+    /* 东南大学品牌主色调 */
+    -fx-primary: #487A32;
+    -fx-primary-hover: #588E3E;
+    -fx-primary-pressed: #3A6328;
+    -fx-primary-light: #EDF4EA;
+
+    /* 中性与表面背景色 */
+    -fx-bg-base: #F7F8FA;
+    -fx-bg-surface: #FFFFFF;
+    -fx-bg-nav: #F2F3F5;
+
+    /* 文字色阶 */
+    -fx-text-main: #1F2329;
+    -fx-text-muted: #646A73;
+    -fx-text-disabled: #8F959E;
+
+    /* 状态与边框 (重命名为 -fx-border-base，避免与内置属性冲突) */
+    -fx-danger: #F54A45;
+    -fx-border-base: #DEE0E3;
+
+    /* 默认字体设置 */
+    -fx-font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+}

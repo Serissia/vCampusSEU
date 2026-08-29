@@ -2,21 +2,72 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>vCampusSEU</artifactId>
-        <groupId>com.vcampus</groupId>
-        <version>1.0-SNAPSHOT</version>
-    </parent>
     <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.vcampus</groupId>
+        <artifactId>vCampusSEU</artifactId>
+        <!-- 请确保这里的版本号与根目录 pom.xml 里的 <version> -->
+        <version>1.0-SNAPSHOT</version>
+        <!-- 指定从上级目录寻找父 POM，防止 Maven 尝试去远程仓库下载 -->
+        <relativePath>../pom.xml</relativePath>
+    </parent>
 
     <artifactId>client</artifactId>
 
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <javafx.version>17.0.10</javafx.version>
+    </properties>
+
     <dependencies>
-        <!-- 依赖公共模块 -->
+        <!-- 依赖 common 模块（Message、VO 等实体） -->
         <dependency>
             <groupId>com.vcampus</groupId>
             <artifactId>common</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- JavaFX 基础控件与图形库 -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+
+        <!-- JavaFX FXML 布局支持 -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <resources>
+            <!-- 确保 FXML、CSS、图片等资源文件能被打包至 classpath -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*</include>
+                </includes>
+            </resource>
+        </resources>
+
+        <plugins>
+            <!-- JavaFX 运行插件 -->
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <!-- 指定客户端的入口类 -->
+                    <mainClass>com.vcampus.client.ClientLauncher</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

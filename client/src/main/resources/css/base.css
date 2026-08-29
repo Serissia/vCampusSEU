@@ -1,0 +1,33 @@
+/* 基础样式表，定义了应用程序的全局样式和主题 */
+
+/* 去除 JavaFX 默认生硬的蓝色外发光高亮 */
+.text-field, .password-field, .button {
+    -fx-focus-color: transparent;
+    -fx-faint-focus: transparent;
+}
+
+/* 现代极简扁平按钮基类 */
+.btn-modern {
+    -fx-background-radius: 4px;
+    -fx-cursor: hand;
+    -fx-font-size: 14px;
+    -fx-alignment: center;
+    -fx-padding: 8px 16px;
+}
+
+/* 极细现代滚动条 */
+.scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 6px;
+}
+.scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(31, 35, 41, 0.2);
+    -fx-background-radius: 3px;
+}
+.scroll-bar:vertical .thumb:hover {
+    -fx-background-color: rgba(31, 35, 41, 0.4);
+}
+.scroll-bar .increment-button, .scroll-bar .decrement-button {
+    -fx-pref-height: 0;
+    -fx-opacity: 0;
+}
