@@ -20,6 +20,8 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -86,7 +88,20 @@ public class MainController {
     }
 
     /**
-     * 渲染顶部基础信息
+     * 更新顶部余额显示
+     *
+     * @param newBalance 新的余额
+     */
+    public void updateBalance(BigDecimal newBalance) {
+        if (newBalance != null) {
+            balanceText.setText("¥ " + newBalance.setScale(2, RoundingMode.HALF_UP).toPlainString());
+        } else {
+            balanceText.setText("¥ 0.00");
+        }
+    }
+
+    /**
+     * 渲染顶部用户信息（头像首字母、用户名、角色徽章、余额）
      */
     private void renderHeaderInfo() {
         if (currentUser == null) {
@@ -101,11 +116,7 @@ public class MainController {
         UserRole role = currentUser.getRole();
         userRoleBadge.setText(role != null ? role.getLabel() : "未知权限");
 
-        if (currentUser.getBalance() != null) {
-            balanceText.setText("¥ " + currentUser.getBalance().setScale(2).toString());
-        } else {
-            balanceText.setText("¥ 0.00");
-        }
+        updateBalance(currentUser.getBalance());
 
         // 加载校徽 Logo
         try (InputStream in = getClass().getResourceAsStream("/images/logo.svg")) {
@@ -125,11 +136,7 @@ public class MainController {
         navButtons.clear();
 
         List<MenuItem> menus = new ArrayList<>();
-        UserRole role = currentUser.getRole();
-
-        if (role == null) {
-            role = UserRole.STUDENT;
-        }
+        UserRole role = currentUser.getRole() != null ? currentUser.getRole() : UserRole.STUDENT;
 
         // 所有用户固定包含个人中心
         menus.add(new MenuItem("个人中心", "user", "PROFILE"));
@@ -212,6 +219,19 @@ public class MainController {
      * @return 节点容器
      */
     private Node createModuleNode(String moduleKey) {
+        if ("PROFILE".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ProfileView.fxml"));
+                Node profileRoot = loader.load();
+                ProfileController controller = loader.getController();
+                controller.initData(currentUser, this);
+                return profileRoot;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // 其他尚未接入的模块仍保留占位卡片
         VBox card = new VBox(16.0);
         card.setAlignment(Pos.CENTER);
         card.getStyleClass().add("placeholder-card");

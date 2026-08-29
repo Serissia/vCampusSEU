@@ -1,0 +1,174 @@
+/* 滚动容器 */
+.profile-scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.profile-scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* 卡片通用类 */
+.profile-card {
+    -fx-background-color: -fx-bg-surface;
+    -fx-background-radius: 10px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-padding: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(31, 35, 41, 0.04), 10, 0, 0, 2);
+}
+
+/* 顶部 Banner 卡片 */
+.profile-banner-card {
+    -fx-background-color: linear-gradient(to right, #FFFFFF, -fx-bg-nav);
+}
+
+.profile-avatar-large {
+    -fx-background-color: -fx-primary;
+    -fx-background-radius: 36px;
+    -fx-min-width: 72px;
+    -fx-min-height: 72px;
+    -fx-max-width: 72px;
+    -fx-max-height: 72px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.12), 12, 0, 0, 4);
+}
+
+.profile-avatar-large-text {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+}
+
+.profile-name-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.profile-role-tag {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+    -fx-background-color: -fx-primary-light;
+    -fx-background-radius: 4px;
+    -fx-padding: 3px 8px;
+}
+
+.profile-status-tag {
+    -fx-font-size: 11px;
+    -fx-text-fill: #2E7D32;
+    -fx-background-color: rgba(46, 125, 50, 0.1);
+    -fx-background-radius: 4px;
+    -fx-padding: 3px 8px;
+}
+
+.profile-uid-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+/* 卡片标题与子标签 */
+.card-section-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.card-sub-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.card-balance-large {
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+}
+
+.card-field-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+/* 充值预设快捷按钮 */
+.btn-recharge-preset {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+    -fx-padding: 6px 16px;
+    -fx-cursor: hand;
+}
+
+.btn-recharge-preset:hover {
+    -fx-background-color: -fx-primary-light;
+    -fx-border-color: -fx-primary;
+    -fx-text-fill: -fx-primary;
+}
+
+/* 现代卡片输入框 */
+.modern-input-field {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-font-size: 13px;
+    -fx-padding: 8px 12px;
+    -fx-text-fill: -fx-text-main;
+    -fx-prompt-text-fill: -fx-text-disabled;
+}
+
+.modern-input-field:focused {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -fx-primary;
+    -fx-effect: dropshadow(gaussian, rgba(72, 122, 50, 0.2), 6, 0, 0, 0);
+}
+
+/* 主操作按钮 */
+.btn-primary-action {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px 20px;
+    -fx-cursor: hand;
+}
+
+.btn-primary-action:hover {
+    -fx-background-color: -fx-primary-hover;
+}
+
+.btn-primary-action:pressed {
+    -fx-background-color: -fx-primary-pressed;
+}
+
+/* 消息提示文本 */
+.security-msg-label {
+    -fx-font-size: 12px;
+}
+
+.security-msg-label.error {
+    -fx-text-fill: -fx-danger;
+}
+
+.security-msg-label.success {
+    -fx-text-fill: #2E7D32;
+}
+
+/* 档案元数据展示 */
+.meta-field-title {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.meta-field-value {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane fitToWidth="true" styleClass="profile-scroll-pane"
+            xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.vcampus.client.controller.ProfileController">
+    <stylesheets>
+        <URL value="@../css/tokens.css" />
+        <URL value="@../css/base.css" />
+        <URL value="@../css/profile.css" />
+    </stylesheets>
+
+    <VBox spacing="20.0" styleClass="profile-container">
+        <padding>
+            <Insets bottom="30.0" left="10.0" right="10.0" top="10.0" />
+        </padding>
+
+        <!-- 顶部信息摘要条 (Banner Card) -->
+        <HBox alignment="CENTER_LEFT" spacing="24.0" styleClass="profile-card, profile-banner-card">
+            <!-- 大头像圆圈 -->
+            <StackPane styleClass="profile-avatar-large">
+                <Label fx:id="avatarLargeText" text="U" styleClass="profile-avatar-large-text" />
+            </StackPane>
+
+            <!-- 用户主身份描述 -->
+            <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                <HBox alignment="CENTER_LEFT" spacing="12.0">
+                    <Label fx:id="displayNameText" text="用户姓名" styleClass="profile-name-title" />
+                    <Label fx:id="roleBadge" text="STUDENT" styleClass="profile-role-tag" />
+                    <Label fx:id="statusBadge" text="状态正常" styleClass="profile-status-tag" />
+                </HBox>
+                <Label fx:id="uidSubtitleText" text="一卡通号: 213000001" styleClass="profile-uid-subtitle" />
+            </VBox>
+        </HBox>
+
+        <!-- 中部网格卡片区 (2列并排) -->
+        <GridPane hgap="20.0" vgap="20.0">
+            <!-- 左列：一卡通账户与资产 -->
+            <VBox spacing="16.0" styleClass="profile-card" GridPane.columnIndex="0" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0">
+                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                    <Label text="一卡通账户资产" styleClass="card-section-title" />
+                </HBox>
+                <Separator />
+
+                <VBox spacing="8.0">
+                    <Label text="当前可用余额" styleClass="card-sub-label" />
+                    <Label fx:id="cardBalanceText" text="¥ 0.00" styleClass="card-balance-large" />
+                </VBox>
+
+                <VBox spacing="10.0">
+                    <Label text="快速在线充值" styleClass="card-sub-label" />
+                    <HBox spacing="10.0">
+                        <Button onAction="#handleQuickRecharge50" text="+ ¥50" styleClass="btn-recharge-preset" />
+                        <Button onAction="#handleQuickRecharge100" text="+ ¥100" styleClass="btn-recharge-preset" />
+                        <Button onAction="#handleQuickRecharge200" text="+ ¥200" styleClass="btn-recharge-preset" />
+                    </HBox>
+                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <TextField fx:id="customRechargeField" promptText="自定义充值金额" styleClass="modern-input-field" HBox.hgrow="ALWAYS" />
+                        <Button onAction="#handleCustomRecharge" text="充值" styleClass="btn-primary-action" />
+                    </HBox>
+                </VBox>
+            </VBox>
+
+            <!-- 右列：安全与密码设置 -->
+            <VBox spacing="16.0" styleClass="profile-card" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0">
+                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                    <Label text="登录安全设置" styleClass="card-section-title" />
+                </HBox>
+                <Separator />
+
+                <VBox spacing="12.0">
+                    <VBox spacing="4.0">
+                        <Label text="原密码" styleClass="card-field-label" />
+                        <PasswordField fx:id="oldPasswordField" promptText="请输入当前使用的密码" styleClass="modern-input-field" />
+                    </VBox>
+
+                    <VBox spacing="4.0">
+                        <Label text="新密码" styleClass="card-field-label" />
+                        <PasswordField fx:id="newPasswordField" promptText="请输入新密码（不少于6位）" styleClass="modern-input-field" />
+                    </VBox>
+
+                    <VBox spacing="4.0">
+                        <Label text="确认新密码" styleClass="card-field-label" />
+                        <PasswordField fx:id="confirmPasswordField" promptText="请再次输入新密码" styleClass="modern-input-field" />
+                    </VBox>
+
+                    <Label fx:id="securityMsgLabel" managed="false" visible="false" styleClass="security-msg-label" />
+
+                    <HBox alignment="CENTER_RIGHT">
+                        <Button onAction="#handleChangePassword" text="更新密码" styleClass="btn-primary-action" />
+                    </HBox>
+                </VBox>
+            </VBox>
+
+            <!-- 下方全宽：档案元数据详情 -->
+            <VBox spacing="16.0" styleClass="profile-card" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="1">
+                <Label text="学籍 / 教工详细档案" styleClass="card-section-title" />
+                <Separator />
+
+                <GridPane hgap="24.0" vgap="16.0">
+                    <VBox spacing="4.0" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                        <Label text="一卡通账号 / UID" styleClass="meta-field-title" />
+                        <Label fx:id="metaUidText" text="--" styleClass="meta-field-value" />
+                    </VBox>
+
+                    <VBox spacing="4.0" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                        <Label text="真实姓名" styleClass="meta-field-title" />
+                        <Label fx:id="metaNameText" text="--" styleClass="meta-field-value" />
+                    </VBox>
+
+                    <VBox spacing="4.0" GridPane.columnIndex="2" GridPane.rowIndex="0">
+                        <Label text="用户角色" styleClass="meta-field-title" />
+                        <Label fx:id="metaRoleText" text="--" styleClass="meta-field-value" />
+                    </VBox>
+
+                    <VBox spacing="4.0" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                        <Label text="所属院系 / 部门" styleClass="meta-field-title" />
+                        <Label text="计算机科学与工程学院" styleClass="meta-field-value" />
+                    </VBox>
+
+                    <VBox spacing="4.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <Label text="校区" styleClass="meta-field-title" />
+                        <Label text="九龙湖校区" styleClass="meta-field-value" />
+                    </VBox>
+
+                    <VBox spacing="4.0" GridPane.columnIndex="2" GridPane.rowIndex="1">
+                        <Label text="账户状态" styleClass="meta-field-title" />
+                        <Label text="正常活跃 (Active)" styleClass="meta-field-value" />
+                    </VBox>
+                </GridPane>
+            </VBox>
+        </GridPane>
+    </VBox>
+</ScrollPane>
