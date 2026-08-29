@@ -1,0 +1,170 @@
+/* 主界面全局背景 */
+.main-root-pane {
+    -fx-background-color: -fx-bg-base;
+}
+
+/* 顶部导航栏 */
+.header-bar {
+    -fx-background-color: -fx-bg-surface;
+    -fx-border-color: transparent transparent -fx-border-base transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.03), 8, 0, 0, 2);
+}
+
+.header-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+/* 余额气泡 */
+.balance-badge {
+    -fx-background-color: -fx-primary-light;
+    -fx-background-radius: 16px;
+    -fx-padding: 4px 12px;
+}
+
+.balance-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-primary;
+}
+
+.balance-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+}
+
+/* 用户头像与信息 */
+.user-avatar-circle {
+    -fx-background-color: -fx-primary;
+    -fx-background-radius: 18px;
+    -fx-min-width: 34px;
+    -fx-min-height: 34px;
+    -fx-max-width: 34px;
+    -fx-max-height: 34px;
+}
+
+.user-avatar-text {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.user-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.user-role-tag {
+    -fx-font-size: 10px;
+    -fx-text-fill: -fx-text-muted;
+    -fx-background-color: -fx-bg-nav;
+    -fx-background-radius: 4px;
+    -fx-padding: 1px 4px;
+}
+
+/* 退出登录按钮 */
+.logout-btn {
+    -fx-background-color: transparent;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-text-fill: -fx-text-muted;
+    -fx-font-size: 12px;
+    -fx-padding: 5px 12px;
+    -fx-cursor: hand;
+    -fx-graphic-text-gap: 6px;
+}
+
+.logout-btn:hover {
+    -fx-background-color: rgba(245, 74, 69, 0.1);
+    -fx-border-color: -fx-danger;
+    -fx-text-fill: -fx-danger;
+}
+
+.logout-btn:hover .header-icon {
+    -fx-fill: -fx-danger;
+}
+
+.header-icon {
+    -fx-fill: -fx-text-muted;
+}
+
+/* 左侧边栏 */
+.sidebar-container {
+    -fx-background-color: -fx-bg-surface;
+    -fx-border-color: transparent -fx-border-base transparent transparent;
+    -fx-border-width: 0 1px 0 0;
+}
+
+.sidebar-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.sidebar-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* 导航项按钮样式（图标 + 文字布局） */
+.nav-item-btn {
+    -fx-background-color: transparent;
+    -fx-alignment: CENTER_LEFT;
+    -fx-pref-height: 42px;
+    -fx-max-width: Infinity;
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-main;
+    -fx-padding: 8px 16px;
+    -fx-background-radius: 6px;
+    -fx-cursor: hand;
+    -fx-graphic-text-gap: 12px;
+}
+
+.nav-item-btn:hover {
+    -fx-background-color: -fx-bg-nav;
+}
+
+/* 默认图标色 */
+.nav-item-btn .nav-icon {
+    -fx-fill: -fx-text-muted;
+}
+
+.nav-item-btn:hover .nav-icon {
+    -fx-fill: -fx-text-main;
+}
+
+/* 激活态：背景浅主色，文字与图标变为东大主色并加粗 */
+.nav-item-btn.active {
+    -fx-background-color: -fx-primary-light;
+    -fx-text-fill: -fx-primary;
+    -fx-font-weight: bold;
+}
+
+.nav-item-btn.active .nav-icon {
+    -fx-fill: -fx-primary;
+}
+
+.sidebar-footer {
+    -fx-border-color: -fx-border-base transparent transparent transparent;
+    -fx-border-width: 1px 0 0 0;
+}
+
+.version-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-disabled;
+}
+
+/* 内容承载卡片区 */
+.main-content-host {
+    -fx-background-color: -fx-bg-base;
+}
+
+.placeholder-card {
+    -fx-background-color: -fx-bg-surface;
+    -fx-background-radius: 8px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.02), 6, 0, 0, 2);
+}

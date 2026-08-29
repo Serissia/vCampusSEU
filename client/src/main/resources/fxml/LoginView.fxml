@@ -32,7 +32,7 @@
 
         <VBox alignment="CENTER" spacing="12.0" styleClass="artwork-overlay">
             <ImageView fx:id="logoImageView" fitHeight="72.0" fitWidth="72.0" preserveRatio="true" />
-            <Label text="東 南 大 學" styleClass="artwork-title-cn" />
+            <Label text="东 南 大 学" styleClass="artwork-title-cn" />
             <Label text="SOUTHEAST UNIVERSITY" styleClass="artwork-title-en" />
 
             <Region VBox.vgrow="ALWAYS" />

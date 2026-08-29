@@ -153,9 +153,13 @@ public class LoginController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MainView.fxml"));
             Parent root = loader.load();
 
+            // 注入当前登录用户的上下文信息
+            MainController mainController = loader.getController();
+            mainController.initUserContext(user);
+
             Stage stage = (Stage) loginButton.getScene().getWindow();
             Scene mainScene = new Scene(root, 1100, 720);
-            stage.setTitle("vCampus - 东南大学虚拟校园系统");
+            stage.setTitle("vCampus - 智慧校园综合服务平台");
             stage.setScene(mainScene);
             stage.centerOnScreen();
         } catch (IOException e) {
