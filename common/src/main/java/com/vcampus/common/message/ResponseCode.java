@@ -2,6 +2,8 @@ package com.vcampus.common.message;
 
 /**
  * 服务端统一状态响应码。
+ *
+ * @author GGbongy
  */
 public enum ResponseCode {
     /** 操作成功 */
@@ -19,5 +21,15 @@ public enum ResponseCode {
     /** 已经选择该课程 */
     ALREADY_SELECTED,
     /** 该课程成绩已录入 */
-    GRADE_ALREADY_EXISTS
+    GRADE_ALREADY_EXISTS,
+    /** 图书不存在 */
+    BOOK_NOT_FOUND,
+    /** 图书库存不足 */
+    BOOK_NO_STOCK,
+    /** 已达借阅数量上限 */
+    BORROW_LIMIT_EXCEEDED,
+    /** 已借阅该书且尚未归还 */
+    ALREADY_BORROWED,
+    /** 未借阅该书 */
+    NOT_BORROWED
 }

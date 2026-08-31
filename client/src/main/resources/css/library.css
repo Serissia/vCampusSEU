@@ -1,0 +1,258 @@
+/* 图书馆模块私有样式（通用组件样式见 base.css） */
+
+/* 内容容器 */
+.lib-container {
+    -fx-padding: 4px;
+}
+
+/* 顶部标题 */
+.lib-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.lib-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.lib-section-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+/* 表格整体 */
+.lib-table {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 0;
+}
+
+.lib-table .column-header-background {
+    -fx-background-color: -fx-bg-nav;
+    -fx-background-radius: 8px 8px 0 0;
+}
+
+.lib-table .column-header,
+.lib-table .filler {
+    -fx-background-color: transparent;
+    -fx-size: 42px;
+    -fx-border-width: 0;
+}
+
+.lib-table .column-header .label {
+    -fx-text-fill: -fx-text-muted;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.lib-table .table-cell {
+    -fx-border-width: 0;
+    -fx-padding: 10px 12px;
+    -fx-text-fill: -fx-text-main;
+    -fx-font-size: 13px;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.lib-table .table-row-cell {
+    -fx-background-color: -fx-bg-surface;
+    -fx-border-color: transparent transparent -fx-border-base transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-cell-size: 46px;
+}
+
+.lib-table .table-row-cell:hover {
+    -fx-background-color: -fx-primary-light;
+}
+
+.lib-table .table-row-cell:selected {
+    -fx-background-color: -fx-primary-light;
+}
+
+.lib-table .table-row-cell:selected .table-cell {
+    -fx-text-fill: -fx-text-main;
+}
+
+.lib-table .placeholder .label {
+    -fx-text-fill: -fx-text-disabled;
+    -fx-font-size: 13px;
+}
+
+/* 表格内小按钮 */
+.lib-btn-borrow,
+.lib-btn-return {
+    -fx-background-color: -fx-primary-light;
+    -fx-text-fill: -fx-primary;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4px;
+    -fx-padding: 5px 14px;
+    -fx-cursor: hand;
+}
+
+.lib-btn-borrow:hover,
+.lib-btn-return:hover {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: -fx-bg-surface;
+}
+
+.lib-btn-borrow:disabled,
+.lib-btn-return:disabled {
+    -fx-opacity: 0.4;
+    -fx-cursor: default;
+}
+
+/* 借阅状态标签 */
+.status-borrowed {
+    -fx-text-fill: -fx-primary;
+    -fx-font-weight: bold;
+}
+
+.status-returned {
+    -fx-text-fill: -fx-text-disabled;
+}
+
+/* 表单标签 */
+.lib-form-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+/* 危险操作按钮 */
+.lib-btn-danger {
+    -fx-background-color: transparent;
+    -fx-border-color: -fx-danger;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-danger;
+    -fx-padding: 8px 16px;
+    -fx-cursor: hand;
+}
+
+.lib-btn-danger:hover {
+    -fx-background-color: rgba(245, 74, 69, 0.1);
+}
+
+/* 提示文本 */
+.lib-msg-label {
+    -fx-font-size: 12px;
+}
+
+.lib-msg-label.error {
+    -fx-text-fill: -fx-danger;
+}
+
+.lib-msg-label.success {
+    -fx-text-fill: -fx-primary;
+}
+
+/* 图书详情页 */
+.book-detail-container {
+    -fx-background-color: -fx-bg-surface;
+}
+
+.lib-detail-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.lib-detail-value {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+/* 无余量状态标签 */
+.status-unavailable {
+    -fx-text-fill: -fx-danger;
+    -fx-font-weight: bold;
+}
+
+/* 在线浏览按钮（图书详情页） */
+.btn-online {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: -fx-bg-surface;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px 20px;
+    -fx-cursor: hand;
+}
+
+.btn-online:hover {
+    -fx-background-color: -fx-primary-hover;
+}
+
+.btn-online:disabled {
+    -fx-background-color: -fx-bg-nav;
+    -fx-text-fill: -fx-text-disabled;
+    -fx-opacity: 1;
+}
+
+/* 在线浏览 PDF 阅读器 */
+.pdf-reader-root {
+    -fx-background-color: -fx-bg-surface;
+}
+
+.pdf-reader-header {
+    -fx-background-color: -fx-bg-nav;
+    -fx-padding: 12px 16px;
+    -fx-border-color: transparent transparent -fx-border-base transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.pdf-reader-footer {
+    -fx-background-color: -fx-bg-nav;
+    -fx-padding: 10px 16px;
+    -fx-border-color: -fx-border-base transparent transparent transparent;
+    -fx-border-width: 1px 0 0 0;
+}
+
+.pdf-page-scroll {
+    -fx-background-color: -fx-bg-base;
+}
+
+.pdf-page-scroll > .viewport {
+    -fx-background-color: -fx-bg-base;
+}
+
+/* 返回按钮图标 */
+.back-icon {
+    -fx-fill: -fx-text-main;
+}
+
+.btn-recharge-preset:hover .back-icon {
+    -fx-fill: -fx-primary;
+}
+
+/* 面包屑导航 */
+.breadcrumb-link {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-muted;
+    -fx-font-size: 13px;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+
+.breadcrumb-link:hover {
+    -fx-text-fill: -fx-primary;
+}
+
+.breadcrumb-sep {
+    -fx-text-fill: -fx-text-disabled;
+    -fx-font-size: 13px;
+}
+
+.breadcrumb-current {
+    -fx-text-fill: -fx-text-main;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}

@@ -29,6 +29,7 @@ import java.util.List;
  * 主界面主控制器，负责侧边导航鉴权、业务面板挂载与全局上下文调度。
  *
  * @author Serissia
+ * @author GGbongy
  */
 public class MainController {
 
@@ -145,7 +146,7 @@ public class MainController {
             case STUDENT:
                 menus.add(new MenuItem("学生选课", "graduation-cap", "ACADEMIC_SELECT"));
                 menus.add(new MenuItem("我的成绩", "chart-bar", "ACADEMIC_GRADE"));
-                menus.add(new MenuItem("图书借阅", "book-open", "LIBRARY"));
+                menus.add(new MenuItem("图书检索", "book-open", "LIBRARY"));
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
                 break;
             case TEACHER:
@@ -157,16 +158,14 @@ public class MainController {
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
                 menus.add(new MenuItem("开课审批", "edit", "ACADEMIC_APPROVE"));
                 break;
-            case LIBRARIAN:
-                menus.add(new MenuItem("图书采编", "book", "LIBRARY_MANAGE"));
-                menus.add(new MenuItem("借还审核", "receipt", "LIBRARY_BORROW_MANAGE"));
-                break;
             case STORE_MANAGER:
                 menus.add(new MenuItem("商品库存", "boxes", "SHOP_MANAGE"));
                 menus.add(new MenuItem("流水订单", "receipt", "SHOP_ORDER_MANAGE"));
                 break;
             case ADMIN:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
+                menus.add(new MenuItem("办理借阅", "book-open", "LIBRARY_BORROW_PROCESS"));
+                menus.add(new MenuItem("办理归还", "receipt", "LIBRARY_RETURN_PROCESS"));
                 menus.add(new MenuItem("图书管理", "book", "LIBRARY_MANAGE"));
                 menus.add(new MenuItem("超市管理", "store", "SHOP_MANAGE"));
                 menus.add(new MenuItem("用户权限", "user-shield", "ADMIN_USER"));
@@ -226,6 +225,54 @@ public class MainController {
                 ProfileController controller = loader.getController();
                 controller.initData(currentUser, this);
                 return profileRoot;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if ("LIBRARY".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LibraryView.fxml"));
+                Node root = loader.load();
+                LibraryController controller = loader.getController();
+                controller.initData(currentUser);
+                return root;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if ("LIBRARY_MANAGE".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LibraryManageView.fxml"));
+                Node root = loader.load();
+                LibraryManageController controller = loader.getController();
+                controller.initData(currentUser);
+                return root;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if ("LIBRARY_BORROW_PROCESS".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/BorrowProcessView.fxml"));
+                Node root = loader.load();
+                BorrowProcessController controller = loader.getController();
+                controller.initData(currentUser);
+                return root;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if ("LIBRARY_RETURN_PROCESS".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ReturnProcessView.fxml"));
+                Node root = loader.load();
+                ReturnProcessController controller = loader.getController();
+                controller.initData(currentUser);
+                return root;
             } catch (IOException e) {
                 e.printStackTrace();
             }
