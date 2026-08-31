@@ -1,5 +1,6 @@
 target/
 out/
+/config/
 /log.txt
 /server/src/main/resources/db.properties
 !/server/src/main/resources/db.properties.default
