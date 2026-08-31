@@ -4,11 +4,11 @@ package com.vcampus.common.vo;
  * 系统用户角色。
  *
  * @author xingyi852
+ * @author GGbongy
  */
 public enum UserRole { // 角色枚举
     ADMIN("系统管理员", 0),
     ACADEMIC_AFFAIRS_TEACHER("教务老师", 1),
-    LIBRARIAN("图书管理员", 2),
     STORE_MANAGER("商店管理员", 3),
     TEACHER("教职工", 4),
     STUDENT("学生", 5);

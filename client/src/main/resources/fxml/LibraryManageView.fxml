@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane fx:id="rootScrollPane" fitToWidth="true" styleClass="profile-scroll-pane"
+            xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.vcampus.client.controller.LibraryManageController">
+    <stylesheets>
+        <URL value="@../css/tokens.css" />
+        <URL value="@../css/base.css" />
+        <URL value="@../css/library.css" />
+    </stylesheets>
+
+    <VBox spacing="16.0" styleClass="lib-container">
+        <padding>
+            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+        </padding>
+
+        <!-- 顶部检索工具栏 -->
+        <HBox alignment="CENTER_LEFT" spacing="14.0" styleClass="profile-card">
+            <Button fx:id="backButton" text="返回" onAction="#handleBack" styleClass="btn-recharge-preset" />
+            <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                <Label text="图书管理" styleClass="lib-title" />
+                <Label text="维护馆藏图书信息，支持新增、编辑与删除" styleClass="lib-subtitle" />
+            </VBox>
+            <TextField fx:id="searchField" promptText="输入书名 / 作者 / ISBN 检索" styleClass="modern-input-field"
+                       HBox.hgrow="ALWAYS" onAction="#handleSearch" />
+            <Button text="检索" onAction="#handleSearch" styleClass="btn-primary-action" />
+        </HBox>
+
+        <!-- 主体：左侧书目列表 + 右侧编辑表单 -->
+        <HBox spacing="16.0" alignment="TOP_LEFT">
+            <!-- 左：书目列表 -->
+            <VBox spacing="12.0" styleClass="profile-card" HBox.hgrow="ALWAYS">
+                <Label text="馆藏列表" styleClass="lib-section-title" />
+                <TableView fx:id="bookTable" prefHeight="480.0" styleClass="lib-table" />
+            </VBox>
+
+            <!-- 右：编辑表单 -->
+            <VBox spacing="14.0" prefWidth="300.0" minWidth="300.0" styleClass="profile-card">
+                <Label text="书目信息维护" styleClass="lib-section-title" />
+                <Separator />
+
+                <VBox spacing="4.0">
+                    <Label text="ISBN 编号" styleClass="lib-form-label" />
+                    <TextField fx:id="isbnField" promptText="例如 9787111213826" styleClass="modern-input-field" />
+                </VBox>
+
+                <VBox spacing="4.0">
+                    <Label text="书名" styleClass="lib-form-label" />
+                    <TextField fx:id="titleField" promptText="图书名称" styleClass="modern-input-field" />
+                </VBox>
+
+                <VBox spacing="4.0">
+                    <Label text="作者" styleClass="lib-form-label" />
+                    <TextField fx:id="authorField" promptText="作者" styleClass="modern-input-field" />
+                </VBox>
+
+                <VBox spacing="4.0">
+                    <Label text="出版社" styleClass="lib-form-label" />
+                    <TextField fx:id="publisherField" promptText="出版社" styleClass="modern-input-field" />
+                </VBox>
+
+                <VBox spacing="4.0">
+                    <Label text="存放位置" styleClass="lib-form-label" />
+                    <TextField fx:id="locationField" promptText="例如 九龙湖馆三楼 TP 区" styleClass="modern-input-field" />
+                </VBox>
+
+                <VBox spacing="6.0">
+                    <Label text="电子资源（PDF，选填）" styleClass="lib-form-label" />
+                    <HBox spacing="10.0" alignment="CENTER_LEFT">
+                        <Button text="选择文件并上传" onAction="#handleChooseResource" styleClass="btn-recharge-preset" />
+                        <Button text="清除" onAction="#handleClearResource" styleClass="lib-btn-danger" />
+                    </HBox>
+                    <Label fx:id="resourceStatusLabel" text="未录入电子资源" styleClass="lib-subtitle" />
+                </VBox>
+
+                <VBox spacing="4.0">
+                    <Label text="馆藏总数" styleClass="lib-form-label" />
+                    <TextField fx:id="totalNumField" promptText="馆藏总数" styleClass="modern-input-field" />
+                </VBox>
+
+                <Label fx:id="msgLabel" managed="false" visible="false" styleClass="lib-msg-label" />
+
+                <HBox spacing="10.0">
+                    <Button text="新增" onAction="#handleNew" styleClass="btn-recharge-preset" />
+                    <Button text="保存" onAction="#handleSave" styleClass="btn-primary-action" />
+                    <Button text="清空" onAction="#handleClear" styleClass="btn-recharge-preset" />
+                </HBox>
+
+                <Button text="删除选中书目" onAction="#handleDelete" maxWidth="Infinity" styleClass="lib-btn-danger" />
+            </VBox>
+        </HBox>
+    </VBox>
+</ScrollPane>

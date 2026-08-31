@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane fx:id="rootScrollPane" fitToWidth="true" styleClass="profile-scroll-pane"
+            xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.vcampus.client.controller.ReturnProcessController">
+    <stylesheets>
+        <URL value="@../css/tokens.css" />
+        <URL value="@../css/base.css" />
+        <URL value="@../css/library.css" />
+    </stylesheets>
+
+    <VBox spacing="16.0" styleClass="lib-container">
+        <padding>
+            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+        </padding>
+
+        <!-- 顶部标题 -->
+        <HBox alignment="CENTER_LEFT" spacing="14.0" styleClass="profile-card">
+            <Button fx:id="backButton" text="返回" onAction="#handleBack" styleClass="btn-recharge-preset" />
+            <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                <Label text="办理归还" styleClass="lib-title" />
+                <Label text="输入借阅人学号 / 工号查询其借阅记录，并为其办理归还" styleClass="lib-subtitle" />
+            </VBox>
+        </HBox>
+
+        <!-- 借阅人查询 -->
+        <HBox alignment="CENTER_LEFT" spacing="14.0" styleClass="profile-card">
+            <Label text="借阅人学号 / 工号" styleClass="lib-form-label" />
+            <TextField fx:id="studentIdField" promptText="例如 213000001" styleClass="modern-input-field"
+                       HBox.hgrow="ALWAYS" onAction="#handleQuery" />
+            <Button text="查询借阅记录" onAction="#handleQuery" styleClass="btn-primary-action" />
+            <Label fx:id="msgLabel" managed="false" visible="false" styleClass="lib-msg-label" />
+        </HBox>
+
+        <!-- 借阅记录列表 -->
+        <VBox spacing="12.0" styleClass="profile-card">
+            <Label text="借阅记录" styleClass="lib-section-title" />
+            <TableView fx:id="borrowTable" prefHeight="440.0" styleClass="lib-table" />
+        </VBox>
+    </VBox>
+</ScrollPane>
