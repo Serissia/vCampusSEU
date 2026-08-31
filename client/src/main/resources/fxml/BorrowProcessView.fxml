@@ -26,6 +26,7 @@
 
         <!-- 顶部标题 -->
         <HBox alignment="CENTER_LEFT" spacing="14.0" styleClass="profile-card">
+            <Button fx:id="backButton" text="返回" onAction="#handleBack" styleClass="btn-recharge-preset" />
             <VBox spacing="4.0" HBox.hgrow="ALWAYS">
                 <Label text="办理借阅" styleClass="lib-title" />
                 <Label text="输入借阅人学号 / 工号，选择图书后办理借出" styleClass="lib-subtitle" />

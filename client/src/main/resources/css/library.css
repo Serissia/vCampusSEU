@@ -256,3 +256,29 @@
     -fx-font-weight: bold;
     -fx-font-size: 13px;
 }
+
+/* 管理员业务选择中心卡片 */
+.lib-hub-card {
+    -fx-background-color: -fx-bg-surface;
+    -fx-background-radius: 10px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-padding: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(31, 35, 41, 0.04), 10, 0, 0, 2);
+}
+
+.lib-hub-card:hover {
+    -fx-border-color: -fx-primary;
+    -fx-background-color: -fx-primary-light;
+}
+
+.lib-hub-icon {
+    -fx-fill: -fx-primary;
+}
+
+.lib-hub-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}

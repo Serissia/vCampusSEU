@@ -2,6 +2,7 @@ package com.vcampus.client.controller;
 
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.ScrollSpeedUtil;
+import com.vcampus.client.util.SvgIcons;
 import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
@@ -13,6 +14,9 @@ import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
@@ -22,6 +26,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
@@ -111,6 +116,12 @@ public class LibraryController {
      */
     public void initData(UserVO user) {
         this.currentUser = user;
+        if (currentUser != null && currentUser.getRole() == UserRole.ADMIN) {
+            // 管理员：进入虚拟图书馆后先展示业务选择中心
+            libraryRoot.getChildren().setAll(buildAdminHub());
+            return;
+        }
+
         boolean isRegularUser = currentUser != null
                 && (currentUser.getRole() == UserRole.STUDENT || currentUser.getRole() == UserRole.TEACHER);
 
@@ -316,6 +327,91 @@ public class LibraryController {
     private void navigateBack() {
         if (!navStack.isEmpty()) {
             showView(navStack.pop());
+        }
+    }
+
+    /**
+     * 构建管理员业务选择中心（唯一入口内的三级导航）。
+     */
+    private Node buildAdminHub() {
+        VBox container = new VBox(16.0);
+        container.setPadding(new Insets(10.0));
+        container.getStyleClass().add("lib-container");
+
+        HBox header = new HBox();
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.getStyleClass().add("profile-card");
+        VBox headerText = new VBox(4.0);
+        Label title = new Label("虚拟图书馆");
+        title.getStyleClass().add("lib-title");
+        Label subtitle = new Label("请选择需要办理的业务");
+        subtitle.getStyleClass().add("lib-subtitle");
+        headerText.getChildren().addAll(title, subtitle);
+        header.getChildren().add(headerText);
+
+        HBox cards = new HBox(16.0);
+        cards.getChildren().addAll(
+                createHubCard("办理借阅", "为读者办理图书借出", "book-open", this::showBorrowProcess),
+                createHubCard("办理归还", "为读者办理图书归还", "receipt", this::showReturnProcess),
+                createHubCard("图书管理", "维护馆藏图书与电子资源", "book", this::showLibraryManage));
+
+        container.getChildren().addAll(header, cards);
+        return container;
+    }
+
+    /**
+     * 创建业务选择卡片。
+     */
+    private Node createHubCard(String title, String desc, String iconKey, Runnable action) {
+        VBox card = new VBox(10.0);
+        card.setAlignment(Pos.CENTER);
+        card.setPrefWidth(200.0);
+        card.setMinHeight(150.0);
+        card.getStyleClass().add("lib-hub-card");
+
+        Label titleLabel = new Label(title);
+        titleLabel.getStyleClass().add("lib-hub-title");
+
+        Label descLabel = new Label(desc);
+        descLabel.getStyleClass().add("lib-subtitle");
+        descLabel.setWrapText(true);
+
+        card.getChildren().addAll(SvgIcons.createIcon(iconKey, 28.0, "lib-hub-icon"), titleLabel, descLabel);
+        card.setCursor(Cursor.HAND);
+        card.setOnMouseClicked(e -> action.run());
+        return card;
+    }
+
+    private void showBorrowProcess() {
+        loadSubView("/fxml/BorrowProcessView.fxml");
+    }
+
+    private void showReturnProcess() {
+        loadSubView("/fxml/ReturnProcessView.fxml");
+    }
+
+    private void showLibraryManage() {
+        loadSubView("/fxml/LibraryManageView.fxml");
+    }
+
+    /**
+     * 加载管理员子视图并注入返回回调，随后导航进入。
+     */
+    private void loadSubView(String fxmlPath) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            Node root = loader.load();
+            Object controller = loader.getController();
+            if (controller instanceof BorrowProcessController) {
+                ((BorrowProcessController) controller).initData(currentUser, this::navigateBack);
+            } else if (controller instanceof ReturnProcessController) {
+                ((ReturnProcessController) controller).initData(currentUser, this::navigateBack);
+            } else if (controller instanceof LibraryManageController) {
+                ((LibraryManageController) controller).initData(currentUser, this::navigateBack);
+            }
+            navigateTo(root);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

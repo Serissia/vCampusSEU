@@ -146,13 +146,13 @@ public class MainController {
             case STUDENT:
                 menus.add(new MenuItem("学生选课", "graduation-cap", "ACADEMIC_SELECT"));
                 menus.add(new MenuItem("我的成绩", "chart-bar", "ACADEMIC_GRADE"));
-                menus.add(new MenuItem("图书检索", "book-open", "LIBRARY"));
+                menus.add(new MenuItem("虚拟图书馆", "book-open", "LIBRARY"));
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
                 break;
             case TEACHER:
                 menus.add(new MenuItem("课程管理", "calendar-alt", "ACADEMIC_TEACHER"));
                 menus.add(new MenuItem("成绩登记", "edit", "ACADEMIC_GRADE_SUBMIT"));
-                menus.add(new MenuItem("图书检索", "book-open", "LIBRARY"));
+                menus.add(new MenuItem("虚拟图书馆", "book-open", "LIBRARY"));
                 break;
             case ACADEMIC_AFFAIRS_TEACHER:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
@@ -164,9 +164,7 @@ public class MainController {
                 break;
             case ADMIN:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
-                menus.add(new MenuItem("办理借阅", "book-open", "LIBRARY_BORROW_PROCESS"));
-                menus.add(new MenuItem("办理归还", "receipt", "LIBRARY_RETURN_PROCESS"));
-                menus.add(new MenuItem("图书管理", "book", "LIBRARY_MANAGE"));
+                menus.add(new MenuItem("虚拟图书馆", "book-open", "LIBRARY"));
                 menus.add(new MenuItem("超市管理", "store", "SHOP_MANAGE"));
                 menus.add(new MenuItem("用户权限", "user-shield", "ADMIN_USER"));
                 break;
@@ -235,42 +233,6 @@ public class MainController {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LibraryView.fxml"));
                 Node root = loader.load();
                 LibraryController controller = loader.getController();
-                controller.initData(currentUser);
-                return root;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        if ("LIBRARY_MANAGE".equals(moduleKey)) {
-            try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LibraryManageView.fxml"));
-                Node root = loader.load();
-                LibraryManageController controller = loader.getController();
-                controller.initData(currentUser);
-                return root;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        if ("LIBRARY_BORROW_PROCESS".equals(moduleKey)) {
-            try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/BorrowProcessView.fxml"));
-                Node root = loader.load();
-                BorrowProcessController controller = loader.getController();
-                controller.initData(currentUser);
-                return root;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        if ("LIBRARY_RETURN_PROCESS".equals(moduleKey)) {
-            try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ReturnProcessView.fxml"));
-                Node root = loader.load();
-                ReturnProcessController controller = loader.getController();
                 controller.initData(currentUser);
                 return root;
             } catch (IOException e) {

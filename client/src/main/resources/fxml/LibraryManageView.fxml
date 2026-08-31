@@ -27,6 +27,7 @@
 
         <!-- 顶部检索工具栏 -->
         <HBox alignment="CENTER_LEFT" spacing="14.0" styleClass="profile-card">
+            <Button fx:id="backButton" text="返回" onAction="#handleBack" styleClass="btn-recharge-preset" />
             <VBox spacing="4.0" HBox.hgrow="ALWAYS">
                 <Label text="图书管理" styleClass="lib-title" />
                 <Label text="维护馆藏图书信息，支持新增、编辑与删除" styleClass="lib-subtitle" />

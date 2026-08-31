@@ -2,6 +2,7 @@ package com.vcampus.client.controller;
 
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.ScrollSpeedUtil;
+import com.vcampus.client.util.SvgIcons;
 import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
@@ -56,6 +57,8 @@ public class ReturnProcessController {
     );
 
     @FXML
+    private Button backButton;
+    @FXML
     private ScrollPane rootScrollPane;
     @FXML
     private TextField studentIdField;
@@ -66,17 +69,28 @@ public class ReturnProcessController {
 
     private UserVO currentUser;
     private final SocketClient socketClient = new SocketClient();
+    private Runnable backAction;
 
     @FXML
     private void initialize() {
         if (rootScrollPane != null) {
             ScrollSpeedUtil.applyCustomScrollSpeed(rootScrollPane);
         }
+        backButton.setGraphic(SvgIcons.createIcon("arrow-left", 13, "back-icon"));
+        backButton.setGraphicTextGap(6.0);
         setupTable();
     }
 
-    public void initData(UserVO user) {
+    public void initData(UserVO user, Runnable backAction) {
         this.currentUser = user;
+        this.backAction = backAction;
+    }
+
+    @FXML
+    private void handleBack() {
+        if (backAction != null) {
+            backAction.run();
+        }
     }
 
     /**
