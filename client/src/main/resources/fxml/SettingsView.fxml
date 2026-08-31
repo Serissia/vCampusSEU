@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane fx:id="settingsScrollPane" fitToWidth="true" styleClass="settings-scroll-pane"
+            xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.vcampus.client.controller.SettingsController">
+    <stylesheets>
+        <URL value="@../css/tokens.css" />
+        <URL value="@../css/base.css" />
+        <URL value="@../css/settings.css" />
+    </stylesheets>
+
+    <VBox spacing="18.0" styleClass="settings-container">
+        <padding>
+            <Insets bottom="30.0" left="10.0" right="10.0" top="10.0" />
+        </padding>
+
+        <!-- 顶部 Banner 卡片 -->
+        <HBox alignment="CENTER_LEFT" spacing="20.0" styleClass="settings-card, settings-banner-card">
+            <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                <Label text="偏好设置" styleClass="settings-title-main" />
+                <Label text="自定义客户端外观、连接参数与交互行为，所有配置按账号独立持久化。" styleClass="settings-title-sub" />
+            </VBox>
+            <HBox alignment="CENTER_RIGHT" spacing="12.0">
+                <Button onAction="#handleResetDefaults" text="恢复默认" styleClass="btn-secondary-action" />
+                <Button onAction="#handleSaveSettings" text="保存并生效" styleClass="btn-primary-action" />
+            </HBox>
+        </HBox>
+
+        <!-- 卡片 1: 外观与个性化 -->
+        <VBox spacing="16.0" styleClass="settings-card">
+            <Label text="外观与主题" styleClass="card-section-title" />
+            <Separator />
+
+            <!-- 主题模式 -->
+            <VBox spacing="8.0">
+                <Label text="主题模式" styleClass="setting-item-label" />
+                <HBox spacing="28.0" alignment="CENTER_LEFT">
+                    <fx:define>
+                        <ToggleGroup fx:id="themeToggleGroup" />
+                    </fx:define>
+                    <RadioButton fx:id="themeLightRadio" text="浅色模式 (Light)" toggleGroup="$themeToggleGroup" selected="true" styleClass="modern-radio" />
+                    <RadioButton fx:id="themeDarkRadio" text="深色模式 (Dark)" toggleGroup="$themeToggleGroup" styleClass="modern-radio" />
+                    <RadioButton fx:id="themeSystemRadio" text="跟随系统 (System)" toggleGroup="$themeToggleGroup" styleClass="modern-radio" />
+                </HBox>
+            </VBox>
+
+            <!-- 强调色选择 -->
+            <VBox spacing="8.0">
+                <Label text="主题强调色" styleClass="setting-item-label" />
+                <HBox fx:id="colorPaletteGroup" spacing="14.0" alignment="CENTER_LEFT">
+                    <!-- 由 Controller 动态填充 -->
+                </HBox>
+            </VBox>
+        </VBox>
+
+        <!-- 卡片 2: 网络与连接 -->
+        <VBox spacing="16.0" styleClass="settings-card">
+            <Label text="网络与连接" styleClass="card-section-title" />
+            <Separator />
+
+            <HBox spacing="16.0" alignment="CENTER_LEFT">
+                <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                    <Label text="服务器 IP / 域名" styleClass="setting-item-label" />
+                    <TextField fx:id="serverHostField" promptText="127.0.0.1" styleClass="modern-input-field" />
+                </VBox>
+                <VBox spacing="6.0" prefWidth="160.0">
+                    <Label text="通信端口" styleClass="setting-item-label" />
+                    <TextField fx:id="serverPortField" promptText="8888" styleClass="modern-input-field" />
+                </VBox>
+                <VBox spacing="6.0" prefWidth="200.0">
+                    <Label text="连接超时 (毫秒)" styleClass="setting-item-label" />
+                    <TextField fx:id="connectTimeoutField" promptText="5000" styleClass="modern-input-field" />
+                </VBox>
+            </HBox>
+
+            <HBox alignment="CENTER_LEFT" spacing="12.0">
+                <Button onAction="#handleTestConnection" text="测试网络连接" styleClass="btn-secondary-action" />
+                <ProgressIndicator fx:id="testingSpinner" maxHeight="18.0" maxWidth="18.0" visible="false" />
+                <Label fx:id="testResultLabel" text="" styleClass="test-result-label" />
+            </HBox>
+        </VBox>
+
+        <!-- 卡片 3: 交互与常规行为 -->
+        <VBox spacing="16.0" styleClass="settings-card">
+            <Label text="交互与常规行为" styleClass="card-section-title" />
+            <Separator />
+
+            <!-- 滚动倍率 Slider -->
+            <VBox spacing="8.0">
+                <HBox alignment="CENTER_LEFT">
+                    <Label text="鼠标滚轮平滑加速度" styleClass="setting-item-label" />
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Label fx:id="scrollSpeedValueLabel" text="2.5x" styleClass="slider-value-badge" />
+                </HBox>
+                <Slider fx:id="scrollSpeedSlider" min="1.0" max="5.0" value="2.5" blockIncrement="0.5" majorTickUnit="1.0" minorTickCount="1" showTickMarks="true" />
+            </VBox>
+
+            <!-- 关闭窗口行为 -->
+            <VBox spacing="6.0">
+                <Label text="点击窗口关闭按钮时" styleClass="setting-item-label" />
+                <ComboBox fx:id="closeBehaviorCombo" prefWidth="380.0" styleClass="modern-combo-box" />
+            </VBox>
+
+            <!-- 记住卡号 -->
+            <CheckBox fx:id="rememberCardNumCheck" text="在登录页记住上次登录的一卡通号" styleClass="modern-checkbox" />
+        </VBox>
+
+        <!-- 卡片 4: 配置文件与存储 -->
+        <VBox spacing="16.0" styleClass="settings-card">
+            <Label text="配置文件与存储" styleClass="card-section-title" />
+            <Separator />
+
+            <VBox spacing="6.0">
+                <Label text="当前生效配置文件物理路径" styleClass="setting-item-label" />
+                <TextField fx:id="configFilePathField" editable="false" styleClass="modern-input-field, readonly-field" />
+            </VBox>
+
+            <HBox alignment="CENTER_LEFT" spacing="12.0">
+                <Button onAction="#handleOpenConfigDir" text="打开配置所在目录" styleClass="btn-secondary-action" />
+                <Button onAction="#handleReloadFromDisk" text="重新载入配置" styleClass="btn-secondary-action" />
+            </HBox>
+
+            <Label fx:id="statusMessageLabel" managed="false" visible="false" styleClass="status-message-label" />
+        </VBox>
+    </VBox>
+</ScrollPane>

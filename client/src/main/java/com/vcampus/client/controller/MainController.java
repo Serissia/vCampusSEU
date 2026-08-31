@@ -1,5 +1,6 @@
 package com.vcampus.client.controller;
 
+import com.vcampus.client.config.AppConfigManager;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.SvgIcons;
 import com.vcampus.common.vo.UserRole;
@@ -83,6 +84,9 @@ public class MainController {
      */
     public void initUserContext(UserVO user) {
         this.currentUser = user;
+        if (user != null) {
+            AppConfigManager.getInstance().switchUser(user.getAccountNumber());
+        }
         renderHeaderInfo();
         buildRoleBasedNavigation();
     }
@@ -226,6 +230,15 @@ public class MainController {
                 ProfileController controller = loader.getController();
                 controller.initData(currentUser, this);
                 return profileRoot;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if ("SETTINGS".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/SettingsView.fxml"));
+                return loader.load();
             } catch (IOException e) {
                 e.printStackTrace();
             }

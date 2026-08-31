@@ -1,0 +1,187 @@
+/* 设置界面 */
+
+/* 容器与卡片 */
+.settings-scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+.settings-scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.settings-card {
+    -fx-background-color: -fx-bg-surface;
+    -fx-background-radius: 10px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-padding: 22px;
+    -fx-effect: dropshadow(gaussian, rgba(31, 35, 41, 0.04), 10, 0, 0, 2);
+}
+
+.settings-banner-card {
+    -fx-background-color: linear-gradient(to right, #FFFFFF, -fx-bg-nav);
+}
+
+.settings-title-main {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.settings-title-sub {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.card-section-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.setting-item-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+/* 按钮样式 */
+.btn-primary-action {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6px;
+    -fx-padding: 8px 18px;
+    -fx-cursor: hand;
+}
+.btn-primary-action:hover {
+    -fx-background-color: -fx-primary-hover;
+}
+.btn-primary-action:pressed {
+    -fx-background-color: -fx-primary-pressed;
+}
+
+.btn-secondary-action {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-main;
+    -fx-padding: 7px 16px;
+    -fx-cursor: hand;
+}
+.btn-secondary-action:hover {
+    -fx-background-color: -fx-bg-nav;
+    -fx-border-color: -fx-text-disabled;
+}
+
+/* 输入框 & 只读框 */
+.modern-input-field {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-font-size: 13px;
+    -fx-padding: 8px 12px;
+    -fx-text-fill: -fx-text-main;
+    -fx-prompt-text-fill: -fx-text-disabled;
+}
+.modern-input-field:focused {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -fx-primary;
+}
+
+.modern-radio, .modern-checkbox {
+    -fx-text-fill: -fx-text-main;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+}
+
+.modern-radio .text, .modern-checkbox .text {
+    -fx-fill: -fx-text-main;
+}
+
+.modern-radio:selected, .modern-checkbox:selected {
+    -fx-text-fill: -fx-text-main;
+}
+
+.modern-radio .radio, .modern-checkbox .box {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+}
+
+.modern-checkbox .box {
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+}
+
+.modern-radio:hover .radio, .modern-checkbox:hover .box {
+    -fx-border-color: -fx-primary;
+}
+
+.modern-radio:selected .radio, .modern-checkbox:selected .box {
+    -fx-background-color: -fx-primary;
+    -fx-border-color: -fx-primary;
+}
+
+.modern-radio:selected .dot {
+    -fx-background-color: #FFFFFF;
+}
+
+.modern-checkbox:selected .mark {
+    -fx-background-color: #FFFFFF;
+}
+
+.readonly-field {
+    -fx-opacity: 0.85;
+    -fx-text-fill: -fx-text-muted;
+}
+
+/* 调色板圆圈 */
+.color-circle {
+    -fx-min-width: 26px;
+    -fx-min-height: 26px;
+    -fx-max-width: 26px;
+    -fx-max-height: 26px;
+    -fx-background-radius: 13px;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-border-radius: 13px;
+    -fx-border-width: 2px;
+}
+.color-circle.selected {
+    -fx-border-color: -fx-text-main;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 6, 0, 0, 1);
+}
+
+/* Slider & Badges */
+.slider-value-badge {
+    -fx-background-color: -fx-primary-light;
+    -fx-text-fill: -fx-primary;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4px;
+    -fx-padding: 2px 8px;
+}
+
+.test-result-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+.test-result-label.success {
+    -fx-text-fill: #2E7D32;
+}
+.test-result-label.fail {
+    -fx-text-fill: -fx-danger;
+}
+
+.status-message-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2E7D32;
+}
