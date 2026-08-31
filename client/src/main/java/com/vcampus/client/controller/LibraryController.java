@@ -351,9 +351,9 @@ public class LibraryController {
 
         HBox cards = new HBox(16.0);
         cards.getChildren().addAll(
-                createHubCard("办理借阅", "为读者办理图书借出", "book-open", this::showBorrowProcess),
-                createHubCard("办理归还", "为读者办理图书归还", "receipt", this::showReturnProcess),
-                createHubCard("图书管理", "维护馆藏图书与电子资源", "book", this::showLibraryManage));
+                createHubCard("办理借阅", "为读者办理图书借出", "borrow-in", this::showBorrowProcess),
+                createHubCard("办理归还", "为读者办理图书归还", "borrow-out", this::showReturnProcess),
+                createHubCard("图书管理", "维护馆藏图书与电子资源", "library-manage", this::showLibraryManage));
 
         container.getChildren().addAll(header, cards);
         return container;
