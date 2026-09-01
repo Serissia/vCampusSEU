@@ -20,7 +20,7 @@
 }
 
 .settings-banner-card {
-    -fx-background-color: linear-gradient(to right, #FFFFFF, -fx-bg-nav);
+    -fx-background-color: linear-gradient(to right, -fx-bg-surface, -fx-bg-nav);
 }
 
 .settings-title-main {
@@ -32,6 +32,18 @@
 .settings-title-sub {
     -fx-font-size: 13px;
     -fx-text-fill: -fx-text-muted;
+}
+
+/* 蒙版标签样式 */
+.setting-sub-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+/* 小字提示 */
+.setting-hint-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-disabled;
 }
 
 .card-section-title {
@@ -89,8 +101,9 @@
     -fx-text-fill: -fx-text-main;
     -fx-prompt-text-fill: -fx-text-disabled;
 }
+
 .modern-input-field:focused {
-    -fx-background-color: #FFFFFF;
+    -fx-background-color: -fx-bg-surface;
     -fx-border-color: -fx-primary;
 }
 

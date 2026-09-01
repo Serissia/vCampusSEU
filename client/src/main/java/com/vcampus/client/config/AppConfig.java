@@ -41,11 +41,28 @@ public class AppConfig implements Serializable {
     /**
      * 主题强调色 Hex 值
      */
-    private String accentColor = "#3370ff";
+    private String accentColor = "#487A32";
 
     /**
-     * 界面平滑滚动倍率
+     * 自定义背景图片绝对路径（为空表示无自定义背景）
      */
+    private String customBgPath = "";
+
+    /**
+     * 背景图片遮罩透明度 (0.0 ~ 1.0)
+     */
+    private double bgScrimOpacity = 0.25;
+
+    /**
+     * 是否启用莫奈自动取色
+     */
+    private boolean useMonetTheme = false;
+
+    /**
+     * 用户主动点击“莫奈取色”后保存的颜色，空表示未生成或已失效
+     */
+    private String savedMonetColor = "";
+
     private double scrollSpeedFactor = 2.5;
 
     /**
@@ -66,83 +83,45 @@ public class AppConfig implements Serializable {
     public AppConfig() {
     }
 
-    public String getCardNum() {
-        return cardNum;
-    }
+    public String getCardNum() { return cardNum; }
+    public void setCardNum(String cardNum) { this.cardNum = cardNum; }
 
-    public void setCardNum(String cardNum) {
-        this.cardNum = cardNum;
-    }
+    public String getServerHost() { return serverHost; }
+    public void setServerHost(String serverHost) { this.serverHost = serverHost; }
 
-    public String getServerHost() {
-        return serverHost;
-    }
+    public int getServerPort() { return serverPort; }
+    public void setServerPort(int serverPort) { this.serverPort = serverPort; }
 
-    public void setServerHost(String serverHost) {
-        this.serverHost = serverHost;
-    }
+    public int getConnectTimeoutMs() { return connectTimeoutMs; }
+    public void setConnectTimeoutMs(int connectTimeoutMs) { this.connectTimeoutMs = connectTimeoutMs; }
 
-    public int getServerPort() {
-        return serverPort;
-    }
+    public String getThemeMode() { return themeMode; }
+    public void setThemeMode(String themeMode) { this.themeMode = themeMode; }
 
-    public void setServerPort(int serverPort) {
-        this.serverPort = serverPort;
-    }
+    public String getAccentColor() { return accentColor; }
+    public void setAccentColor(String accentColor) { this.accentColor = accentColor; }
 
-    public int getConnectTimeoutMs() {
-        return connectTimeoutMs;
-    }
+    public String getCustomBgPath() { return customBgPath; }
+    public void setCustomBgPath(String customBgPath) { this.customBgPath = customBgPath; }
 
-    public void setConnectTimeoutMs(int connectTimeoutMs) {
-        this.connectTimeoutMs = connectTimeoutMs;
-    }
+    public double getBgScrimOpacity() { return bgScrimOpacity; }
+    public void setBgScrimOpacity(double bgScrimOpacity) { this.bgScrimOpacity = bgScrimOpacity; }
 
-    public String getThemeMode() {
-        return themeMode;
-    }
+    public boolean isUseMonetTheme() { return useMonetTheme; }
+    public void setUseMonetTheme(boolean useMonetTheme) { this.useMonetTheme = useMonetTheme; }
 
-    public void setThemeMode(String themeMode) {
-        this.themeMode = themeMode;
-    }
+    public String getSavedMonetColor() { return savedMonetColor; }
+    public void setSavedMonetColor(String savedMonetColor) { this.savedMonetColor = savedMonetColor; }
 
-    public String getAccentColor() {
-        return accentColor;
-    }
+    public double getScrollSpeedFactor() { return scrollSpeedFactor; }
+    public void setScrollSpeedFactor(double scrollSpeedFactor) { this.scrollSpeedFactor = scrollSpeedFactor; }
 
-    public void setAccentColor(String accentColor) {
-        this.accentColor = accentColor;
-    }
+    public String getCloseBehavior() { return closeBehavior; }
+    public void setCloseBehavior(String closeBehavior) { this.closeBehavior = closeBehavior; }
 
-    public double getScrollSpeedFactor() {
-        return scrollSpeedFactor;
-    }
+    public boolean isRememberCardNum() { return rememberCardNum; }
+    public void setRememberCardNum(boolean rememberCardNum) { this.rememberCardNum = rememberCardNum; }
 
-    public void setScrollSpeedFactor(double scrollSpeedFactor) {
-        this.scrollSpeedFactor = scrollSpeedFactor;
-    }
-
-    public String getCloseBehavior() {
-        return closeBehavior;
-    }
-
-    public void setCloseBehavior(String closeBehavior) {
-        this.closeBehavior = closeBehavior;
-    }
-
-    public boolean isRememberCardNum() {
-        return rememberCardNum;
-    }
-
-    public void setRememberCardNum(boolean rememberCardNum) {
-        this.rememberCardNum = rememberCardNum;
-    }
-
-    public String getLastCardNum() {
-        return lastCardNum;
-    }
-
-    public void setLastCardNum(String lastCardNum) {
-        this.lastCardNum = lastCardNum;
-    }
+    public String getLastCardNum() { return lastCardNum; }
+    public void setLastCardNum(String lastCardNum) { this.lastCardNum = lastCardNum; }
 }

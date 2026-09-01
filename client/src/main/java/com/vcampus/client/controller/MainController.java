@@ -3,8 +3,10 @@ package com.vcampus.client.controller;
 import com.vcampus.client.config.AppConfigManager;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.SvgIcons;
+import com.vcampus.client.util.ThemeManager;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
@@ -89,6 +91,13 @@ public class MainController {
         }
         renderHeaderInfo();
         buildRoleBasedNavigation();
+
+        // 应用主题样式
+        Platform.runLater(() -> {
+            if (contentArea != null && contentArea.getScene() != null) {
+                ThemeManager.applyTheme(contentArea.getScene());
+            }
+        });
     }
 
     /**

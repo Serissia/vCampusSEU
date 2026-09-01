@@ -3,11 +3,14 @@ package com.vcampus.client.controller;
 import com.vcampus.client.config.AppConfig;
 import com.vcampus.client.config.AppConfigManager;
 import com.vcampus.client.config.ConfigPathUtil;
+import com.vcampus.client.util.MonetColorUtil;
 import com.vcampus.client.util.ScrollSpeedUtil;
+import com.vcampus.client.util.ThemeManager;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -19,6 +22,9 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 
 import java.awt.Desktop;
 import java.io.File;
@@ -26,7 +32,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -50,7 +55,7 @@ public class SettingsController {
             2,
             60L,
             TimeUnit.SECONDS,
-            new LinkedBlockingQueue<Runnable>(20),
+            new LinkedBlockingQueue<>(20),
             new ThreadFactory() {
                 private final AtomicInteger threadNumber = new AtomicInteger(1);
 
@@ -65,57 +70,44 @@ public class SettingsController {
     );
 
     private final AtomicBoolean connectionCheckRunning = new AtomicBoolean(false);
+    /** 阻止初始化期间触发预览事件覆盖配置 */
+    private boolean isInitializing = true;
 
-    @FXML
-    private ScrollPane settingsScrollPane;
+    @FXML private ScrollPane settingsScrollPane;
 
     // --- 主题与外观 ---
+    @FXML private ToggleGroup themeToggleGroup;
+    @FXML private RadioButton themeLightRadio;
+    @FXML private RadioButton themeDarkRadio;
+    @FXML private RadioButton themeSystemRadio;
+    @FXML private HBox colorPaletteGroup;
 
-    @FXML
-    private ToggleGroup themeToggleGroup;
-    @FXML
-    private RadioButton themeLightRadio;
-    @FXML
-    private RadioButton themeDarkRadio;
-    @FXML
-    private RadioButton themeSystemRadio;
-    @FXML
-    private HBox colorPaletteGroup;
+    @FXML private Button monetExtractBtn;
+    @FXML private StackPane monetColorContainer;
+    @FXML private Region monetColorCircle;
+    @FXML private Label monetColorTip;
+
+    @FXML private TextField bgPathField;
+    @FXML private VBox bgOpacityBox;
+    @FXML private Slider bgOpacitySlider;
+    @FXML private Label bgOpacityValueLabel;
 
     // --- 网络通信 ---
-
-    @FXML
-    private TextField serverHostField;
-    @FXML
-    private TextField serverPortField;
-    @FXML
-    private TextField connectTimeoutField;
-    @FXML
-    private ProgressIndicator testingSpinner;
-    @FXML
-    private Label testResultLabel;
+    @FXML private TextField serverHostField;
+    @FXML private TextField serverPortField;
+    @FXML private TextField connectTimeoutField;
+    @FXML private ProgressIndicator testingSpinner;
+    @FXML private Label testResultLabel;
 
     // --- 交互与行为 ---
+    @FXML private Slider scrollSpeedSlider;
+    @FXML private Label scrollSpeedValueLabel;
+    @FXML private ComboBox<String> closeBehaviorCombo;
+    @FXML private CheckBox rememberCardNumCheck;
 
-    @FXML
-    private Slider scrollSpeedSlider;
-    @FXML
-    private Label scrollSpeedValueLabel;
-    @FXML
-    private ComboBox<String> closeBehaviorCombo;
-    @FXML
-    private CheckBox rememberCardNumCheck;
+    @FXML private TextField configFilePathField;
+    @FXML private Label statusMessageLabel;
 
-    // --- 本地存储 ---
-
-    @FXML
-    private TextField configFilePathField;
-    @FXML
-    private Label statusMessageLabel;
-
-    /**
-     * 预设色彩：东南绿、飞书蓝、活力橙、优雅紫、经典黑
-     */
     private static final Map<String, String> PRESET_COLORS = new LinkedHashMap<>();
 
     static {
@@ -127,6 +119,8 @@ public class SettingsController {
     }
 
     private String selectedAccentColor = "#487A32";
+    private String currentCustomBgPath = "";
+    private String currentMonetColor = "";
 
     @FXML
     public void initialize() {
@@ -135,10 +129,27 @@ public class SettingsController {
             ScrollSpeedUtil.applyCustomScrollSpeed(settingsScrollPane);
         }
 
+        monetColorContainer.managedProperty().bind(monetColorContainer.visibleProperty());
+        monetColorTip.managedProperty().bind(monetColorTip.visibleProperty());
+
         initCloseBehaviorOptions();
         initColorPalette();
-        initSliderListener();
+        initMonetCircleAction();
+
+        // 必须先加载配置，再绑定监听器，防止互相覆盖
         loadCurrentConfigToUI();
+
+        initThemeToggleListener();
+        initSliderListeners();
+        isInitializing = false;
+    }
+
+    private void initThemeToggleListener() {
+        themeToggleGroup.selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                previewTheme();
+            }
+        });
     }
 
     /**
@@ -165,14 +176,35 @@ public class SettingsController {
             circle.setOnMouseClicked(event -> {
                 selectedAccentColor = hex;
                 updatePaletteSelection();
+                previewTheme();
             });
             colorPaletteGroup.getChildren().add(circle);
         }
     }
 
-    /**
-     * 更新调色板高亮状态
-     */
+    private void initMonetCircleAction() {
+        monetColorCircle.setOnMouseClicked(event -> {
+            if (currentMonetColor != null && !currentMonetColor.isEmpty()) {
+                selectedAccentColor = currentMonetColor;
+                updatePaletteSelection();
+                previewTheme();
+            }
+        });
+    }
+
+    private void initSliderListeners() {
+        scrollSpeedSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            double formatted = Math.round(newVal.doubleValue() * 10.0) / 10.0;
+            scrollSpeedValueLabel.setText(formatted + "x");
+        });
+
+        bgOpacitySlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            int percent = (int) Math.round(newVal.doubleValue() * 100);
+            bgOpacityValueLabel.setText(percent + "%");
+            previewTheme();
+        });
+    }
+
     private void updatePaletteSelection() {
         for (int i = 0; i < colorPaletteGroup.getChildren().size(); i++) {
             Region circle = (Region) colorPaletteGroup.getChildren().get(i);
@@ -182,16 +214,10 @@ public class SettingsController {
                 circle.getStyleClass().add("selected");
             }
         }
-    }
-
-    /**
-     * 绑定滚动倍率 Slider 显示
-     */
-    private void initSliderListener() {
-        scrollSpeedSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            double formatted = Math.round(newVal.doubleValue() * 10.0) / 10.0;
-            scrollSpeedValueLabel.setText(formatted + "x");
-        });
+        monetColorCircle.getStyleClass().remove("selected");
+        if (selectedAccentColor.equalsIgnoreCase(currentMonetColor) && !currentMonetColor.isEmpty()) {
+            monetColorCircle.getStyleClass().add("selected");
+        }
     }
 
     /**
@@ -199,6 +225,11 @@ public class SettingsController {
      */
     public void loadCurrentConfigToUI() {
         AppConfig config = AppConfigManager.getInstance().getConfig();
+
+        // 将状态安全载入变量（避免受 UI 默认值影响）
+        selectedAccentColor = config.getAccentColor();
+        currentCustomBgPath = config.getCustomBgPath();
+        currentMonetColor = config.getSavedMonetColor() != null ? config.getSavedMonetColor() : "";
 
         // 外观
         String themeMode = config.getThemeMode();
@@ -209,8 +240,14 @@ public class SettingsController {
         } else {
             themeLightRadio.setSelected(true);
         }
-        selectedAccentColor = config.getAccentColor();
-        updatePaletteSelection();
+
+        bgPathField.setText(currentCustomBgPath != null ? currentCustomBgPath : "");
+
+        double opacity = config.getBgScrimOpacity();
+        bgOpacitySlider.setValue(opacity);
+        bgOpacityValueLabel.setText((int) Math.round(opacity * 100) + "%");
+
+        refreshMonetState();
 
         // 网络
         serverHostField.setText(config.getServerHost());
@@ -220,11 +257,7 @@ public class SettingsController {
         // 交互
         scrollSpeedSlider.setValue(config.getScrollSpeedFactor());
         scrollSpeedValueLabel.setText(config.getScrollSpeedFactor() + "x");
-        if ("minimize".equalsIgnoreCase(config.getCloseBehavior())) {
-            closeBehaviorCombo.getSelectionModel().select(1);
-        } else {
-            closeBehaviorCombo.getSelectionModel().select(0);
-        }
+        closeBehaviorCombo.getSelectionModel().select("minimize".equalsIgnoreCase(config.getCloseBehavior()) ? 1 : 0);
         rememberCardNumCheck.setSelected(config.isRememberCardNum());
 
         // 存储路径
@@ -233,8 +266,104 @@ public class SettingsController {
     }
 
     /**
-     * 保存偏好设置并即时应用生效
+     * 独立校验背景图并控制莫奈按钮组件显示
      */
+    private void refreshMonetState() {
+        if (currentCustomBgPath != null && !currentCustomBgPath.trim().isEmpty()) {
+            File bgFile = new File(currentCustomBgPath);
+            if (bgFile.exists() && bgFile.isFile()) {
+                monetExtractBtn.setDisable(false);
+                if (currentMonetColor != null && !currentMonetColor.isEmpty()) {
+                    monetColorCircle.setStyle("-fx-background-color: " + currentMonetColor + ";");
+                }
+                monetColorContainer.setVisible(currentMonetColor != null && !currentMonetColor.isEmpty());
+                monetColorTip.setVisible(currentMonetColor != null && !currentMonetColor.isEmpty());
+                updatePaletteSelection();
+                return;
+            }
+        }
+        // 无有效图片时，禁用按钮、隐藏圆圈
+        currentMonetColor = "";
+        monetExtractBtn.setDisable(true);
+        monetColorContainer.setVisible(false);
+        monetColorTip.setVisible(false);
+        updatePaletteSelection();
+    }
+
+    @FXML
+    private void handleChooseBackground() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("选择自定义背景图片");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("图像文件 (*.jpg, *.png, *.jpeg)", "*.jpg", "*.png", "*.jpeg")
+        );
+        File selectedFile = fileChooser.showOpenDialog(settingsScrollPane.getScene().getWindow());
+        if (selectedFile != null) {
+            currentCustomBgPath = selectedFile.getAbsolutePath();
+            selectedAccentColor = PRESET_COLORS.values().iterator().next();
+            currentMonetColor = "";
+            bgPathField.setText(currentCustomBgPath);
+            AppConfigManager.getInstance().getConfig().setSavedMonetColor("");
+
+            // 仅解锁莫奈按钮状态，让用户自己选择是否取色，不覆盖当前配置颜色
+            refreshMonetState();
+            previewTheme();
+        }
+    }
+
+    @FXML
+    private void handleExtractMonetColor() {
+        if (currentCustomBgPath != null && !currentCustomBgPath.trim().isEmpty()) {
+            File bgFile = new File(currentCustomBgPath);
+            if (bgFile.exists() && bgFile.isFile()) {
+                currentMonetColor = MonetColorUtil.extractSeedColor(bgFile);
+                monetColorCircle.setStyle("-fx-background-color: " + currentMonetColor + ";");
+                monetColorContainer.setVisible(true);
+                monetColorTip.setVisible(true);
+                AppConfigManager.getInstance().getConfig().setSavedMonetColor(currentMonetColor);
+                selectedAccentColor = currentMonetColor;
+                updatePaletteSelection();
+                previewTheme();
+            }
+        }
+    }
+
+    @FXML
+    private void handleClearBackground() {
+        currentCustomBgPath = "";
+        selectedAccentColor = PRESET_COLORS.values().iterator().next();
+        currentMonetColor = "";
+        bgPathField.clear();
+        AppConfigManager.getInstance().getConfig().setSavedMonetColor("");
+        refreshMonetState();
+        previewTheme();
+    }
+
+
+    private void previewTheme() {
+        if (isInitializing) {
+            return; // 阻止初始化相互打架
+        }
+
+        AppConfig config = AppConfigManager.getInstance().getConfig();
+        config.setAccentColor(selectedAccentColor);
+
+        if (themeDarkRadio.isSelected()) {
+            config.setThemeMode("dark");
+        } else if (themeSystemRadio.isSelected()) {
+            config.setThemeMode("system");
+        } else {
+            config.setThemeMode("light");
+        }
+
+        config.setCustomBgPath(currentCustomBgPath);
+        config.setBgScrimOpacity(bgOpacitySlider.getValue());
+
+        if (settingsScrollPane != null && settingsScrollPane.getScene() != null) {
+            ThemeManager.applyTheme(settingsScrollPane.getScene());
+        }
+    }
+
     @FXML
     private void handleSaveSettings() {
         try {
@@ -251,6 +380,7 @@ public class SettingsController {
             config.setServerHost(host);
             config.setServerPort(port);
             config.setConnectTimeoutMs(timeout);
+
             if (themeDarkRadio.isSelected()) {
                 config.setThemeMode("dark");
             } else if (themeSystemRadio.isSelected()) {
@@ -258,21 +388,23 @@ public class SettingsController {
             } else {
                 config.setThemeMode("light");
             }
+
             config.setAccentColor(selectedAccentColor);
+            config.setCustomBgPath(currentCustomBgPath);
+            config.setBgScrimOpacity(bgOpacitySlider.getValue());
+            config.setSavedMonetColor(currentMonetColor != null ? currentMonetColor : "");
 
             double speedFactor = Math.round(scrollSpeedSlider.getValue() * 10.0) / 10.0;
             config.setScrollSpeedFactor(speedFactor);
             config.setCloseBehavior(closeBehaviorCombo.getSelectionModel().getSelectedIndex() == 1 ? "minimize" : "exit");
             config.setRememberCardNum(rememberCardNumCheck.isSelected());
 
-            // 1. 持久化到 JSON 文件
             boolean ok = AppConfigManager.getInstance().saveConfig();
-
-            // 2. 动态更新内存中运行时的全局变量
             ScrollSpeedUtil.SPEED_MULTIPLIER.set(speedFactor);
 
             if (ok) {
-                showStatusMessage("偏好设置已成功保存并立即生效！");
+                previewTheme();
+                showStatusMessage("偏好设置与个性化壁纸已成功保存！");
             } else {
                 showAlert("保存受限", "保存失败，请检查运行目录写权限。", Alert.AlertType.ERROR);
             }
@@ -355,14 +487,21 @@ public class SettingsController {
         config.setConnectTimeoutMs(defaultConfig.getConnectTimeoutMs());
         config.setThemeMode(defaultConfig.getThemeMode());
         config.setAccentColor(defaultConfig.getAccentColor());
+        config.setCustomBgPath(defaultConfig.getCustomBgPath());
+        config.setBgScrimOpacity(defaultConfig.getBgScrimOpacity());
+        config.setSavedMonetColor(defaultConfig.getSavedMonetColor());
         config.setScrollSpeedFactor(defaultConfig.getScrollSpeedFactor());
         config.setCloseBehavior(defaultConfig.getCloseBehavior());
         config.setRememberCardNum(defaultConfig.isRememberCardNum());
 
         AppConfigManager.getInstance().saveConfig();
         ScrollSpeedUtil.SPEED_MULTIPLIER.set(defaultConfig.getScrollSpeedFactor());
-        loadCurrentConfigToUI();
 
+        isInitializing = true;
+        loadCurrentConfigToUI();
+        isInitializing = false;
+
+        previewTheme();
         showStatusMessage("已恢复为系统默认配置！");
     }
 
@@ -396,7 +535,12 @@ public class SettingsController {
     private void handleReloadFromDisk() {
         AppConfig config = AppConfigManager.getInstance().getConfig();
         AppConfigManager.getInstance().switchUser(config.getCardNum());
+
+        isInitializing = true;
         loadCurrentConfigToUI();
+        isInitializing = false;
+
+        previewTheme();
         showStatusMessage("已重新自本地磁盘载入配置！");
     }
 

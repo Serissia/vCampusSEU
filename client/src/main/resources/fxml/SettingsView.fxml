@@ -17,6 +17,7 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
+<?import javafx.scene.layout.StackPane?>
 <ScrollPane fx:id="settingsScrollPane" fitToWidth="true" styleClass="settings-scroll-pane"
             xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.vcampus.client.controller.SettingsController">
@@ -55,18 +56,46 @@
                     <fx:define>
                         <ToggleGroup fx:id="themeToggleGroup" />
                     </fx:define>
-                    <RadioButton fx:id="themeLightRadio" text="浅色模式 (Light)" toggleGroup="$themeToggleGroup" selected="true" styleClass="modern-radio" />
+                    <RadioButton fx:id="themeLightRadio" text="浅色模式 (Light)" toggleGroup="$themeToggleGroup" styleClass="modern-radio" />
                     <RadioButton fx:id="themeDarkRadio" text="深色模式 (Dark)" toggleGroup="$themeToggleGroup" styleClass="modern-radio" />
                     <RadioButton fx:id="themeSystemRadio" text="跟随系统 (System)" toggleGroup="$themeToggleGroup" styleClass="modern-radio" />
                 </HBox>
             </VBox>
 
-            <!-- 强调色选择 -->
+            <!-- 主题强调色与莫奈取色 -->
             <VBox spacing="8.0">
                 <Label text="主题强调色" styleClass="setting-item-label" />
-                <HBox fx:id="colorPaletteGroup" spacing="14.0" alignment="CENTER_LEFT">
-                    <!-- 由 Controller 动态填充 -->
+                <HBox spacing="14.0" alignment="CENTER_LEFT">
+                    <!-- 预设色盘 -->
+                    <HBox fx:id="colorPaletteGroup" spacing="12.0" alignment="CENTER_LEFT" />
+                    <Separator orientation="VERTICAL" maxHeight="20.0" />
+                    <!-- 莫奈衍生色按钮与预览圆圈 -->
+                    <Button fx:id="monetExtractBtn" onAction="#handleExtractMonetColor" text="莫奈取色" styleClass="btn-secondary-action" />
+                    <StackPane fx:id="monetColorContainer" alignment="CENTER">
+                        <Region fx:id="monetColorCircle" styleClass="color-circle" />
+                    </StackPane>
+                    <Label fx:id="monetColorTip" text="壁纸衍生色" styleClass="setting-hint-label" />
                 </HBox>
+            </VBox>
+
+            <!-- 个性化壁纸 -->
+            <VBox spacing="10.0">
+                <Label text="个性化壁纸" styleClass="setting-item-label" />
+                <HBox spacing="12.0" alignment="CENTER_LEFT">
+                    <TextField fx:id="bgPathField" promptText="未设置自定义壁纸" editable="false" HBox.hgrow="ALWAYS" styleClass="modern-input-field, readonly-field" />
+                    <Button onAction="#handleChooseBackground" text="选择壁纸" styleClass="btn-secondary-action" />
+                    <Button onAction="#handleClearBackground" text="清除壁纸" styleClass="btn-secondary-action" />
+                </HBox>
+
+                <!-- 遮罩透明度调节 -->
+                <VBox fx:id="bgOpacityBox" spacing="6.0">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="壁纸蒙版浓度 (遮罩不透明度)" styleClass="setting-sub-label" />
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Label fx:id="bgOpacityValueLabel" text="25%" styleClass="slider-value-badge" />
+                    </HBox>
+                    <Slider fx:id="bgOpacitySlider" min="0.0" max="0.8" value="0.25" blockIncrement="0.05" />
+                </VBox>
             </VBox>
         </VBox>
 

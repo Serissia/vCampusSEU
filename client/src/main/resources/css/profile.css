@@ -21,7 +21,7 @@
 
 /* 顶部 Banner 卡片 */
 .profile-banner-card {
-    -fx-background-color: linear-gradient(to right, #FFFFFF, -fx-bg-nav);
+    -fx-background-color: linear-gradient(to right, -fx-bg-surface, -fx-bg-nav);
 }
 
 .profile-avatar-large {
@@ -124,7 +124,7 @@
 }
 
 .modern-input-field:focused {
-    -fx-background-color: #FFFFFF;
+    -fx-background-color: -fx-bg-surface;
     -fx-border-color: -fx-primary;
     -fx-effect: dropshadow(gaussian, rgba(72, 122, 50, 0.2), 6, 0, 0, 0);
 }
