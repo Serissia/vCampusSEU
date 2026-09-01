@@ -31,7 +31,7 @@ import java.util.List;
 /**
  * 主界面主控制器，负责侧边导航鉴权、业务面板挂载与全局上下文调度。
  *
- * @author Serissia
+ * @author Serissia, GGbongy
  */
 public class MainController {
 
@@ -158,21 +158,17 @@ public class MainController {
             case STUDENT:
                 menus.add(new MenuItem("学生选课", "graduation-cap", "ACADEMIC_SELECT"));
                 menus.add(new MenuItem("我的成绩", "chart-bar", "ACADEMIC_GRADE"));
-                menus.add(new MenuItem("图书借阅", "book-open", "LIBRARY"));
+                menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
                 break;
             case TEACHER:
                 menus.add(new MenuItem("课程管理", "calendar-alt", "ACADEMIC_TEACHER"));
                 menus.add(new MenuItem("成绩登记", "edit", "ACADEMIC_GRADE_SUBMIT"));
-                menus.add(new MenuItem("图书检索", "book-open", "LIBRARY"));
+                menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 break;
             case ACADEMIC_AFFAIRS_TEACHER:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
                 menus.add(new MenuItem("开课审批", "edit", "ACADEMIC_APPROVE"));
-                break;
-            case LIBRARIAN:
-                menus.add(new MenuItem("图书采编", "book", "LIBRARY_MANAGE"));
-                menus.add(new MenuItem("借还审核", "receipt", "LIBRARY_BORROW_MANAGE"));
                 break;
             case STORE_MANAGER:
                 menus.add(new MenuItem("商品库存", "boxes", "SHOP_MANAGE"));
@@ -180,7 +176,7 @@ public class MainController {
                 break;
             case ADMIN:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
-                menus.add(new MenuItem("图书管理", "book", "LIBRARY_MANAGE"));
+                menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 menus.add(new MenuItem("超市管理", "store", "SHOP_MANAGE"));
                 menus.add(new MenuItem("用户权限", "user-shield", "ADMIN_USER"));
                 break;
@@ -252,6 +248,18 @@ public class MainController {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/SettingsView.fxml"));
                 return loader.load();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if ("LIBRARY".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LibraryView.fxml"));
+                Node root = loader.load();
+                LibraryController controller = loader.getController();
+                controller.initData(currentUser);
+                return root;
             } catch (IOException e) {
                 e.printStackTrace();
             }

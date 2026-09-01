@@ -1,6 +1,7 @@
 target/
 out/
 /config/
+/ebooks/
 /log.txt
 /server/src/main/resources/db.properties
 !/server/src/main/resources/db.properties.default
