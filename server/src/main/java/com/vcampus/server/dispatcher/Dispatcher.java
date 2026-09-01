@@ -68,6 +68,10 @@ public class Dispatcher {
                     response.setData(courseService.queryCourses(String.valueOf(request.getData())));
                     response.setCode(ResponseCode.SUCCESS);
                     break;
+                case HEARTBEAT:
+                    response.setCode(ResponseCode.SUCCESS);
+                    response.setData("pong");
+                    break;
                 case COURSE_SELECT:
                 case COURSE_DROP:
                     response.setCode(handleSelection(request));

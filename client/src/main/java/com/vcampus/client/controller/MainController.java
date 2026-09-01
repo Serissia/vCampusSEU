@@ -214,6 +214,10 @@ public class MainController {
      * @param activeBtn 当前激活按钮
      */
     private void switchModule(String moduleKey, Button activeBtn) {
+        if (contentArea != null && contentArea.getScene() != null) {
+            ThemeManager.applyTheme(contentArea.getScene());
+        }
+
         for (Button btn : navButtons) {
             btn.getStyleClass().remove("active");
         }

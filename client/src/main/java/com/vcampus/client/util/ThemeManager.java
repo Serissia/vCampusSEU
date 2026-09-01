@@ -72,6 +72,54 @@ public final class ThemeManager {
         applyWallpaper(scene, config, isDark);
     }
 
+    public static void applyTheme(Scene scene, AppConfig config) {
+        if (scene == null || scene.getRoot() == null || config == null) {
+            return;
+        }
+
+        Parent root = scene.getRoot();
+
+        String primary = config.getAccentColor();
+        String primaryHover = MonetColorUtil.getHoverColor(primary);
+        String primaryPressed = MonetColorUtil.getPressedColor(primary);
+        String primaryLight = MonetColorUtil.getLightContainerColor(primary);
+
+        boolean isDark = false;
+        if ("dark".equalsIgnoreCase(config.getThemeMode())) {
+            isDark = true;
+        } else if ("system".equalsIgnoreCase(config.getThemeMode())) {
+            isDark = isSystemInDarkMode();
+        }
+
+        StringBuilder cssVars = new StringBuilder();
+        cssVars.append("-fx-primary: ").append(primary).append(";");
+        cssVars.append("-fx-primary-hover: ").append(primaryHover).append(";");
+        cssVars.append("-fx-primary-pressed: ").append(primaryPressed).append(";");
+        cssVars.append("-fx-primary-light: ").append(primaryLight).append(";");
+
+        if (isDark) {
+            cssVars.append("-fx-bg-base: #1E1F22;");
+            cssVars.append("-fx-bg-surface: #2B2D30;");
+            cssVars.append("-fx-bg-nav: #26282B;");
+            cssVars.append("-fx-text-main: #DFE1E5;");
+            cssVars.append("-fx-text-muted: #9DA0A8;");
+            cssVars.append("-fx-text-disabled: #6F737A;");
+            cssVars.append("-fx-border-base: #393B40;");
+        } else {
+            cssVars.append("-fx-bg-base: #F7F8FA;");
+            cssVars.append("-fx-bg-surface: #FFFFFF;");
+            cssVars.append("-fx-bg-nav: #F2F3F5;");
+            cssVars.append("-fx-text-main: #1F2329;");
+            cssVars.append("-fx-text-muted: #646A73;");
+            cssVars.append("-fx-text-disabled: #8F959E;");
+            cssVars.append("-fx-border-base: #DEE0E3;");
+        }
+
+        root.setStyle(cssVars.toString());
+
+        applyWallpaper(scene, config, isDark);
+    }
+
     public static boolean isSystemInDarkMode() {
         String os = System.getProperty("os.name").toLowerCase();
         if (os.contains("win")) {

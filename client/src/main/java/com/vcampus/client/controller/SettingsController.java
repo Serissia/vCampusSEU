@@ -3,9 +3,12 @@ package com.vcampus.client.controller;
 import com.vcampus.client.config.AppConfig;
 import com.vcampus.client.config.AppConfigManager;
 import com.vcampus.client.config.ConfigPathUtil;
+import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.MonetColorUtil;
 import com.vcampus.client.util.ScrollSpeedUtil;
 import com.vcampus.client.util.ThemeManager;
+import com.vcampus.common.message.Message;
+import com.vcampus.common.message.MessageType;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -28,8 +31,6 @@ import javafx.stage.FileChooser;
 
 import java.awt.Desktop;
 import java.io.File;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -66,7 +67,7 @@ public class SettingsController {
                     return thread;
                 }
             },
-            new ThreadPoolExecutor.CallerRunsPolicy()
+            new ThreadPoolExecutor.DiscardPolicy()
     );
 
     private final AtomicBoolean connectionCheckRunning = new AtomicBoolean(false);
@@ -121,6 +122,29 @@ public class SettingsController {
     private String selectedAccentColor = "#487A32";
     private String currentCustomBgPath = "";
     private String currentMonetColor = "";
+
+    /**
+     * 构建一个临时的预览配置对象，避免直接修改全局配置
+     */
+    private AppConfig buildPreviewConfig() {
+        AppConfig source = AppConfigManager.getInstance().getConfig();
+        AppConfig preview = new AppConfig();
+        preview.setCardNum(source.getCardNum());
+        preview.setServerHost(source.getServerHost());
+        preview.setServerPort(source.getServerPort());
+        preview.setConnectTimeoutMs(source.getConnectTimeoutMs());
+        preview.setThemeMode(source.getThemeMode());
+        preview.setAccentColor(source.getAccentColor());
+        preview.setCustomBgPath(source.getCustomBgPath());
+        preview.setBgScrimOpacity(source.getBgScrimOpacity());
+        preview.setUseMonetTheme(source.isUseMonetTheme());
+        preview.setSavedMonetColor(source.getSavedMonetColor());
+        preview.setScrollSpeedFactor(source.getScrollSpeedFactor());
+        preview.setCloseBehavior(source.getCloseBehavior());
+        preview.setRememberCardNum(source.isRememberCardNum());
+        preview.setLastCardNum(source.getLastCardNum());
+        return preview;
+    }
 
     @FXML
     public void initialize() {
@@ -303,8 +327,6 @@ public class SettingsController {
             selectedAccentColor = PRESET_COLORS.values().iterator().next();
             currentMonetColor = "";
             bgPathField.setText(currentCustomBgPath);
-            AppConfigManager.getInstance().getConfig().setSavedMonetColor("");
-
             // 仅解锁莫奈按钮状态，让用户自己选择是否取色，不覆盖当前配置颜色
             refreshMonetState();
             previewTheme();
@@ -320,7 +342,6 @@ public class SettingsController {
                 monetColorCircle.setStyle("-fx-background-color: " + currentMonetColor + ";");
                 monetColorContainer.setVisible(true);
                 monetColorTip.setVisible(true);
-                AppConfigManager.getInstance().getConfig().setSavedMonetColor(currentMonetColor);
                 selectedAccentColor = currentMonetColor;
                 updatePaletteSelection();
                 previewTheme();
@@ -334,7 +355,6 @@ public class SettingsController {
         selectedAccentColor = PRESET_COLORS.values().iterator().next();
         currentMonetColor = "";
         bgPathField.clear();
-        AppConfigManager.getInstance().getConfig().setSavedMonetColor("");
         refreshMonetState();
         previewTheme();
     }
@@ -345,7 +365,7 @@ public class SettingsController {
             return; // 阻止初始化相互打架
         }
 
-        AppConfig config = AppConfigManager.getInstance().getConfig();
+        AppConfig config = buildPreviewConfig();
         config.setAccentColor(selectedAccentColor);
 
         if (themeDarkRadio.isSelected()) {
@@ -360,7 +380,7 @@ public class SettingsController {
         config.setBgScrimOpacity(bgOpacitySlider.getValue());
 
         if (settingsScrollPane != null && settingsScrollPane.getScene() != null) {
-            ThemeManager.applyTheme(settingsScrollPane.getScene());
+            ThemeManager.applyTheme(settingsScrollPane.getScene(), config);
         }
     }
 
@@ -441,10 +461,12 @@ public class SettingsController {
         THREAD_POOL.execute(() -> {
             boolean reachable = false;
             long start = System.currentTimeMillis();
-            try (Socket socket = new Socket()) {
-                socket.connect(new InetSocketAddress(host, port), Math.min(timeout, 3000));
-                reachable = true;
+            try (SocketClient client = new SocketClient(host, port)) {
+                Message ping = new Message("probe", MessageType.HEARTBEAT, null, "ping");
+                Message pong = client.send(ping);
+                reachable = pong != null && "pong".equals(pong.getData());
             } catch (Exception ignored) {
+                // 连接失败或超时，视为不可达
             }
             long cost = System.currentTimeMillis() - start;
 

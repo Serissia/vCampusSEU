@@ -8,6 +8,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 /**
  * 客户端偏好设置管理器
@@ -72,6 +74,8 @@ public class AppConfigManager {
         this.currentCardNum = (cardNum == null) ? "" : cardNum.trim();
         File configFile = ConfigPathUtil.getConfigFile(this.currentCardNum);
 
+        boolean parseFailed = false;
+
         if (configFile.exists() && configFile.isFile()) {
             try (FileReader reader = new FileReader(configFile, StandardCharsets.UTF_8)) {
                 this.currentConfig = GSON.fromJson(reader, AppConfig.class);
@@ -79,17 +83,31 @@ public class AppConfigManager {
                     return;
                 }
             } catch (Exception e) {
-                System.err.println("[AppConfigManager] 读取配置文件失败，使用默认配置: " + e.getMessage());
+                parseFailed = true;
+                backupCorruptedConfig(configFile);
+                System.err.println("[AppConfigManager] 读取配置文件失败，已保留原文件并禁用自动覆盖: " + e.getMessage());
             }
         }
 
-        // 文件不存在或异常损坏时，创建新配置并持久化一次
+        // 文件不存在时创建新配置并持久化；解析失败时禁止自动覆盖原文件
         this.currentConfig = new AppConfig();
         this.currentConfig.setCardNum(this.currentCardNum);
         if (!this.currentCardNum.isEmpty()) {
             this.currentConfig.setLastCardNum(this.currentCardNum);
         }
-        saveConfig();
+        if (!parseFailed) {
+            saveConfig();
+        }
+    }
+
+    private void backupCorruptedConfig(File configFile) {
+        File backupFile = new File(configFile.getAbsolutePath() + ".bak");
+        try {
+            Files.copy(configFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            System.err.println("[AppConfigManager] 已备份损坏配置文件: " + backupFile.getAbsolutePath());
+        } catch (IOException backupEx) {
+            System.err.println("[AppConfigManager] 备份损坏配置文件失败: " + backupEx.getMessage());
+        }
     }
 
     /**
