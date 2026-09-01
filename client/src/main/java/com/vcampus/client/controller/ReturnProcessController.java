@@ -161,6 +161,9 @@ public class ReturnProcessController {
 
         borrowTable.getColumns().addAll(titleCol, isbnCol, borrowCol, dueCol, statusCol, actionCol);
         borrowTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        for (TableColumn<BorrowRecordVO, ?> col : borrowTable.getColumns()) {
+            col.setMinWidth(80.0);
+        }
     }
 
     /**

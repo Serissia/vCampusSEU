@@ -82,7 +82,7 @@
                     <Label text="电子资源（PDF，选填）" styleClass="lib-form-label" />
                     <HBox spacing="10.0" alignment="CENTER_LEFT">
                         <Button text="选择文件并上传" onAction="#handleChooseResource" styleClass="btn-recharge-preset" />
-                        <Button text="清除" onAction="#handleClearResource" styleClass="lib-btn-danger" />
+                        <Button fx:id="clearResourceButton" text="清除" onAction="#handleClearResource" styleClass="lib-btn-danger" />
                     </HBox>
                     <Label fx:id="resourceStatusLabel" text="未录入电子资源" styleClass="lib-subtitle" />
                 </VBox>
