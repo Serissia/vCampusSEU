@@ -87,6 +87,10 @@ public class LibraryManageController {
     private Label resourceStatusLabel;
     @FXML
     private Label msgLabel;
+    @FXML
+    private Label modeLabel;
+    @FXML
+    private Button saveButton;
 
     private UserVO currentUser;
     private final SocketClient socketClient = new SocketClient();
@@ -201,19 +205,7 @@ public class LibraryManageController {
         bookTable.getSelectionModel().clearSelection();
         resetForm();
         isbnField.setDisable(false);
-        showMsg("请输入新书目的信息后点击保存", true);
-    }
-
-    /**
-     * 清空表单。
-     */
-    @FXML
-    private void handleClear() {
-        editingBook = null;
-        bookTable.getSelectionModel().clearSelection();
-        resetForm();
-        isbnField.setDisable(false);
-        hideMsg();
+        showMsg("请输入新书目的信息后点击「保存新增」", true);
     }
 
     /**
@@ -395,6 +387,7 @@ public class LibraryManageController {
         resourceStatusLabel.setText(uploadedResourceName == null || uploadedResourceName.trim().isEmpty()
                 ? "未录入电子资源" : "已录入电子资源：" + uploadedResourceName);
         hideMsg();
+        updateModeUI();
     }
 
     /**
@@ -409,6 +402,20 @@ public class LibraryManageController {
         totalNumField.clear();
         uploadedResourceName = null;
         resourceStatusLabel.setText("未录入电子资源");
+        updateModeUI();
+    }
+
+    /**
+     * 根据当前模式更新界面提示（新增 / 编辑）。
+     */
+    private void updateModeUI() {
+        boolean isAdd = editingBook == null;
+        if (saveButton != null) {
+            saveButton.setText(isAdd ? "保存新增" : "保存修改");
+        }
+        if (modeLabel != null) {
+            modeLabel.setText(isAdd ? "新增模式" : "编辑模式");
+        }
     }
 
     private void showMsg(String msg, boolean success) {
