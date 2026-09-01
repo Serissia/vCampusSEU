@@ -1,14 +1,14 @@
 package com.vcampus.client.net;
 
+import com.vcampus.client.config.AppConfig;
+import com.vcampus.client.config.AppConfigManager;
 import com.vcampus.common.message.Message;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.util.Properties;
 
 /**
  * 客户端 Socket 连接与对象流收发封装。
@@ -25,20 +25,12 @@ public class SocketClient implements Closeable {
     private ObjectInputStream in;
 
     /**
-     * 使用默认的 client.properties 构造客户端。
+     * 使用 AppConfigManager 中的服务端地址和端口构造客户端。
      */
     public SocketClient() {
-        Properties props = new Properties();
-        try (InputStream stream = SocketClient.class.getClassLoader()
-                .getResourceAsStream("client.properties")) {
-            if (stream != null) {
-                props.load(stream);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("读取客户端配置失败", e);
-        }
-        this.host = props.getProperty("server.host", "127.0.0.1");
-        this.port = Integer.parseInt(props.getProperty("server.port", "8888"));
+        AppConfig config = AppConfigManager.getInstance().getConfig();
+        this.host = config.getServerHost();
+        this.port = config.getServerPort();
     }
 
     /**
