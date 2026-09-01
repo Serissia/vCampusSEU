@@ -13,12 +13,12 @@ import java.util.UUID;
  *
  * @author GGbongy
  */
-public class
-ResourceService {
+public class ResourceService {
 
     /** 电子资源存放目录（相对于服务端运行目录） */
     private static final String RESOURCE_DIR = "ebooks";
 
+    
     private final Path baseDir;
 
     public ResourceService() {
@@ -57,6 +57,22 @@ ResourceService {
             return Files.readAllBytes(target);
         } catch (IOException e) {
             throw new RuntimeException("读取电子资源失败", e);
+        }
+    }
+
+    /**
+     * 按文件名删除电子资源。
+     */
+    public boolean delete(String name) {
+        String safeName = Paths.get(name).getFileName().toString();
+        Path target = baseDir.resolve(safeName).normalize();
+        if (!target.startsWith(baseDir) || !Files.exists(target)) {
+            return false;
+        }
+        try {
+            return Files.deleteIfExists(target);
+        } catch (IOException e) {
+            return false;
         }
     }
 }

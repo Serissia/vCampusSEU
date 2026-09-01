@@ -137,6 +137,9 @@ public class Dispatcher {
                 case BOOK_RESOURCE_DOWNLOAD:
                     handleResourceDownload(request, response);
                     break;
+                case BOOK_RESOURCE_DELETE:
+                    handleResourceDelete(request, response);
+                    break;
                 default:
                     response.setCode(ResponseCode.INVALID_REQUEST);
                     response.setData("不支持的请求类型");
@@ -302,5 +305,19 @@ public class Dispatcher {
         file.setData(data);
         response.setCode(ResponseCode.SUCCESS);
         response.setData(file);
+    }
+
+    /**
+     * 处理电子资源删除：按文件名删除服务器本地文件。
+     */
+    private void handleResourceDelete(Message request, Message response) {
+        String name = String.valueOf(request.getData());
+        if (name == null || "null".equals(name) || name.trim().isEmpty()) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("资源标识为空");
+            return;
+        }
+        boolean ok = resourceService.delete(name.trim());
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
     }
 }

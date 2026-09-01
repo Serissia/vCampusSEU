@@ -50,7 +50,8 @@ public enum MessageType implements Serializable {
     BORROW_MY_LIST,
     BORROW_BY_STUDENT,
 
-    /** 图书电子资源上传与下载 */
+    /** 图书电子资源上传、下载与删除 */
     BOOK_RESOURCE_UPLOAD,
-    BOOK_RESOURCE_DOWNLOAD
+    BOOK_RESOURCE_DOWNLOAD,
+    BOOK_RESOURCE_DELETE
 }
