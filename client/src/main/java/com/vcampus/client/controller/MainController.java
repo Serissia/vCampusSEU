@@ -174,10 +174,13 @@ public class MainController {
                 menus.add(new MenuItem("商品库存", "boxes", "SHOP_MANAGE"));
                 menus.add(new MenuItem("流水订单", "receipt", "SHOP_ORDER_MANAGE"));
                 break;
+            case SELLER:
+                menus.add(new MenuItem("校园超市", "store", "SHOP"));
+                break;
             case ADMIN:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
-                menus.add(new MenuItem("超市管理", "store", "SHOP_MANAGE"));
+                menus.add(new MenuItem("校园超市", "store", "SHOP"));
                 menus.add(new MenuItem("用户权限", "user-shield", "ADMIN_USER"));
                 break;
             default:
@@ -265,6 +268,11 @@ public class MainController {
             }
         }
 
+        if ("SHOP".equals(moduleKey)) {
+            ShopPanel shopPanel = new ShopPanel();
+            shopPanel.initData(currentUser, this);
+            return shopPanel;
+        }
         // 其他尚未接入的模块仍保留占位卡片
         VBox card = new VBox(16.0);
         card.setAlignment(Pos.CENTER);

@@ -31,5 +31,12 @@ public enum ResponseCode {
     /** 已借阅该书且尚未归还 */
     ALREADY_BORROWED,
     /** 未借阅该书 */
-    NOT_BORROWED
+    NOT_BORROWED,
+
+    /** 商品不存在 */
+    GOODS_NOT_FOUND,
+    /** 商品库存不足 */
+    GOODS_STOCK_INSUFFICIENT,
+    /** 一卡通余额不足 */
+    BALANCE_INSUFFICIENT
 }
