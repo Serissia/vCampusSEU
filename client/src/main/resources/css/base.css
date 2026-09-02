@@ -31,3 +31,82 @@
     -fx-pref-height: 0;
     -fx-opacity: 0;
 }
+
+/* ===================== 通用组件样式（全局复用） ===================== */
+
+/* 滚动容器 */
+.profile-scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.profile-scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* 卡片容器 */
+.profile-card {
+    -fx-background-color: -fx-bg-surface;
+    -fx-background-radius: 10px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-padding: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(31, 35, 41, 0.04), 10, 0, 0, 2);
+}
+
+/* 现代卡片输入框 */
+.modern-input-field {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-font-size: 13px;
+    -fx-padding: 8px 12px;
+    -fx-text-fill: -fx-text-main;
+    -fx-prompt-text-fill: -fx-text-disabled;
+}
+
+.modern-input-field:focused {
+    -fx-background-color: -fx-bg-surface;
+    -fx-border-color: -fx-primary;
+    -fx-effect: dropshadow(gaussian, rgba(72, 122, 50, 0.2), 6, 0, 0, 0);
+}
+
+/* 主操作按钮 */
+.btn-primary-action {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: -fx-bg-surface;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px 20px;
+    -fx-cursor: hand;
+}
+
+.btn-primary-action:hover {
+    -fx-background-color: -fx-primary-hover;
+}
+
+.btn-primary-action:pressed {
+    -fx-background-color: -fx-primary-pressed;
+}
+
+/* 次要 / 预设按钮 */
+.btn-recharge-preset {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+    -fx-padding: 6px 16px;
+    -fx-cursor: hand;
+}
+
+.btn-recharge-preset:hover {
+    -fx-background-color: -fx-primary-light;
+    -fx-border-color: -fx-primary;
+    -fx-text-fill: -fx-primary;
+}
