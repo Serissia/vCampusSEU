@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * 统一通信动作枚举
  *
- * @author vCampus Team
+ * @author GGbongy
  * @version 1.0
  */
 public enum MessageType implements Serializable {
@@ -34,5 +34,24 @@ public enum MessageType implements Serializable {
     /** 成绩管理 */
     GRADE_SUBMIT,
     GRADE_QUERY,
-    GRADE_STATISTICS
+    GRADE_STATISTICS,
+
+    /** 图书馆图书检索与采编 */
+    BOOK_QUERY,
+    BOOK_ADD,
+    BOOK_UPDATE,
+    BOOK_DELETE,
+
+    /** 图书借还流转 */
+    BOOK_BORROW,
+    BOOK_RETURN,
+
+    /** 借阅记录查询 */
+    BORROW_MY_LIST,
+    BORROW_BY_STUDENT,
+
+    /** 图书电子资源上传、下载与删除 */
+    BOOK_RESOURCE_UPLOAD,
+    BOOK_RESOURCE_DOWNLOAD,
+    BOOK_RESOURCE_DELETE
 }

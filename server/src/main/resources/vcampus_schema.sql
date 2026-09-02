@@ -60,6 +60,8 @@ CREATE TABLE `tbl_book` (
     `title` VARCHAR(128) NOT NULL COMMENT '图书名称',
     `author` VARCHAR(64) NOT NULL COMMENT '作者',
     `publisher` VARCHAR(64) DEFAULT NULL COMMENT '出版社',
+    `location` VARCHAR(64) DEFAULT NULL COMMENT '存放位置/书架',
+    `resource_file` VARCHAR(255) DEFAULT NULL COMMENT '电子资源文件名（服务器本地存储索引），为空表示未录入',
     `total_num` INT NOT NULL DEFAULT 5 COMMENT '馆藏总数',
     `current_num` INT NOT NULL DEFAULT 5 COMMENT '当前可借余量',
     PRIMARY KEY (`isbn`)
@@ -71,6 +73,7 @@ CREATE TABLE `tbl_borrow_record` (
     `student_id` VARCHAR(32) NOT NULL COMMENT '借阅学生学号',
     `isbn` VARCHAR(32) NOT NULL COMMENT '图书ISBN',
     `borrow_date` VARCHAR(32) NOT NULL COMMENT '借出日期 (YYYY-MM-DD)',
+    `due_date` VARCHAR(32) NOT NULL COMMENT '应还日期 (YYYY-MM-DD)',
     `return_date` VARCHAR(32) DEFAULT NULL COMMENT '归还日期',
     `status` VARCHAR(16) NOT NULL DEFAULT 'BORROWED' COMMENT '状态: BORROWED, RETURNED',
     PRIMARY KEY (`id`),
@@ -118,9 +121,11 @@ INSERT INTO `tbl_course` (`course_id`, `course_name`, `teacher_id`, `teacher_nam
 ('CS101', 'Java程序设计', '100001', '李教授', 3.0, '2026-2027-1', '开课', 50, 0, '周一 1-2节', '九龙湖计算机楼101'),
 ('CS102', '数据结构与算法', '100001', '李教授', 4.0, '2026-2027-1', '开课', 40, 0, '周三 3-4节', '九龙湖计算机楼203');
 
-INSERT INTO `tbl_book` (`isbn`, `title`, `author`, `publisher`, `total_num`, `current_num`) VALUES
-('9787111213826', 'Java编程思想', 'Bruce Eckel', '机械工业出版社', 10, 10),
-('9787115546081', '算法导论', 'Thomas H. Cormen', '人民邮电出版社', 5, 5);
+INSERT INTO `tbl_book` (`isbn`, `title`, `author`, `publisher`, `location`, `resource_file`, `total_num`, `current_num`) VALUES
+('9787111213826', 'Java编程思想', 'Bruce Eckel', '机械工业出版社', '九龙湖馆三楼 TP312 区', NULL, 10, 10),
+('9787115546081', '算法导论', 'Thomas H. Cormen', '人民邮电出版社', '九龙湖馆三楼 TP301 区', NULL, 5, 5),
+('9787302520322', '计算机网络（第7版）', '谢希仁', '电子工业出版社', '九龙湖馆四楼 TN 区', NULL, 6, 6),
+('9787115426799', '深入理解计算机系统', 'Randal E. Bryant', '机械工业出版社', '九龙湖馆三楼 TP303 区', NULL, 4, 4);
 
 INSERT INTO `tbl_goods` (`goods_id`, `goods_name`, `price`, `stock`, `description`) VALUES
 ('G001', '东大纪念笔记本', 15.00, 100, '精装校徽文创笔记本'),

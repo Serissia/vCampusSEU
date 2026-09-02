@@ -172,6 +172,9 @@ public class LibraryController {
 
         bookTable.getColumns().addAll(isbnCol, titleCol, authorCol, publisherCol, locationCol, stockCol);
         bookTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        for (TableColumn<BookVO, ?> col : bookTable.getColumns()) {
+            col.setMinWidth(80.0);
+        }
     }
 
     /**
@@ -219,6 +222,9 @@ public class LibraryController {
 
         borrowTable.getColumns().addAll(titleCol, isbnCol, borrowCol, dueCol, returnCol, statusCol);
         borrowTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        for (TableColumn<BorrowRecordVO, ?> col : borrowTable.getColumns()) {
+            col.setMinWidth(80.0);
+        }
     }
 
     /**
