@@ -1,0 +1,34 @@
+/* 教务模块私有样式，复用全局 Design Tokens 与图书系统组件风格 */
+
+/* 教务表单说明文本 */
+.academic-hint {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+    -fx-line-spacing: 2px;
+}
+
+/* 成绩组成名称标签，与表单标签保持一致 */
+.academic-score-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+/* 教务排课下拉选择框 */
+.academic-combo {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-main;
+}
+
+.academic-combo .list-cell {
+    -fx-text-fill: -fx-text-main;
+}
+
+.academic-combo .combo-box-popup .list-view {
+    -fx-background-color: -fx-bg-surface;
+    -fx-border-color: -fx-border-base;
+}

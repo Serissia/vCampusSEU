@@ -36,6 +36,47 @@ public class CourseSelectionDaoImpl implements CourseSelectionDao {
         }
     }
 
+    @Override
+    public boolean insertWithCountUpdate(CourseSelectionVO selection) throws SQLException {
+        String insertSql = "INSERT INTO tbl_course_select(student_id, course_id, select_time, status) "
+                + "VALUES (?, ?, ?, ?)";
+        String updateSql = "UPDATE tbl_course SET current_num = current_num + 1 WHERE course_id = ?";
+
+        Connection conn = null;
+        try {
+            conn = DBUtil.getConnection();
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement insertPs = conn.prepareStatement(insertSql)) {
+                insertPs.setString(1, selection.getStudentId());
+                insertPs.setString(2, selection.getCourseCode());
+                insertPs.setTimestamp(3, new java.sql.Timestamp(selection.getSelectTime().getTime()));
+                insertPs.setString(4, selection.getStatus());
+                insertPs.executeUpdate();
+            }
+
+            try (PreparedStatement updatePs = conn.prepareStatement(updateSql)) {
+                updatePs.setString(1, selection.getCourseCode());
+                if (updatePs.executeUpdate() == 0) {
+                    throw new SQLException("课程不存在，无法更新已选人数");
+                }
+            }
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            throw e;
+        } finally {
+            if (conn != null) {
+                conn.setAutoCommit(true);
+                conn.close();
+            }
+        }
+    }
+
     /**
      * 根据学生和课程代码删除选课记录。
      */
@@ -47,6 +88,44 @@ public class CourseSelectionDaoImpl implements CourseSelectionDao {
             ps.setString(1, studentId);
             ps.setString(2, courseCode);
             return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean deleteWithCountUpdate(String studentId, String courseCode) throws SQLException {
+        String deleteSql = "DELETE FROM tbl_course_select WHERE student_id = ? AND course_id = ?";
+        String updateSql = "UPDATE tbl_course SET current_num = current_num - 1 WHERE course_id = ?";
+
+        Connection conn = null;
+        try {
+            conn = DBUtil.getConnection();
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement deletePs = conn.prepareStatement(deleteSql)) {
+                deletePs.setString(1, studentId);
+                deletePs.setString(2, courseCode);
+                if (deletePs.executeUpdate() == 0) {
+                    throw new SQLException("选课记录不存在");
+                }
+            }
+
+            try (PreparedStatement updatePs = conn.prepareStatement(updateSql)) {
+                updatePs.setString(1, courseCode);
+                updatePs.executeUpdate();
+            }
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            throw e;
+        } finally {
+            if (conn != null) {
+                conn.setAutoCommit(true);
+                conn.close();
+            }
         }
     }
 

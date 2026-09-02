@@ -1,6 +1,8 @@
 package com.vcampus.common.vo;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 课程信息值对象。
@@ -10,6 +12,10 @@ import java.io.Serializable;
 public class CourseVO implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
+    public static final String STATUS_ACTIVE = "ACTIVE";
+    public static final String STATUS_DISABLED = "DISABLED";
+    public static final String STATUS_PENDING = "PENDING";
 
     /** 课程代码 */
     private String courseCode;
@@ -29,8 +35,16 @@ public class CourseVO implements Serializable {
     private String semester;
     /** 上课时间 */
     private String classTime;
+    /** 多个上课时间段 */
+    private List<CourseTimeSlotVO> timeSlots = new ArrayList<CourseTimeSlotVO>();
+    /** 起始周次 */
+    private int startWeek;
+    /** 结束周次 */
+    private int endWeek;
     /** 上课教室 */
     private String location;
+    /** 成绩组成项及权重 */
+    private List<ScoreComponentVO> scoreComponents = new ArrayList<ScoreComponentVO>();
     /**
      * 课程状态。
      *
@@ -130,6 +144,30 @@ public class CourseVO implements Serializable {
         this.classTime = classTime;
     }
 
+    public List<CourseTimeSlotVO> getTimeSlots() {
+        return timeSlots;
+    }
+
+    public void setTimeSlots(List<CourseTimeSlotVO> timeSlots) {
+        this.timeSlots = timeSlots;
+    }
+
+    public int getStartWeek() {
+        return startWeek;
+    }
+
+    public void setStartWeek(int startWeek) {
+        this.startWeek = startWeek;
+    }
+
+    public int getEndWeek() {
+        return endWeek;
+    }
+
+    public void setEndWeek(int endWeek) {
+        this.endWeek = endWeek;
+    }
+
     public String getLocation() {
         return location;
     }
@@ -138,11 +176,94 @@ public class CourseVO implements Serializable {
         this.location = location;
     }
 
+    public List<ScoreComponentVO> getScoreComponents() {
+        return scoreComponents;
+    }
+
+    public void setScoreComponents(List<ScoreComponentVO> scoreComponents) {
+        this.scoreComponents = scoreComponents;
+    }
+
     public String getStatus() {
         return status;
     }
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    /**
+     * 将多个上课时间段序列化为 time_slot 字段可存储的字符串。
+     */
+    public String toScheduleText() {
+        if (timeSlots == null || timeSlots.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (CourseTimeSlotVO slot : timeSlots) {
+            if (slot == null) {
+                continue;
+            }
+            if (sb.length() > 0) {
+                sb.append(";");
+            }
+            sb.append(slot.getStartWeek()).append("-").append(slot.getEndWeek()).append("周 ")
+                    .append(slot.getDay()).append(" 第")
+                    .append(slot.getStartPeriod()).append("-")
+                    .append(slot.getEndPeriod()).append("节");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 从 time_slot 字符串解析多个上课时间段。
+     */
+    public void parseScheduleText(String scheduleText) {
+        timeSlots = new ArrayList<CourseTimeSlotVO>();
+        if (scheduleText == null || scheduleText.trim().isEmpty()) {
+            return;
+        }
+        String[] segments = scheduleText.split(";");
+        for (String segment : segments) {
+            CourseTimeSlotVO slot = parseTimeSlot(segment);
+            if (slot != null) {
+                timeSlots.add(slot);
+            }
+        }
+    }
+
+    private CourseTimeSlotVO parseTimeSlot(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return null;
+        }
+        String[] numbers = text.replaceAll("[^0-9]+", " ").trim().split("\\s+");
+        String[] days = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
+        String day = null;
+        for (String candidate : days) {
+            if (text.contains(candidate)) {
+                day = candidate;
+                break;
+            }
+        }
+        if (day == null || numbers.length < 2) {
+            return null;
+        }
+        try {
+            if (numbers.length >= 4) {
+                int startWeek = Integer.parseInt(numbers[0]);
+                int endWeek = Integer.parseInt(numbers[1]);
+                int startPeriod = Integer.parseInt(numbers[2]);
+                int endPeriod = Integer.parseInt(numbers[3]);
+                return new CourseTimeSlotVO(startWeek, endWeek, day, startPeriod, endPeriod);
+            }
+            if (numbers.length >= 2 && startWeek > 0 && endWeek > 0) {
+                int startPeriod = Integer.parseInt(numbers[0]);
+                int endPeriod = Integer.parseInt(numbers[1]);
+                return new CourseTimeSlotVO(this.startWeek, this.endWeek, day, startPeriod, endPeriod);
+            }
+            return null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

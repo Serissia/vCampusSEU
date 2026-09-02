@@ -9,7 +9,11 @@ import com.vcampus.common.vo.GoodsVO;
 import com.vcampus.common.vo.GradeVO;
 import com.vcampus.common.vo.OrderVO;
 import com.vcampus.common.vo.ResourceFileVO;
+import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
+import com.vcampus.common.vo.UserRole;
+import com.vcampus.server.service.BookService;
+import com.vcampus.server.service.BorrowService;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.server.service.BookService;
 import com.vcampus.server.service.BorrowService;
@@ -59,6 +63,13 @@ public class Dispatcher {
         response.setUid(request.getUid());
         response.setType(request.getType());
 
+        if (requiresPermissionCheck(request.getType())
+                && !hasPermission(request.getUid(), request.getType())) {
+            response.setCode(ResponseCode.PERMISSION_DENIED);
+            response.setData("当前角色无权执行该操作");
+            return response;
+        }
+
         try {
             // 请求类型是服务端唯一的业务路由入口
             switch (request.getType()) {
@@ -83,6 +94,24 @@ public class Dispatcher {
                     response.setCode(courseService.disableCourse(String.valueOf(request.getData()))
                             ? ResponseCode.SUCCESS : ResponseCode.FAIL);
                     break;
+                case COURSE_DELETE:
+                    response.setCode(courseService.deleteCourse(String.valueOf(request.getData()))
+                            ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+                    break;
+                case COURSE_APPROVE:
+                    response.setCode(courseService.approveCourse(String.valueOf(request.getData()))
+                            ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+                    break;
+                case COURSE_REJECT:
+                    response.setCode(courseService.rejectCourse(String.valueOf(request.getData()))
+                            ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+                    break;
+                case COURSE_SCHEDULE:
+                    response.setCode(handleCourseSchedule(request));
+                    break;
+                case COURSE_WEEK_SCHEDULE:
+                    response.setCode(handleCourseWeekSchedule(request));
+                    break;
                 case COURSE_QUERY:
                     response.setData(courseService.queryCourses(String.valueOf(request.getData())));
                     response.setCode(ResponseCode.SUCCESS);
@@ -90,6 +119,22 @@ public class Dispatcher {
                 case HEARTBEAT:
                     response.setCode(ResponseCode.SUCCESS);
                     response.setData("pong");
+                    break;
+                case COURSE_LIST_ALL:
+                    response.setData(courseService.listAllCourses());
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case COURSE_QUERY_BY_TEACHER:
+                    response.setData(courseService.queryByTeacher(String.valueOf(request.getData())));
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case COURSE_QUERY_BY_SEMESTER:
+                    response.setData(courseService.queryBySemester(String.valueOf(request.getData())));
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case COURSE_PENDING_LIST:
+                    response.setData(courseService.listPendingCourses());
+                    response.setCode(ResponseCode.SUCCESS);
                     break;
                 case COURSE_SELECT:
                 case COURSE_DROP:
@@ -106,8 +151,12 @@ public class Dispatcher {
                     response.setData(gradeService.queryByStudent(request.getUid()));
                     response.setCode(ResponseCode.SUCCESS);
                     break;
-                case GRADE_STATISTICS:
+                case GRADE_QUERY_BY_COURSE:
                     response.setData(gradeService.queryByCourse(String.valueOf(request.getData())));
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case GRADE_STATISTICS:
+                    response.setData(gradeService.getCourseStatistics(String.valueOf(request.getData())));
                     response.setCode(ResponseCode.SUCCESS);
                     break;
                 case BOOK_QUERY:
@@ -188,6 +237,117 @@ public class Dispatcher {
         }
 
         return response;
+    }
+
+    private boolean requiresPermissionCheck(MessageType type) {
+        switch (type) {
+            case COURSE_QUERY:
+            case COURSE_ADD:
+            case COURSE_UPDATE:
+            case COURSE_DISABLE:
+            case COURSE_DELETE:
+            case COURSE_APPROVE:
+            case COURSE_REJECT:
+            case COURSE_LIST_ALL:
+            case COURSE_QUERY_BY_TEACHER:
+            case COURSE_QUERY_BY_SEMESTER:
+            case COURSE_PENDING_LIST:
+            case COURSE_SCHEDULE:
+            case COURSE_WEEK_SCHEDULE:
+            case COURSE_SELECT:
+            case COURSE_DROP:
+            case COURSE_TIMETABLE:
+            case GRADE_SUBMIT:
+            case GRADE_QUERY:
+            case GRADE_QUERY_BY_COURSE:
+            case GRADE_STATISTICS:
+            case BOOK_QUERY:
+            case BOOK_ADD:
+            case BOOK_UPDATE:
+            case BOOK_DELETE:
+            case BOOK_BORROW:
+            case BOOK_RETURN:
+            case BORROW_MY_LIST:
+            case BORROW_BY_STUDENT:
+            case BOOK_RESOURCE_UPLOAD:
+            case BOOK_RESOURCE_DOWNLOAD:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private boolean hasPermission(String uid, MessageType type) {
+        UserVO user = userService.queryByUid(uid);
+        if (user == null || user.getRole() == null) {
+            return false;
+        }
+
+        UserRole role = user.getRole();
+        switch (type) {
+            case COURSE_QUERY:
+            case COURSE_LIST_ALL:
+            case COURSE_QUERY_BY_TEACHER:
+            case COURSE_QUERY_BY_SEMESTER:
+                return true;
+            case COURSE_ADD:
+            case COURSE_UPDATE:
+            case COURSE_DISABLE:
+                return isCourseManager(role);
+            case COURSE_DELETE:
+                return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
+            case COURSE_APPROVE:
+            case COURSE_REJECT:
+            case COURSE_PENDING_LIST:
+                return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
+            case COURSE_SCHEDULE:
+                return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
+            case COURSE_WEEK_SCHEDULE:
+                return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
+            case COURSE_SELECT:
+            case COURSE_DROP:
+            case COURSE_TIMETABLE:
+                return role == UserRole.STUDENT;
+            case GRADE_SUBMIT:
+                return role == UserRole.ADMIN
+                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
+                        || role == UserRole.TEACHER;
+            case GRADE_QUERY:
+                return role == UserRole.STUDENT
+                        || role == UserRole.TEACHER
+                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
+                        || role == UserRole.ADMIN;
+            case GRADE_QUERY_BY_COURSE:
+            case GRADE_STATISTICS:
+                return role == UserRole.ADMIN
+                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
+                        || role == UserRole.TEACHER;
+            case BOOK_QUERY:
+                return true;
+            case BOOK_ADD:
+            case BOOK_UPDATE:
+            case BOOK_DELETE:
+            case BOOK_RESOURCE_UPLOAD:
+                return role == UserRole.ADMIN;
+            case BOOK_BORROW:
+            case BOOK_RETURN:
+            case BORROW_MY_LIST:
+                return role == UserRole.STUDENT
+                        || role == UserRole.ADMIN;
+            case BORROW_BY_STUDENT:
+            case BOOK_RESOURCE_DOWNLOAD:
+                return role == UserRole.ADMIN
+                        || role == UserRole.STUDENT
+                        || role == UserRole.TEACHER;
+            default:
+                return false;
+        }
+    }
+
+    private boolean isCourseManager(UserRole role) {
+        return role == UserRole.ADMIN
+                || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
+                || role == UserRole.TEACHER;
     }
 
     /**
@@ -533,5 +693,45 @@ public class Dispatcher {
     private boolean isAdmin(Message request) {
         UserVO user = userService.queryByUid(request.getUid());
         return user != null && user.getRole() == UserRole.ADMIN;
+    }
+
+    /**
+     * 处理教务老师安排或修改课程上课时间请求。
+     */
+    private ResponseCode handleCourseSchedule(Message request) {
+        String[] payload = toBorrowPayload(request.getData());
+        if (payload == null || payload[0] == null || payload[1] == null) {
+            return ResponseCode.INVALID_REQUEST;
+        }
+        boolean ok = courseService.scheduleCourseTime(payload[0].trim(), payload[1].trim());
+        return ok ? ResponseCode.SUCCESS : ResponseCode.FAIL;
+    }
+
+    /**
+     * 处理教务老师安排或修改课程起止周次请求。
+     */
+    private ResponseCode handleCourseWeekSchedule(Message request) {
+        String[] payload = toStringArray(request.getData(), 3);
+        if (payload == null) {
+            return ResponseCode.INVALID_REQUEST;
+        }
+        try {
+            int startWeek = Integer.parseInt(payload[1].trim());
+            int endWeek = Integer.parseInt(payload[2].trim());
+            boolean ok = courseService.scheduleCourseWeeks(payload[0].trim(), startWeek, endWeek);
+            return ok ? ResponseCode.SUCCESS : ResponseCode.FAIL;
+        } catch (NumberFormatException e) {
+            return ResponseCode.INVALID_REQUEST;
+        }
+    }
+
+    /**
+     * 将消息负载安全转换为指定长度的字符串数组。
+     */
+    private String[] toStringArray(Object data, int expectedLength) {
+        if (data instanceof String[] && ((String[]) data).length >= expectedLength) {
+            return (String[]) data;
+        }
+        return null;
     }
 }
