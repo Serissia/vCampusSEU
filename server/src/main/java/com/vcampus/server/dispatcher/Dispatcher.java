@@ -510,30 +510,6 @@ public class Dispatcher {
             return ResponseCode.INVALID_REQUEST;
         }
     }
-
-    private ResponseCode handleBorrow(Message request) {
-        String[] payload = toBorrowPayload(request.getData());
-        if (payload == null) {
-            return ResponseCode.INVALID_REQUEST;
-        }
-        return borrowService.borrow(payload[0], payload[1]);
-    }
-
-    private ResponseCode handleReturn(Message request) {
-        String[] payload = toBorrowPayload(request.getData());
-        if (payload == null) {
-            return ResponseCode.INVALID_REQUEST;
-        }
-        return borrowService.returnBook(payload[0], payload[1]);
-    }
-
-    private String[] toBorrowPayload(Object data) {
-        if (data instanceof String[] && ((String[]) data).length >= 2) {
-            return (String[]) data;
-        }
-        return null;
-    }
-
     /**
      * 将消息负载安全转换为指定长度的字符串数组。
      */
