@@ -155,6 +155,9 @@ public class BorrowProcessController {
 
         bookTable.getColumns().addAll(isbnCol, titleCol, authorCol, publisherCol, locationCol, stockCol, actionCol);
         bookTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        for (TableColumn<BookVO, ?> col : bookTable.getColumns()) {
+            col.setMinWidth(80.0);
+        }
     }
 
     @FXML

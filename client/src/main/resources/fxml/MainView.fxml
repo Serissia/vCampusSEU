@@ -13,9 +13,9 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane prefHeight="720.0" prefWidth="1100.0" styleClass="main-root-pane"
-            xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.vcampus.client.controller.MainController">
+<StackPane fx:id="mainRootStackPane" prefHeight="720.0" prefWidth="1100.0" styleClass="main-root-pane"
+           xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.vcampus.client.controller.MainController">
     <stylesheets>
         <URL value="@../css/tokens.css" />
         <URL value="@../css/base.css" />
@@ -24,65 +24,71 @@
         <URL value="@../css/academic.css" />
     </stylesheets>
 
-    <!-- 顶部状态与用户信息栏 -->
-    <top>
-        <HBox alignment="CENTER_LEFT" prefHeight="60.0" styleClass="header-bar">
-            <padding>
-                <Insets left="24.0" right="24.0" />
-            </padding>
-            <HBox alignment="CENTER_LEFT" spacing="12.0">
-                <ImageView fx:id="headerLogoView" fitHeight="32.0" fitWidth="32.0" preserveRatio="true" />
-                <Label text="vCampus 智慧校园" styleClass="header-title" />
-            </HBox>
+    <!-- 底层自定义壁纸层 -->
+    <ImageView fx:id="bgWallpaperImageView" id="bgWallpaperImageView" mouseTransparent="true" preserveRatio="false" visible="false" />
 
-            <Region HBox.hgrow="ALWAYS" />
+    <!-- 动态遮罩蒙版层（浅色叠加白透，深色叠加黑透） -->
+    <Region fx:id="bgScrimOverlay" id="bgScrimOverlay" mouseTransparent="true" styleClass="bg-scrim-overlay" visible="false" />
 
-            <!-- 用户信息及快捷操作 -->
-            <HBox alignment="CENTER_RIGHT" spacing="16.0">
-                <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="balance-badge">
-                    <Label text="校园卡余额:" styleClass="balance-label" />
-                    <Label fx:id="balanceText" text="¥ 0.00" styleClass="balance-value" />
+    <!-- 主交互视图层 -->
+    <BorderPane fx:id="mainBorderPane" styleClass="main-border-pane">
+        <!-- 顶部状态与用户信息栏 -->
+        <top>
+            <HBox alignment="CENTER_LEFT" prefHeight="60.0" styleClass="header-bar">
+                <padding>
+                    <Insets left="24.0" right="24.0" />
+                </padding>
+                <HBox alignment="CENTER_LEFT" spacing="12.0">
+                    <ImageView fx:id="headerLogoView" fitHeight="32.0" fitWidth="32.0" preserveRatio="true" />
+                    <Label text="vCampus 智慧校园" styleClass="header-title" />
                 </HBox>
-                <Separator orientation="VERTICAL" maxHeight="24.0" />
-                <HBox alignment="CENTER" spacing="10.0" styleClass="user-profile-badge">
-                    <StackPane styleClass="user-avatar-circle">
-                        <Label fx:id="avatarInitialText" text="U" styleClass="user-avatar-text" />
-                    </StackPane>
-                    <VBox alignment="CENTER_LEFT" spacing="2.0">
-                        <Label fx:id="userNameText" text="用户姓名" styleClass="user-name" />
-                        <Label fx:id="userRoleBadge" text="STUDENT" styleClass="user-role-tag" />
+
+                <Region HBox.hgrow="ALWAYS" />
+
+                <!-- 用户信息及快捷操作 -->
+                <HBox alignment="CENTER_RIGHT" spacing="16.0">
+                    <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="balance-badge">
+                        <Label text="校园卡余额:" styleClass="balance-label" />
+                        <Label fx:id="balanceText" text="¥ 0.00" styleClass="balance-value" />
+                    </HBox>
+                    <Separator orientation="VERTICAL" maxHeight="24.0" />
+                    <HBox alignment="CENTER" spacing="10.0" styleClass="user-profile-badge">
+                        <StackPane styleClass="user-avatar-circle">
+                            <Label fx:id="avatarInitialText" text="U" styleClass="user-avatar-text" />
+                        </StackPane>
+                        <VBox alignment="CENTER_LEFT" spacing="2.0">
+                            <Label fx:id="userNameText" text="用户姓名" styleClass="user-name" />
+                            <Label fx:id="userRoleBadge" text="STUDENT" styleClass="user-role-tag" />
+                        </VBox>
+                    </HBox>
+                    <Button fx:id="logoutButton" onAction="#handleLogout" text="退出" styleClass="logout-btn" />
+                </HBox>
+            </HBox>
+        </top>
+
+        <!-- 左侧导航栏 -->
+        <left>
+            <VBox prefWidth="220.0" styleClass="sidebar-container">
+                <ScrollPane fitToWidth="true" styleClass="sidebar-scroll" VBox.vgrow="ALWAYS">
+                    <VBox fx:id="navButtonGroup" spacing="4.0">
+                        <padding>
+                            <Insets top="16.0" bottom="16.0" left="12.0" right="12.0" />
+                        </padding>
                     </VBox>
-                </HBox>
-                <Button fx:id="logoutButton" onAction="#handleLogout" text="退出" styleClass="logout-btn" />
-            </HBox>
-        </HBox>
-    </top>
-
-    <!-- 左侧主导航栏 -->
-    <left>
-        <VBox prefWidth="220.0" styleClass="sidebar-container">
-            <ScrollPane fitToWidth="true" styleClass="sidebar-scroll" VBox.vgrow="ALWAYS">
-                <VBox fx:id="navButtonGroup" spacing="4.0">
-                    <padding>
-                        <Insets top="16.0" bottom="16.0" left="12.0" right="12.0" />
-                    </padding>
-                    <!-- 导航按钮由 MainController 根据用户角色动态注入 -->
+                </ScrollPane>
+                <VBox alignment="CENTER" prefHeight="48.0" styleClass="sidebar-footer">
+                    <Label text="vCampusSEU v1.1" styleClass="version-label" />
                 </VBox>
-            </ScrollPane>
-            <!-- 底部版本标识 -->
-            <VBox alignment="CENTER" prefHeight="48.0" styleClass="sidebar-footer">
-                <Label text="vCampusSEU v1.1" styleClass="version-label" />
             </VBox>
-        </VBox>
-    </left>
+        </left>
 
-    <!-- 中央业务内容宿主区域 -->
-    <center>
-        <StackPane fx:id="contentArea" styleClass="main-content-host">
-            <padding>
-                <Insets top="20.0" right="24.0" bottom="20.0" left="24.0" />
-            </padding>
-            <!-- 动态载入对应业务模块（教务、学籍、图书馆、商城等）面板 -->
-        </StackPane>
-    </center>
-</BorderPane>
+        <!-- 核心内容展示区 -->
+        <center>
+            <StackPane fx:id="contentArea" styleClass="main-content-host">
+                <padding>
+                    <Insets top="20.0" right="24.0" bottom="20.0" left="24.0" />
+                </padding>
+            </StackPane>
+        </center>
+    </BorderPane>
+</StackPane>

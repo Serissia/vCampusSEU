@@ -3,6 +3,15 @@
     -fx-background-color: -fx-bg-base;
 }
 
+/* 蒙版与透明画布层 */
+.main-border-pane {
+    -fx-background-color: transparent;
+}
+
+.bg-scrim-overlay {
+    -fx-background-color: -fx-bg-base;
+}
+
 /* 顶部导航栏 */
 .header-bar {
     -fx-background-color: -fx-bg-surface;
@@ -158,7 +167,7 @@
 
 /* 内容承载卡片区 */
 .main-content-host {
-    -fx-background-color: -fx-bg-base;
+    -fx-background-color: transparent;
 }
 
 .placeholder-card {

@@ -1,9 +1,12 @@
 package com.vcampus.client.controller;
 
+import com.vcampus.client.config.AppConfigManager;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.SvgIcons;
+import com.vcampus.client.util.ThemeManager;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
@@ -28,7 +31,7 @@ import java.util.List;
 /**
  * 主界面主控制器，负责侧边导航鉴权、业务面板挂载与全局上下文调度。
  *
- * @author Serissia
+ * @author Serissia, GGbongy
  */
 public class MainController {
 
@@ -84,9 +87,19 @@ public class MainController {
      */
     public void initUserContext(UserVO user) {
         this.currentUser = user;
+        if (user != null) {
+            AppConfigManager.getInstance().switchUser(user.getAccountNumber());
+        }
         academicController.setUid(user.getAccountNumber());
         renderHeaderInfo();
         buildRoleBasedNavigation();
+
+        // 应用主题样式
+        Platform.runLater(() -> {
+            if (contentArea != null && contentArea.getScene() != null) {
+                ThemeManager.applyTheme(contentArea.getScene());
+            }
+        });
     }
 
     /**
@@ -199,6 +212,10 @@ public class MainController {
      * @param activeBtn 当前激活按钮
      */
     private void switchModule(String moduleKey, Button activeBtn) {
+        if (contentArea != null && contentArea.getScene() != null) {
+            ThemeManager.applyTheme(contentArea.getScene());
+        }
+
         for (Button btn : navButtons) {
             btn.getStyleClass().remove("active");
         }
@@ -249,6 +266,27 @@ public class MainController {
                 LibraryController controller = loader.getController();
                 controller.initData(currentUser);
                 return libraryRoot;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if ("SETTINGS".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/SettingsView.fxml"));
+                return loader.load();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if ("LIBRARY".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LibraryView.fxml"));
+                Node root = loader.load();
+                LibraryController controller = loader.getController();
+                controller.initData(currentUser);
+                return root;
             } catch (IOException e) {
                 e.printStackTrace();
             }

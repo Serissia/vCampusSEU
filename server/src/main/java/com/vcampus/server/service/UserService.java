@@ -9,6 +9,7 @@ import java.math.BigDecimal;
  *
  * @author Serissia
  */
+
 public interface UserService {
 
     /**

@@ -47,7 +47,10 @@
 
             <!-- 右：编辑表单 -->
             <VBox spacing="14.0" prefWidth="300.0" minWidth="300.0" styleClass="profile-card">
-                <Label text="书目信息维护" styleClass="lib-section-title" />
+                <HBox alignment="CENTER_LEFT" spacing="8.0">
+                    <Label text="书目信息维护" styleClass="lib-section-title" />
+                    <Label fx:id="modeLabel" text="新增模式" styleClass="lib-mode-badge" />
+                </HBox>
                 <Separator />
 
                 <VBox spacing="4.0">
@@ -79,7 +82,7 @@
                     <Label text="电子资源（PDF，选填）" styleClass="lib-form-label" />
                     <HBox spacing="10.0" alignment="CENTER_LEFT">
                         <Button text="选择文件并上传" onAction="#handleChooseResource" styleClass="btn-recharge-preset" />
-                        <Button text="清除" onAction="#handleClearResource" styleClass="lib-btn-danger" />
+                        <Button fx:id="clearResourceButton" text="清除" onAction="#handleClearResource" styleClass="lib-btn-danger" />
                     </HBox>
                     <Label fx:id="resourceStatusLabel" text="未录入电子资源" styleClass="lib-subtitle" />
                 </VBox>
@@ -92,9 +95,8 @@
                 <Label fx:id="msgLabel" managed="false" visible="false" styleClass="lib-msg-label" />
 
                 <HBox spacing="10.0">
-                    <Button text="新增" onAction="#handleNew" styleClass="btn-recharge-preset" />
-                    <Button text="保存" onAction="#handleSave" styleClass="btn-primary-action" />
-                    <Button text="清空" onAction="#handleClear" styleClass="btn-recharge-preset" />
+                    <Button text="新增书目" onAction="#handleNew" styleClass="btn-recharge-preset" />
+                    <Button fx:id="saveButton" text="保存新增" onAction="#handleSave" styleClass="btn-primary-action" />
                 </HBox>
 
                 <Button text="删除选中书目" onAction="#handleDelete" maxWidth="Infinity" styleClass="lib-btn-danger" />

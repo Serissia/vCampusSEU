@@ -3,10 +3,12 @@ package com.vcampus.server.net;
 import com.vcampus.common.message.Message;
 import com.vcampus.server.dispatcher.Dispatcher;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 
 /**
  * 单客户端长连接处理线程。
@@ -44,6 +46,8 @@ public class ClientHandler implements Runnable {
                 out.flush();
                 out.reset();
             }
+        } catch (EOFException | SocketException ignored) {
+            // 客户端正常关闭连接或探测断开，无需打印错误堆栈
         } catch (IOException e) {
             System.err.println("客户端连接异常：" + e.getMessage());
         } catch (ClassNotFoundException e) {

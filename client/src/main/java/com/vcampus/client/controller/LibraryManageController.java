@@ -87,6 +87,12 @@ public class LibraryManageController {
     private Label resourceStatusLabel;
     @FXML
     private Label msgLabel;
+    @FXML
+    private Label modeLabel;
+    @FXML
+    private Button saveButton;
+    @FXML
+    private Button clearResourceButton;
 
     private UserVO currentUser;
     private final SocketClient socketClient = new SocketClient();
@@ -97,6 +103,14 @@ public class LibraryManageController {
 
     /** 已上传到服务端的电子资源文件名（null 表示未录入） */
     private String uploadedResourceName;
+
+    /** 已选择但尚未上传的电子资源字节（保存时上传） */
+    private byte[] pendingResourceData;
+    /** 已选择电子资源的原始文件名 */
+    private String pendingResourceFileName;
+
+    /** 进入编辑模式时书目原有的电子资源文件名（用于保存后清理被替换/清除的旧文件） */
+    private String originalResourceName;
 
     @FXML
     private void initialize() {
@@ -156,6 +170,9 @@ public class LibraryManageController {
 
         bookTable.getColumns().addAll(isbnCol, titleCol, authorCol, publisherCol, locationCol, totalCol, stockCol);
         bookTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        for (TableColumn<BookVO, ?> col : bookTable.getColumns()) {
+            col.setMinWidth(80.0);
+        }
 
         bookTable.getSelectionModel().selectedItemProperty().addListener((obs, old, val) -> {
             if (val != null) {
@@ -201,19 +218,7 @@ public class LibraryManageController {
         bookTable.getSelectionModel().clearSelection();
         resetForm();
         isbnField.setDisable(false);
-        showMsg("请输入新书目的信息后点击保存", true);
-    }
-
-    /**
-     * 清空表单。
-     */
-    @FXML
-    private void handleClear() {
-        editingBook = null;
-        bookTable.getSelectionModel().clearSelection();
-        resetForm();
-        isbnField.setDisable(false);
-        hideMsg();
+        showMsg("请输入新书目的信息后点击「保存新增」", true);
     }
 
     /**
@@ -248,7 +253,6 @@ public class LibraryManageController {
         book.setAuthor(author);
         book.setPublisher(publisherField.getText() == null ? "" : publisherField.getText().trim());
         book.setLocation(locationField.getText() == null ? "" : locationField.getText().trim());
-        book.setResourceFile(uploadedResourceName);
         book.setTotalNum(totalNum);
 
         boolean isAdd = editingBook == null;
@@ -260,12 +264,49 @@ public class LibraryManageController {
             book.setCurrentNum(totalNum);
         }
 
+        byte[] pendingData = pendingResourceData;
+        String pendingName = pendingResourceFileName;
+        String originalName = originalResourceName;
+        performSave(book, type, isAdd, pendingData, pendingName, originalName);
+    }
+
+    /**
+     * 保存书目：如有待上传的电子资源则先上传，再保存。
+     */
+    private void performSave(BookVO book, MessageType type, boolean isAdd, byte[] pendingData, String pendingName, String originalName) {
         THREAD_POOL.execute(() -> {
             try {
+                String newResourceName;
+                if (pendingData != null) {
+                    ResourceFileVO vo = new ResourceFileVO();
+                    vo.setFileName(pendingName);
+                    vo.setData(pendingData);
+                    Message uploadReq = new Message(currentUser.getAccountNumber(), MessageType.BOOK_RESOURCE_UPLOAD, null, vo);
+                    Message uploadResp = socketClient.send(uploadReq);
+                    if (uploadResp == null || uploadResp.getCode() != ResponseCode.SUCCESS
+                            || !(uploadResp.getData() instanceof String)) {
+                        Platform.runLater(() -> showMsg("电子资源上传失败", false));
+                        return;
+                    }
+                    newResourceName = (String) uploadResp.getData();
+                    book.setResourceFile(newResourceName);
+                } else {
+                    newResourceName = uploadedResourceName;
+                    book.setResourceFile(newResourceName);
+                }
+
                 Message request = new Message(currentUser.getAccountNumber(), type, null, book);
                 Message response = socketClient.send(request);
+                boolean saved = response != null && response.getCode() == ResponseCode.SUCCESS;
+
+                // 保存成功后，若原资源被替换或清除，则删除服务器上的旧文件
+                if (saved && originalName != null && !originalName.trim().isEmpty()
+                        && (newResourceName == null || !originalName.equals(newResourceName))) {
+                    deleteResource(originalName);
+                }
+
                 Platform.runLater(() -> {
-                    if (response != null && response.getCode() == ResponseCode.SUCCESS) {
+                    if (saved) {
                         showMsg(isAdd ? "新增成功" : "保存成功", true);
                         editingBook = null;
                         resetForm();
@@ -279,6 +320,18 @@ public class LibraryManageController {
                 Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
             }
         });
+    }
+
+    /**
+     * 请求服务端删除电子资源文件（尽力而为，失败不阻断主流程）。
+     */
+    private void deleteResource(String name) {
+        try {
+            Message request = new Message(currentUser.getAccountNumber(), MessageType.BOOK_RESOURCE_DELETE, null, name);
+            socketClient.send(request);
+        } catch (Exception ignored) {
+            // 删除失败仅可能残留孤儿文件，不影响主流程
+        }
     }
 
     /**
@@ -305,8 +358,16 @@ public class LibraryManageController {
             try {
                 Message request = new Message(currentUser.getAccountNumber(), MessageType.BOOK_DELETE, null, selected.getIsbn());
                 Message response = socketClient.send(request);
+                boolean deleted = response != null && response.getCode() == ResponseCode.SUCCESS;
+
+                // 删除书目成功后，若有电子资源则一并删除服务器文件
+                String resourceFile = selected.getResourceFile();
+                if (deleted && resourceFile != null && !resourceFile.trim().isEmpty()) {
+                    deleteResource(resourceFile);
+                }
+
                 Platform.runLater(() -> {
-                    if (response != null && response.getCode() == ResponseCode.SUCCESS) {
+                    if (deleted) {
                         showMsg("删除成功", true);
                         resetForm();
                         isbnField.setDisable(false);
@@ -335,38 +396,12 @@ public class LibraryManageController {
         }
         try {
             byte[] data = Files.readAllBytes(file.toPath());
-            uploadResource(data, file.getName());
+            pendingResourceData = data;
+            pendingResourceFileName = file.getName();
+            updateResourceStatus();
         } catch (IOException e) {
             showMsg("读取文件失败：" + e.getMessage(), false);
         }
-    }
-
-    /**
-     * 上传电子资源到服务端，成功后记录返回的文件名。
-     */
-    private void uploadResource(byte[] data, String fileName) {
-        ResourceFileVO vo = new ResourceFileVO();
-        vo.setFileName(fileName);
-        vo.setData(data);
-
-        THREAD_POOL.execute(() -> {
-            try {
-                Message request = new Message(currentUser.getAccountNumber(), MessageType.BOOK_RESOURCE_UPLOAD, null, vo);
-                Message response = socketClient.send(request);
-                Platform.runLater(() -> {
-                    if (response != null && response.getCode() == ResponseCode.SUCCESS
-                            && response.getData() instanceof String) {
-                        uploadedResourceName = (String) response.getData();
-                        resourceStatusLabel.setText("已上传电子资源：" + fileName);
-                        showMsg("电子资源上传成功", true);
-                    } else {
-                        showMsg("电子资源上传失败", false);
-                    }
-                });
-            } catch (Exception e) {
-                Platform.runLater(() -> showAlert("网络错误", "上传失败: " + e.getMessage(), Alert.AlertType.ERROR));
-            }
-        });
     }
 
     /**
@@ -375,7 +410,9 @@ public class LibraryManageController {
     @FXML
     private void handleClearResource() {
         uploadedResourceName = null;
-        resourceStatusLabel.setText("未录入电子资源");
+        pendingResourceData = null;
+        pendingResourceFileName = null;
+        updateResourceStatus();
     }
 
     /**
@@ -392,9 +429,12 @@ public class LibraryManageController {
         totalNumField.setText(String.valueOf(book.getTotalNum()));
 
         uploadedResourceName = book.getResourceFile();
-        resourceStatusLabel.setText(uploadedResourceName == null || uploadedResourceName.trim().isEmpty()
-                ? "未录入电子资源" : "已录入电子资源：" + uploadedResourceName);
+        originalResourceName = book.getResourceFile();
+        pendingResourceData = null;
+        pendingResourceFileName = null;
+        updateResourceStatus();
         hideMsg();
+        updateModeUI();
     }
 
     /**
@@ -408,7 +448,44 @@ public class LibraryManageController {
         locationField.clear();
         totalNumField.clear();
         uploadedResourceName = null;
-        resourceStatusLabel.setText("未录入电子资源");
+        pendingResourceData = null;
+        pendingResourceFileName = null;
+        originalResourceName = null;
+        updateModeUI();
+        updateResourceStatus();
+    }
+
+    /**
+     * 根据当前模式更新界面提示（新增 / 编辑）。
+     */
+    private void updateModeUI() {
+        boolean isAdd = editingBook == null;
+        if (saveButton != null) {
+            saveButton.setText(isAdd ? "保存新增" : "保存修改");
+        }
+        if (modeLabel != null) {
+            modeLabel.setText(isAdd ? "新增模式" : "编辑模式");
+        }
+    }
+
+    /**
+     * 根据当前电子资源状态更新提示与「清除」按钮。
+     */
+    private void updateResourceStatus() {
+        boolean hasResource = (uploadedResourceName != null && !uploadedResourceName.trim().isEmpty())
+                || pendingResourceData != null;
+        if (clearResourceButton != null) {
+            clearResourceButton.setDisable(!hasResource);
+        }
+        if (resourceStatusLabel != null) {
+            if (pendingResourceData != null) {
+                resourceStatusLabel.setText("已选择电子资源：" + pendingResourceFileName + "（保存时上传）");
+            } else if (uploadedResourceName != null && !uploadedResourceName.trim().isEmpty()) {
+                resourceStatusLabel.setText("已录入电子资源：" + uploadedResourceName);
+            } else {
+                resourceStatusLabel.setText("未录入电子资源");
+            }
+        }
     }
 
     private void showMsg(String msg, boolean success) {

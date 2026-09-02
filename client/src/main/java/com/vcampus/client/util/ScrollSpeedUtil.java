@@ -1,5 +1,7 @@
 package com.vcampus.client.util;
 
+import com.vcampus.client.config.AppConfig;
+import com.vcampus.client.config.AppConfigManager;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Node;
@@ -18,7 +20,9 @@ public final class ScrollSpeedUtil {
      * 全局滚轮速度倍率属性（默认为 3.0 倍速，推荐 2.5 ~ 4.0）
      * 后续设置模块可直接修改此 Property，全局立即生效
      */
-    public static final DoubleProperty SPEED_MULTIPLIER = new SimpleDoubleProperty(3.0);
+    public static final DoubleProperty SPEED_MULTIPLIER = new SimpleDoubleProperty(
+            AppConfigManager.getInstance().getConfig().getScrollSpeedFactor()
+    );
 
     private ScrollSpeedUtil() {
     }

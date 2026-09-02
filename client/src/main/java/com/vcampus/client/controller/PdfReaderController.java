@@ -1,6 +1,7 @@
 package com.vcampus.client.controller;
 
 import com.vcampus.client.net.SocketClient;
+import com.vcampus.client.util.ScrollSpeedUtil;
 import com.vcampus.client.util.SvgIcons;
 import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
@@ -86,6 +87,8 @@ public class PdfReaderController {
         backButton.setGraphicTextGap(6.0);
         // 页面宽度自适应阅读区
         pdfImageView.fitWidthProperty().bind(pdfScroll.widthProperty().subtract(40));
+        // 顺滑滚轮滚动
+        ScrollSpeedUtil.applyCustomScrollSpeed(pdfScroll);
     }
 
     /**
@@ -147,6 +150,9 @@ public class PdfReaderController {
                     pageIndicatorLabel.setText("第 " + (index + 1) + " / " + pageCount + " 页");
                     prevButton.setDisable(index <= 0);
                     nextButton.setDisable(index >= pageCount - 1);
+                    // 翻页后回到新一页开头
+                    pdfScroll.setVvalue(0.0);
+                    pdfScroll.setHvalue(0.0);
                 });
             } catch (Exception e) {
                 Platform.runLater(() -> pageIndicatorLabel.setText("渲染失败"));

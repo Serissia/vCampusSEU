@@ -7,7 +7,10 @@ import com.vcampus.common.vo.BookVO;
 import com.vcampus.common.vo.CourseVO;
 import com.vcampus.common.vo.GradeVO;
 import com.vcampus.common.vo.ResourceFileVO;
+import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
+import com.vcampus.server.service.BookService;
+import com.vcampus.server.service.BorrowService;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.server.service.BookService;
 import com.vcampus.server.service.BorrowService;
@@ -28,7 +31,7 @@ import java.math.BigDecimal;
 /**
  * 服务端消息路由与业务调度中心。
  *
- * @author vCampus Team
+ * @author GGbongy
  */
 public class Dispatcher {
 
@@ -104,6 +107,10 @@ public class Dispatcher {
                     response.setData(courseService.queryCourses(String.valueOf(request.getData())));
                     response.setCode(ResponseCode.SUCCESS);
                     break;
+                case HEARTBEAT:
+                    response.setCode(ResponseCode.SUCCESS);
+                    response.setData("pong");
+                    break;
                 case COURSE_LIST_ALL:
                     response.setData(courseService.listAllCourses());
                     response.setCode(ResponseCode.SUCCESS);
@@ -178,6 +185,9 @@ public class Dispatcher {
                     break;
                 case BOOK_RESOURCE_DOWNLOAD:
                     handleResourceDownload(request, response);
+                    break;
+                case BOOK_RESOURCE_DELETE:
+                    handleResourceDelete(request, response);
                     break;
                 default:
                     response.setCode(ResponseCode.INVALID_REQUEST);
@@ -387,6 +397,91 @@ public class Dispatcher {
     }
 
     /**
+     * 办理借阅：从负载解析借阅人学号与 ISBN。
+     */
+    private ResponseCode handleBorrow(Message request) {
+        String[] payload = toBorrowPayload(request.getData());
+        if (payload == null) {
+            return ResponseCode.INVALID_REQUEST;
+        }
+        return borrowService.borrow(payload[0], payload[1]);
+    }
+
+    /**
+     * 办理归还：从负载解析借阅人学号与 ISBN。
+     */
+    private ResponseCode handleReturn(Message request) {
+        String[] payload = toBorrowPayload(request.getData());
+        if (payload == null) {
+            return ResponseCode.INVALID_REQUEST;
+        }
+        return borrowService.returnBook(payload[0], payload[1]);
+    }
+
+    /**
+     * 借还请求负载约定为 String[]{借阅人学号, isbn}。
+     */
+    private String[] toBorrowPayload(Object data) {
+        if (data instanceof String[] && ((String[]) data).length >= 2) {
+            return (String[]) data;
+        }
+        return null;
+    }
+
+    /**
+     * 处理电子资源上传：保存文件并返回服务器端文件名。
+     */
+    private void handleResourceUpload(Message request, Message response) {
+        Object data = request.getData();
+        if (!(data instanceof ResourceFileVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("上传参数不合法");
+            return;
+        }
+        ResourceFileVO file = (ResourceFileVO) data;
+        if (file.getData() == null || file.getData().length == 0) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("上传文件为空");
+            return;
+        }
+        String name = resourceService.store(file.getData());
+        response.setCode(ResponseCode.SUCCESS);
+        response.setData(name);
+    }
+
+    /**
+     * 处理电子资源下载：按文件名读取文件并返回字节内容。
+     */
+    private void handleResourceDownload(Message request, Message response) {
+        String name = String.valueOf(request.getData());
+        if (name == null || "null".equals(name) || name.trim().isEmpty()) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("资源标识为空");
+            return;
+        }
+        byte[] data = resourceService.load(name.trim());
+        ResourceFileVO file = new ResourceFileVO();
+        file.setFileName(name.trim());
+        file.setData(data);
+        response.setCode(ResponseCode.SUCCESS);
+        response.setData(file);
+    }
+
+    /**
+     * 处理电子资源删除：按文件名删除服务器本地文件。
+     */
+    private void handleResourceDelete(Message request, Message response) {
+        String name = String.valueOf(request.getData());
+        if (name == null || "null".equals(name) || name.trim().isEmpty()) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("资源标识为空");
+            return;
+        }
+        boolean ok = resourceService.delete(name.trim());
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+    }
+
+    /**
      * 处理教务老师安排或修改课程上课时间请求。
      */
     private ResponseCode handleCourseSchedule(Message request) {
@@ -449,36 +544,4 @@ public class Dispatcher {
         return null;
     }
 
-    private void handleResourceUpload(Message request, Message response) {
-        Object data = request.getData();
-        if (!(data instanceof ResourceFileVO)) {
-            response.setCode(ResponseCode.INVALID_REQUEST);
-            response.setData("上传参数不合法");
-            return;
-        }
-        ResourceFileVO file = (ResourceFileVO) data;
-        if (file.getData() == null || file.getData().length == 0) {
-            response.setCode(ResponseCode.INVALID_REQUEST);
-            response.setData("上传文件为空");
-            return;
-        }
-        String name = resourceService.store(file.getData());
-        response.setCode(ResponseCode.SUCCESS);
-        response.setData(name);
-    }
-
-    private void handleResourceDownload(Message request, Message response) {
-        String name = String.valueOf(request.getData());
-        if (name == null || "null".equals(name) || name.trim().isEmpty()) {
-            response.setCode(ResponseCode.INVALID_REQUEST);
-            response.setData("资源标识为空");
-            return;
-        }
-        byte[] data = resourceService.load(name.trim());
-        ResourceFileVO file = new ResourceFileVO();
-        file.setFileName(name.trim());
-        file.setData(data);
-        response.setCode(ResponseCode.SUCCESS);
-        response.setData(file);
-    }
 }

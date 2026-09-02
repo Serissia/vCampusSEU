@@ -2,6 +2,8 @@ package com.vcampus.common.message;
 
 /**
  * 服务端统一状态响应码。
+ *
+ * @author GGbongy
  */
 public enum ResponseCode {
     /** 操作成功 */
