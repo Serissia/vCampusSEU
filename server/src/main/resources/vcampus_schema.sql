@@ -128,6 +128,7 @@ CREATE TABLE `tbl_goods` (
     `price` DECIMAL(10, 2) NOT NULL COMMENT '售价',
     `stock` INT NOT NULL DEFAULT 100 COMMENT '当前库存',
     `description` VARCHAR(255) DEFAULT NULL COMMENT '商品描述',
+    `status` VARCHAR(16) NOT NULL DEFAULT 'ON_SHELF' COMMENT '状态: ON_SHELF 上架, OFF_SHELF 已下架',
     PRIMARY KEY (`goods_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商店商品表';
 
@@ -154,6 +155,9 @@ INSERT INTO `tbl_user` (`uid`, `password`, `role`, `name`, `balance`) VALUES
 ('213000001', '123456', 'STUDENT', '张三', 500.00),
 ('100001', '123456', 'TEACHER', '李教授', 1000.00),
 ('jwc_test', '123456', 'ACADEMIC_AFFAIRS_TEACHER', '测试教务老师', 1000.00);
+
+INSERT INTO `tbl_user` (`uid`, `password`, `role`, `name`, `balance`, `status`) VALUES
+('200001', '123456', 'SELLER', '高老板', 0.00, 1);
 
 INSERT INTO `tbl_student` (`uid`, `gender`, `department`, `major`, `class_name`, `phone`) VALUES
 ('213000001', '男', '计算机科学与工程学院', '软件工程', '2101班', '13800000000');

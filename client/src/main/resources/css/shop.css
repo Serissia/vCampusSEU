@@ -1,0 +1,84 @@
+/* 校园超市模块私有样式（通用组件样式见 base.css / library.css） */
+
+/* 内容容器 */
+.shop-container {
+    -fx-padding: 4px;
+}
+
+/* 余额徽标 */
+.shop-balance-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.shop-balance-value {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+}
+
+/* 充值行标签 */
+.shop-recharge-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+/* 底部操作表单标签 */
+.shop-form-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-main;
+}
+
+/* 立即购买按钮 */
+.shop-btn-buy {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: -fx-bg-surface;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px 20px;
+    -fx-cursor: hand;
+    -fx-graphic-text-gap: 8px;
+}
+
+.shop-btn-buy:hover {
+    -fx-background-color: -fx-primary-hover;
+}
+
+.shop-btn-buy:pressed {
+    -fx-background-color: -fx-primary-pressed;
+}
+
+.shop-buy-icon {
+    -fx-fill: -fx-bg-surface;
+}
+
+/* 数量微调框 */
+.spinner {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+}
+
+.spinner .text-field {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-main;
+    -fx-font-size: 13px;
+}
+
+.spinner .increment-arrow-button,
+.spinner .decrement-arrow-button {
+    -fx-background-color: -fx-bg-nav;
+}
+
+/* 商品上下架状态标签 */
+.status-on-shelf {
+    -fx-text-fill: -fx-primary;
+    -fx-font-weight: bold;
+}
+
+.status-off-shelf {
+    -fx-text-fill: -fx-text-disabled;
+}

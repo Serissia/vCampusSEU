@@ -3,6 +3,7 @@ package com.vcampus.server.dao;
 import com.vcampus.common.vo.UserVO;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
@@ -48,4 +49,14 @@ public interface UserDao {
      * @throws SQLException 数据库异常
      */
     boolean updateBalance(String uid, BigDecimal newBalance) throws SQLException;
+
+    /**
+     * 在同一事务内按 uid 查询用户信息并锁定用户行（配合结账事务使用）。
+     */
+    UserVO queryByUidForUpdate(Connection conn, String uid) throws SQLException;
+
+    /**
+     * 在同一事务内原子扣减一卡通余额，余额不足时拒绝。
+     */
+    boolean deductBalance(Connection conn, String uid, BigDecimal amount) throws SQLException;
 }

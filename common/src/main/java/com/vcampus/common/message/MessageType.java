@@ -63,5 +63,28 @@ public enum MessageType implements Serializable {
     /** 图书电子资源上传、下载与删除 */
     BOOK_RESOURCE_UPLOAD,
     BOOK_RESOURCE_DOWNLOAD,
-    BOOK_RESOURCE_DELETE
+    BOOK_RESOURCE_DELETE,
+
+    /** 校园超市商品检索 */
+    GOODS_QUERY,
+
+    /** 校园超市商品管理 */
+    GOODS_ADD,
+    GOODS_UPDATE,
+    GOODS_DELETE,
+
+    /** 商品强制下架（仅管理员） */
+    GOODS_OFF_SHELF,
+
+    /** 校园超市订单创建 */
+    ORDER_CREATE,
+
+    /** 校园超市订单查询 */
+    ORDER_QUERY,
+
+    /** 一卡通在线充值 */
+    PAYMENT_RECHARGE,
+
+    /** 一卡通余额查询 */
+    PAYMENT_BALANCE
 }
