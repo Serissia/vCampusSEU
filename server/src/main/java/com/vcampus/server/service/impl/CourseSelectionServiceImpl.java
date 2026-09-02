@@ -31,7 +31,7 @@ public class CourseSelectionServiceImpl implements CourseSelectionService {
         try {
             // 只有正常开课状态的课程允许选课
             CourseVO course = courseDao.findByCode(courseCode);
-            if (course == null || !"ACTIVE".equals(course.getStatus())) {
+            if (course == null || !CourseVO.STATUS_ACTIVE.equals(course.getStatus())) {
                 return ResponseCode.COURSE_NOT_FOUND;
             }
             // 防止同一学生重复选择同一课程
@@ -43,14 +43,21 @@ public class CourseSelectionServiceImpl implements CourseSelectionService {
                 return ResponseCode.COURSE_FULL;
             }
 
-            // 写入选课记录后同步增加课程已选人数
+            List<CourseVO> selectedCourses = selectionDao.listByStudent(studentId);
+            for (CourseVO selected : selectedCourses) {
+                if (selected.getClassTime() != null && course.getClassTime() != null
+                        && selected.getClassTime().equals(course.getClassTime())) {
+                    return ResponseCode.COURSE_TIME_CONFLICT;
+                }
+            }
+
+            // 在同一事务中写入选课记录并增加课程已选人数
             CourseSelectionVO selection = new CourseSelectionVO();
             selection.setStudentId(studentId);
             selection.setCourseCode(courseCode);
             selection.setSelectTime(new Date());
             selection.setStatus("SELECTED");
-            selectionDao.insert(selection);
-            courseDao.updateSelectedCount(courseCode, 1);
+            selectionDao.insertWithCountUpdate(selection);
             return ResponseCode.SUCCESS;
         } catch (SQLException e) {
             return ResponseCode.FAIL;
@@ -66,8 +73,7 @@ public class CourseSelectionServiceImpl implements CourseSelectionService {
             if (!selectionDao.exists(studentId, courseCode)) {
                 return ResponseCode.COURSE_NOT_FOUND;
             }
-            selectionDao.delete(studentId, courseCode);
-            courseDao.updateSelectedCount(courseCode, -1);
+            selectionDao.deleteWithCountUpdate(studentId, courseCode);
             return ResponseCode.SUCCESS;
         } catch (SQLException e) {
             return ResponseCode.FAIL;

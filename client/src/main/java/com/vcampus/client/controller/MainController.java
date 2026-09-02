@@ -62,6 +62,7 @@ public class MainController {
     }
 
     private final SocketClient socketClient = new SocketClient();
+    private final AcademicController academicController = new AcademicController(socketClient);
     private final List<Button> navButtons = new ArrayList<>();
 
     /**
@@ -89,6 +90,7 @@ public class MainController {
         if (user != null) {
             AppConfigManager.getInstance().switchUser(user.getAccountNumber());
         }
+        academicController.setUid(user.getAccountNumber());
         renderHeaderInfo();
         buildRoleBasedNavigation();
 
@@ -239,6 +241,31 @@ public class MainController {
                 ProfileController controller = loader.getController();
                 controller.initData(currentUser, this);
                 return profileRoot;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // 教务模块统一由 AcademicView.fxml 承载，样式与图书馆系统保持一致
+        if (moduleKey.startsWith("ACADEMIC_")) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/AcademicView.fxml"));
+                Node academicRoot = loader.load();
+                AcademicViewController controller = loader.getController();
+                controller.initData(moduleKey, currentUser, academicController);
+                return academicRoot;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if ("LIBRARY".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LibraryView.fxml"));
+                Node libraryRoot = loader.load();
+                LibraryController controller = loader.getController();
+                controller.initData(currentUser);
+                return libraryRoot;
             } catch (IOException e) {
                 e.printStackTrace();
             }

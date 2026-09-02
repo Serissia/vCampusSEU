@@ -20,6 +20,12 @@ public enum ResponseCode {
     COURSE_FULL,
     /** 已经选择该课程 */
     ALREADY_SELECTED,
+    /** 上课时间冲突 */
+    COURSE_TIME_CONFLICT,
+    /** 超过学分上限 */
+    CREDIT_LIMIT_EXCEEDED,
+    /** 课程状态不合法 */
+    COURSE_STATUS_INVALID,
     /** 该课程成绩已录入 */
     GRADE_ALREADY_EXISTS,
     /** 图书不存在 */
@@ -31,5 +37,7 @@ public enum ResponseCode {
     /** 已借阅该书且尚未归还 */
     ALREADY_BORROWED,
     /** 未借阅该书 */
-    NOT_BORROWED
+    NOT_BORROWED,
+    /** 当前角色无权执行该操作 */
+    PERMISSION_DENIED
 }

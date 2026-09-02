@@ -19,9 +19,19 @@ public interface CourseSelectionDao {
     boolean insert(CourseSelectionVO selection) throws SQLException;
 
     /**
+     * 在同一事务中新增选课记录并增加课程已选人数。
+     */
+    boolean insertWithCountUpdate(CourseSelectionVO selection) throws SQLException;
+
+    /**
      * 删除选课记录。
      */
     boolean delete(String studentId, String courseCode) throws SQLException;
+
+    /**
+     * 在同一事务中删除选课记录并减少课程已选人数。
+     */
+    boolean deleteWithCountUpdate(String studentId, String courseCode) throws SQLException;
 
     /**
      * 判断学生是否已经选择该课程。
