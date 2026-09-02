@@ -20,6 +20,8 @@
         <URL value="@../css/tokens.css" />
         <URL value="@../css/base.css" />
         <URL value="@../css/main.css" />
+        <URL value="@../css/profile.css" />
+        <URL value="@../css/academic.css" />
     </stylesheets>
 
     <!-- 顶部状态与用户信息栏 -->

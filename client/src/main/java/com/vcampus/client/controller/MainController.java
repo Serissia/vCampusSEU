@@ -59,6 +59,7 @@ public class MainController {
     }
 
     private final SocketClient socketClient = new SocketClient();
+    private final AcademicController academicController = new AcademicController(socketClient);
     private final List<Button> navButtons = new ArrayList<>();
 
     /**
@@ -83,6 +84,7 @@ public class MainController {
      */
     public void initUserContext(UserVO user) {
         this.currentUser = user;
+        academicController.setUid(user.getAccountNumber());
         renderHeaderInfo();
         buildRoleBasedNavigation();
     }
@@ -145,21 +147,17 @@ public class MainController {
             case STUDENT:
                 menus.add(new MenuItem("学生选课", "graduation-cap", "ACADEMIC_SELECT"));
                 menus.add(new MenuItem("我的成绩", "chart-bar", "ACADEMIC_GRADE"));
-                menus.add(new MenuItem("图书借阅", "book-open", "LIBRARY"));
+                menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
                 break;
             case TEACHER:
                 menus.add(new MenuItem("课程管理", "calendar-alt", "ACADEMIC_TEACHER"));
                 menus.add(new MenuItem("成绩登记", "edit", "ACADEMIC_GRADE_SUBMIT"));
-                menus.add(new MenuItem("图书检索", "book-open", "LIBRARY"));
+                menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 break;
             case ACADEMIC_AFFAIRS_TEACHER:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
                 menus.add(new MenuItem("开课审批", "edit", "ACADEMIC_APPROVE"));
-                break;
-            case LIBRARIAN:
-                menus.add(new MenuItem("图书采编", "book", "LIBRARY_MANAGE"));
-                menus.add(new MenuItem("借还审核", "receipt", "LIBRARY_BORROW_MANAGE"));
                 break;
             case STORE_MANAGER:
                 menus.add(new MenuItem("商品库存", "boxes", "SHOP_MANAGE"));
@@ -167,7 +165,7 @@ public class MainController {
                 break;
             case ADMIN:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
-                menus.add(new MenuItem("图书管理", "book", "LIBRARY_MANAGE"));
+                menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 menus.add(new MenuItem("超市管理", "store", "SHOP_MANAGE"));
                 menus.add(new MenuItem("用户权限", "user-shield", "ADMIN_USER"));
                 break;
@@ -226,6 +224,31 @@ public class MainController {
                 ProfileController controller = loader.getController();
                 controller.initData(currentUser, this);
                 return profileRoot;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // 教务模块统一由 AcademicView.fxml 承载，样式与图书馆系统保持一致
+        if (moduleKey.startsWith("ACADEMIC_")) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/AcademicView.fxml"));
+                Node academicRoot = loader.load();
+                AcademicViewController controller = loader.getController();
+                controller.initData(moduleKey, currentUser, academicController);
+                return academicRoot;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if ("LIBRARY".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LibraryView.fxml"));
+                Node libraryRoot = loader.load();
+                LibraryController controller = loader.getController();
+                controller.initData(currentUser);
+                return libraryRoot;
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -25,6 +25,15 @@ public enum MessageType implements Serializable {
     COURSE_ADD,
     COURSE_UPDATE,
     COURSE_DISABLE,
+    COURSE_DELETE,
+    COURSE_APPROVE,
+    COURSE_REJECT,
+    COURSE_LIST_ALL,
+    COURSE_QUERY_BY_TEACHER,
+    COURSE_QUERY_BY_SEMESTER,
+    COURSE_PENDING_LIST,
+    COURSE_SCHEDULE,
+    COURSE_WEEK_SCHEDULE,
 
     /** 教务选课流转 */
     COURSE_SELECT,
@@ -34,5 +43,24 @@ public enum MessageType implements Serializable {
     /** 成绩管理 */
     GRADE_SUBMIT,
     GRADE_QUERY,
-    GRADE_STATISTICS
+    GRADE_QUERY_BY_COURSE,
+    GRADE_STATISTICS,
+
+    /** 图书馆图书检索与采编 */
+    BOOK_QUERY,
+    BOOK_ADD,
+    BOOK_UPDATE,
+    BOOK_DELETE,
+
+    /** 图书借还流转 */
+    BOOK_BORROW,
+    BOOK_RETURN,
+
+    /** 借阅记录查询 */
+    BORROW_MY_LIST,
+    BORROW_BY_STUDENT,
+
+    /** 图书电子资源上传与下载 */
+    BOOK_RESOURCE_UPLOAD,
+    BOOK_RESOURCE_DOWNLOAD
 }
