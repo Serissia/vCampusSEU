@@ -116,8 +116,9 @@ public class LibraryController {
      */
     public void initData(UserVO user) {
         this.currentUser = user;
-        if (currentUser != null && currentUser.getRole() == UserRole.ADMIN) {
-            // 管理员：进入虚拟图书馆后先展示业务选择中心
+        if (currentUser != null
+                && (currentUser.getRole() == UserRole.ADMIN || currentUser.getRole() == UserRole.LIBRARIAN)) {
+            // 管理员 / 图书管理员：进入虚拟图书馆后先展示业务选择中心
             libraryRoot.getChildren().setAll(buildAdminHub());
             return;
         }
