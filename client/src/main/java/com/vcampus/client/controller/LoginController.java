@@ -161,6 +161,11 @@ public class LoginController {
             Scene mainScene = new Scene(root, 1100, 720);
             stage.setTitle("vCampus - 智慧校园综合服务平台");
             stage.setScene(mainScene);
+            stage.setResizable(true);
+            stage.setMinWidth(1024);
+            stage.setMinHeight(680);
+            stage.setWidth(1200);
+            stage.setHeight(800);
             stage.centerOnScreen();
         } catch (IOException e) {
             showError("主界面加载失败：" + e.getMessage());
