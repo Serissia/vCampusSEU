@@ -112,7 +112,8 @@ CREATE TABLE `tbl_order` (
 INSERT INTO `tbl_user` (`uid`, `password`, `role`, `name`, `balance`) VALUES
 ('admin', '123456', 'ADMIN', '系统管理员', 9999.00),
 ('213000001', '123456', 'STUDENT', '张三', 500.00),
-('100001', '123456', 'TEACHER', '李教授', 1000.00);
+('100001', '123456', 'TEACHER', '李教授', 1000.00),
+('300001', '123456', 'LIBRARIAN', '图书管理员', 1000.00);
 
 INSERT INTO `tbl_student` (`uid`, `gender`, `department`, `major`, `class_name`, `phone`) VALUES
 ('213000001', '男', '计算机科学与工程学院', '软件工程', '2101班', '13800000000');

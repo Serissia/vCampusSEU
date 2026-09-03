@@ -170,6 +170,9 @@ public class MainController {
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
                 menus.add(new MenuItem("开课审批", "edit", "ACADEMIC_APPROVE"));
                 break;
+            case LIBRARIAN:
+                menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
+                break;
             case STORE_MANAGER:
                 menus.add(new MenuItem("商品库存", "boxes", "SHOP_MANAGE"));
                 menus.add(new MenuItem("流水订单", "receipt", "SHOP_ORDER_MANAGE"));
