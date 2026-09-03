@@ -206,7 +206,12 @@ public class Dispatcher {
                     handleGoodsOffShelf(request, response);
                     break;
                 case ORDER_CREATE:
-                    response.setCode(handleOrderCreate(request));
+                    OrderVO orderPayload = (OrderVO) request.getData();
+                    orderPayload.setStudentId(request.getUid());
+                    response.setCode(orderService.createOrder(orderPayload));
+                    if (response.getCode() == ResponseCode.SUCCESS) {
+                        response.setData(orderPayload);
+                    }
                     break;
                 case ORDER_QUERY:
                     response.setData(orderService.listOrders(request.getUid()));

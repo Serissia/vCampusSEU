@@ -10,7 +10,6 @@ import com.vcampus.common.vo.OrderVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
 import javafx.application.Platform;
-import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -21,15 +20,17 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.DialogPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Circle;
+import javafx.scene.paint.Paint;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -43,11 +44,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 校园超市面板。
+ * 校园超市面板（卡片式商品展示）。
  *
  * <p>所有登录用户均可浏览商品、购买、查看订单、充值并查询余额。卖家
  * （SELLER / ADMIN）额外获得商品管理工具栏（新增、修改、删除），管理员还
- * 可强制下架商品。已下架商品对所有用户标记为“已下架”，无法购买。</p>
+ * 可强制下架商品。已下架商品标记为灰色，无法选中购买。</p>
  *
  * <p>全部交互通过 {@link MessageType} 中的报文与服务端通信；商品管理请求
  * （{@code GOODS_ADD / GOODS_UPDATE / GOODS_DELETE / GOODS_OFF_SHELF}）由
@@ -95,9 +96,15 @@ public class ShopPanel extends VBox {
     private VBox bottomBar;
     private TextField rechargeField;
     private TextField searchField;
-    private TableView<GoodsVO> goodsTable;
     private Spinner<Integer> quantitySpinner;
     private Button buyBtn;
+
+    /** 商品卡片容器（FlowPane） */
+    private FlowPane cardFlowPane;
+    /** 卡片区域的外部 ScrollPane */
+    private ScrollPane cardScrollPane;
+    /** 手动追踪的当前选中商品 */
+    private GoodsVO selectedGoods;
 
     public ShopPanel() {
         buildUi();
@@ -136,7 +143,7 @@ public class ShopPanel extends VBox {
 
         bottomBar = new VBox(12.0);
 
-        getChildren().addAll(buildTopCard(), buildTableCard(), bottomBar);
+        getChildren().addAll(buildTopCard(), buildCardsCard(), bottomBar);
     }
 
     /**
@@ -221,74 +228,157 @@ public class ShopPanel extends VBox {
     }
 
     /**
-     * 中部卡片：商品列表表格。
+     * 中部卡片：商品卡片网格（FlowPane + ScrollPane）。
      */
-    private Node buildTableCard() {
+    private Node buildCardsCard() {
         VBox card = new VBox(12.0);
         card.getStyleClass().add("profile-card");
         VBox.setVgrow(card, Priority.ALWAYS);
 
+        HBox header = new HBox(12.0);
+        header.setAlignment(Pos.CENTER_LEFT);
+
         Label sectionTitle = new Label("商品列表");
         sectionTitle.getStyleClass().add("lib-section-title");
 
-        goodsTable = new TableView<>();
-        goodsTable.getStyleClass().add("lib-table");
-        goodsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        VBox.setVgrow(goodsTable, Priority.ALWAYS);
-        setupGoodsTable();
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        card.getChildren().addAll(sectionTitle, goodsTable);
+        Label hintLabel = new Label("点击卡片选中商品进行购买 / 管理");
+        hintLabel.getStyleClass().add("lib-subtitle");
+
+        header.getChildren().addAll(sectionTitle, spacer, hintLabel);
+
+        cardFlowPane = new FlowPane();
+        cardFlowPane.setHgap(14.0);
+        cardFlowPane.setVgap(14.0);
+        cardFlowPane.getStyleClass().add("shop-card-flow");
+
+        cardScrollPane = new ScrollPane(cardFlowPane);
+        cardScrollPane.getStyleClass().add("shop-card-scroll");
+        cardScrollPane.setFitToWidth(true);
+        cardScrollPane.setFitToHeight(false);
+        VBox.setVgrow(cardScrollPane, Priority.ALWAYS);
+
+        card.getChildren().addAll(header, cardScrollPane);
         return card;
     }
 
     /**
-     * 构造商品表格列。
+     * 根据商品数据构建一张可点击的卡片。
      */
-    private void setupGoodsTable() {
-        TableColumn<GoodsVO, String> idCol = new TableColumn<>("商品编号");
-        idCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getGoodsId()));
-        idCol.setPrefWidth(110);
+    private Node createGoodsCard(GoodsVO goods) {
+        boolean offShelf = "OFF_SHELF".equals(goods.getStatus());
 
-        TableColumn<GoodsVO, String> nameCol = new TableColumn<>("商品名称");
-        nameCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getGoodsName()));
-        nameCol.setPrefWidth(190);
-
-        TableColumn<GoodsVO, String> priceCol = new TableColumn<>("单价");
-        priceCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(formatPrice(cd.getValue().getPrice())));
-        priceCol.setPrefWidth(90);
-
-        TableColumn<GoodsVO, String> stockCol = new TableColumn<>("库存");
-        stockCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(String.valueOf(cd.getValue().getStock())));
-        stockCol.setPrefWidth(70);
-
-        TableColumn<GoodsVO, String> statusCol = new TableColumn<>("状态");
-        statusCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getStatus()));
-        statusCol.setCellFactory(col -> new TableCell<GoodsVO, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    getStyleClass().removeAll("status-on-shelf", "status-off-shelf");
-                } else {
-                    boolean onShelf = "ON_SHELF".equals(item);
-                    setText(onShelf ? "上架" : "已下架");
-                    getStyleClass().removeAll("status-on-shelf", "status-off-shelf");
-                    getStyleClass().add(onShelf ? "status-on-shelf" : "status-off-shelf");
-                }
-            }
-        });
-        statusCol.setPrefWidth(70);
-
-        TableColumn<GoodsVO, String> descCol = new TableColumn<>("商品描述");
-        descCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(
-                cd.getValue().getDescription() == null ? "" : cd.getValue().getDescription()));
-        descCol.setPrefWidth(240);
-
-        goodsTable.getColumns().addAll(idCol, nameCol, priceCol, stockCol, statusCol, descCol);
-        for (TableColumn<GoodsVO, ?> col : goodsTable.getColumns()) {
-            col.setMinWidth(60.0);
+        VBox card = new VBox(8.0);
+        card.getStyleClass().add("shop-card");
+        if (offShelf) {
+            card.getStyleClass().add("shop-card-off-shelf");
         }
+        card.setAlignment(Pos.TOP_LEFT);
+        card.setPadding(new Insets(14.0));
+        card.setPrefWidth(200.0);
+        card.setMinWidth(180.0);
+        card.setMaxWidth(220.0);
+
+        // 顶部：商品编号 + 状态徽标
+        HBox topRow = new HBox(6.0);
+        topRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label idLabel = new Label(goods.getGoodsId() == null ? "" : goods.getGoodsId());
+        idLabel.getStyleClass().add("shop-card-id");
+
+        Region idSpacer = new Region();
+        HBox.setHgrow(idSpacer, Priority.ALWAYS);
+
+        Label statusBadge = new Label();
+        statusBadge.getStyleClass().add("shop-card-badge");
+        if (offShelf) {
+            statusBadge.setText("已下架");
+            statusBadge.getStyleClass().add("shop-card-badge-off");
+        } else {
+            statusBadge.setText("在售");
+            statusBadge.getStyleClass().add("shop-card-badge-on");
+        }
+
+        topRow.getChildren().addAll(idLabel, idSpacer, statusBadge);
+
+        // 商品名称
+        Label nameLabel = new Label(goods.getGoodsName() == null ? "" : goods.getGoodsName());
+        nameLabel.getStyleClass().add("shop-card-name");
+        nameLabel.setWrapText(true);
+
+        // 描述
+        Label descLabel = new Label(goods.getDescription() == null ? "" : goods.getDescription());
+        descLabel.getStyleClass().add("shop-card-desc");
+        descLabel.setWrapText(true);
+        descLabel.setMaxHeight(36.0);
+        VBox.setVgrow(descLabel, Priority.ALWAYS);
+
+        // 底部：价格 + 库存
+        HBox bottomRow = new HBox();
+        bottomRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label priceLabel = new Label(formatPrice(goods.getPrice()));
+        priceLabel.getStyleClass().add("shop-card-price");
+
+        Region priceSpacer = new Region();
+        HBox.setHgrow(priceSpacer, Priority.ALWAYS);
+
+        Label stockLabel = new Label("库存 " + goods.getStock());
+        stockLabel.getStyleClass().add("shop-card-stock");
+
+        bottomRow.getChildren().addAll(priceLabel, priceSpacer, stockLabel);
+
+        card.getChildren().addAll(topRow, nameLabel, descLabel, bottomRow);
+
+        // 点击选中（下架商品不可选中购买，但管理员/卖家仍可点击管理）
+        card.setOnMouseClicked(event -> {
+            if (offShelf && !managerMode) {
+                return; // 普通用户不能选中已下架商品
+            }
+            selectGoods(goods, card);
+        });
+
+        // 鼠标悬停效果通过 CSS 处理（.shop-card:hover）
+
+        return card;
+    }
+
+    /**
+     * 选中或取消选中某张卡片，同步更新 selectedGoods 和视觉状态。
+     */
+    private void selectGoods(GoodsVO goods, VBox cardNode) {
+        if (selectedGoods == goods) {
+            // 再次点击取消选中
+            clearSelection();
+            return;
+        }
+        selectedGoods = goods;
+        // 遍历 FlowPane 所有卡片，更新选中样式
+        for (Node n : cardFlowPane.getChildren()) {
+            n.getStyleClass().remove("shop-card-selected");
+            if (n == cardNode) {
+                n.getStyleClass().add("shop-card-selected");
+            }
+        }
+        // 同步购买按钮的禁用状态
+        if (goods != null && "OFF_SHELF".equals(goods.getStatus())) {
+            buyBtn.setDisable(true);
+        } else {
+            buyBtn.setDisable(false);
+        }
+    }
+
+    /**
+     * 清空卡片选中状态。
+     */
+    private void clearSelection() {
+        selectedGoods = null;
+        for (Node n : cardFlowPane.getChildren()) {
+            n.getStyleClass().remove("shop-card-selected");
+        }
+        buyBtn.setDisable(true);
     }
 
     /**
@@ -323,11 +413,7 @@ public class ShopPanel extends VBox {
         buyBtn.getStyleClass().add("shop-btn-buy");
         buyBtn.setGraphic(SvgIcons.createIcon("cart-shopping", 14.0, "shop-buy-icon"));
         buyBtn.setOnAction(e -> handleBuy());
-
-        // 选中已下架商品时禁用购买
-        goodsTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
-            buyBtn.setDisable(newVal != null && "OFF_SHELF".equals(newVal.getStatus()));
-        });
+        buyBtn.setDisable(true); // 初始无选中
 
         bar.getChildren().addAll(searchField, searchBtn, spacer, qtyLabel, quantitySpinner, buyBtn);
         return bar;
@@ -369,8 +455,8 @@ public class ShopPanel extends VBox {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         Label hint = new Label(adminMode
-                ? "选中商品后可修改、删除或强制下架"
-                : "选中商品后可修改或删除");
+                ? "点击卡片选中商品后可修改、删除或强制下架"
+                : "点击卡片选中商品后可修改或删除");
         hint.getStyleClass().add("lib-subtitle");
         bar.getChildren().addAll(spacer, hint);
         return bar;
@@ -385,7 +471,7 @@ public class ShopPanel extends VBox {
     }
 
     /**
-     * 异步检索商品。
+     * 异步检索商品，刷新卡片网格。
      */
     private void refreshGoods(String keyword) {
         THREAD_POOL.execute(() -> {
@@ -397,13 +483,41 @@ public class ShopPanel extends VBox {
                             && response.getData() instanceof List) {
                         @SuppressWarnings("unchecked")
                         List<GoodsVO> goods = (List<GoodsVO>) response.getData();
-                        goodsTable.getItems().setAll(goods);
+                        rebuildCards(goods);
                     }
                 });
             } catch (Exception e) {
                 Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
             }
         });
+    }
+
+    /**
+     * 根据最新商品列表重建卡片网格，保持原选中（若仍存在）。
+     */
+    private void rebuildCards(List<GoodsVO> goods) {
+        GoodsVO keepSelection = selectedGoods;
+        cardFlowPane.getChildren().clear();
+        selectedGoods = null;
+        buyBtn.setDisable(true);
+
+        if (goods == null || goods.isEmpty()) {
+            return;
+        }
+
+        for (GoodsVO g : goods) {
+            Node cardNode = createGoodsCard(g);
+            cardFlowPane.getChildren().add(cardNode);
+            // 如果原来的选中商品还在新列表里，重新选中它
+            if (keepSelection != null && keepSelection.getGoodsId() != null
+                    && keepSelection.getGoodsId().equals(g.getGoodsId())) {
+                selectedGoods = g;
+                cardNode.getStyleClass().add("shop-card-selected");
+                if (!"OFF_SHELF".equals(g.getStatus())) {
+                    buyBtn.setDisable(false);
+                }
+            }
+        }
     }
 
     /**
@@ -500,12 +614,11 @@ public class ShopPanel extends VBox {
      * 处理购买：校验选择与数量后异步发起 ORDER_CREATE 请求。
      */
     private void handleBuy() {
-        GoodsVO selected = goodsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("提示", "请先在商品列表中选择要购买的商品", Alert.AlertType.WARNING);
+        if (selectedGoods == null) {
+            showAlert("提示", "请先点击卡片选择要购买的商品", Alert.AlertType.WARNING);
             return;
         }
-        if ("OFF_SHELF".equals(selected.getStatus())) {
+        if ("OFF_SHELF".equals(selectedGoods.getStatus())) {
             showAlert("提示", "该商品已下架，无法购买", Alert.AlertType.WARNING);
             return;
         }
@@ -517,7 +630,7 @@ public class ShopPanel extends VBox {
 
         OrderVO order = new OrderVO();
         order.setStudentId(currentUser.getAccountNumber());
-        order.setGoodsId(selected.getGoodsId());
+        order.setGoodsId(selectedGoods.getGoodsId());
         order.setCount(count);
 
         THREAD_POOL.execute(() -> {
@@ -526,8 +639,9 @@ public class ShopPanel extends VBox {
                 Message response = socketClient.send(request);
                 Platform.runLater(() -> {
                     if (response != null && response.getCode() == ResponseCode.SUCCESS) {
-                        OrderVO created = response.getData() instanceof OrderVO ? (OrderVO) response.getData() : order;
-                        showAlert("购买成功", buildOrderSuccessMessage(created), Alert.AlertType.INFORMATION);
+                        OrderVO created = response.getData() instanceof OrderVO
+                                ? (OrderVO) response.getData() : order;
+                        showPurchaseSuccessDialog(created);
                         refreshGoods(searchField.getText() == null ? "" : searchField.getText().trim());
                         refreshBalance();
                     } else {
@@ -538,6 +652,84 @@ public class ShopPanel extends VBox {
                 Platform.runLater(() -> showAlert("网络错误", "无法连接服务器，购买失败: " + e.getMessage(), Alert.AlertType.ERROR));
             }
         });
+    }
+
+    /**
+     * 展示自定义样式的购买成功弹窗。
+     */
+    private void showPurchaseSuccessDialog(OrderVO order) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("购买成功");
+        dialog.setHeaderText(null);
+        dialog.getDialogPane().getStylesheets().addAll(getStylesheets());
+
+        ButtonType okType = new ButtonType("确定", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().add(okType);
+
+        VBox content = new VBox(16.0);
+        content.getStyleClass().add("shop-order-dialog-content");
+        content.setPadding(new Insets(24.0));
+
+        // 顶部勾选图标 + 成功标题
+        HBox headerRow = new HBox(12.0);
+        headerRow.setAlignment(Pos.CENTER_LEFT);
+
+        // 绿色圆形勾选背景
+        VBox checkBg = new VBox();
+        checkBg.setAlignment(Pos.CENTER);
+        checkBg.setPrefSize(40.0, 40.0);
+        checkBg.getStyleClass().add("shop-order-check");
+
+        Label checkLabel = new Label("✓");
+        checkLabel.getStyleClass().add("shop-order-check-icon");
+        checkBg.getChildren().add(checkLabel);
+
+        Label successLabel = new Label("订单提交成功！");
+        successLabel.getStyleClass().add("shop-order-success-title");
+
+        headerRow.getChildren().addAll(checkBg, successLabel);
+
+        // 订单详情 GridPane
+        GridPane detailGrid = new GridPane();
+        detailGrid.getStyleClass().add("shop-order-detail-grid");
+        detailGrid.setHgap(12.0);
+        detailGrid.setVgap(8.0);
+        detailGrid.setPadding(new Insets(4.0, 0, 4.0, 0));
+
+        addDetailRow(detailGrid, "订单号", order.getOrderId());
+        addDetailRow(detailGrid, "商品名称", order.getGoodsName());
+        addDetailRow(detailGrid, "购买数量", order.getCount() + "");
+        addDetailRow(detailGrid, "实付金额", formatPrice(order.getTotalPrice()));
+        addDetailRow(detailGrid, "下单时间", order.getOrderTime());
+
+        content.getChildren().addAll(headerRow, detailGrid);
+
+        // 设置 DialogPane 样式
+        DialogPane dp = dialog.getDialogPane();
+        dp.setContent(content);
+        dp.getStyleClass().add("shop-order-dialog-pane");
+
+        // 设置按钮样式
+        Button okBtn = (Button) dp.lookupButton(okType);
+        if (okBtn != null) {
+            okBtn.getStyleClass().add("shop-order-dialog-btn");
+        }
+
+        dialog.showAndWait();
+    }
+
+    /**
+     * 向订单详情 GridPane 添加一行（左标签 + 右值）。
+     */
+    private void addDetailRow(GridPane grid, String label, String value) {
+        Label lbl = new Label(label);
+        lbl.getStyleClass().add("shop-order-detail-label");
+
+        Label val = new Label(value == null ? "--" : value);
+        val.getStyleClass().add("shop-order-detail-value");
+
+        grid.add(lbl, 0, grid.getRowCount());
+        grid.add(val, 1, grid.getRowCount() - 1);
     }
 
     /**
@@ -554,17 +746,16 @@ public class ShopPanel extends VBox {
      * 修改商品：对选中商品弹出编辑对话框后提交 GOODS_UPDATE 请求。
      */
     private void handleEditGoods() {
-        GoodsVO selected = goodsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("提示", "请先在商品列表中选择要修改的商品", Alert.AlertType.WARNING);
+        if (selectedGoods == null) {
+            showAlert("提示", "请先点击卡片选择要修改的商品", Alert.AlertType.WARNING);
             return;
         }
         GoodsVO draft = new GoodsVO();
-        draft.setGoodsId(selected.getGoodsId());
-        draft.setGoodsName(selected.getGoodsName());
-        draft.setPrice(selected.getPrice());
-        draft.setStock(selected.getStock());
-        draft.setDescription(selected.getDescription());
+        draft.setGoodsId(selectedGoods.getGoodsId());
+        draft.setGoodsName(selectedGoods.getGoodsName());
+        draft.setPrice(selectedGoods.getPrice());
+        draft.setStock(selectedGoods.getStock());
+        draft.setDescription(selectedGoods.getDescription());
         if (showGoodsDialog("修改商品", draft, false)) {
             submitGoods(MessageType.GOODS_UPDATE, draft, "修改商品成功");
         }
@@ -574,18 +765,17 @@ public class ShopPanel extends VBox {
      * 删除商品：确认后提交 GOODS_DELETE 请求。
      */
     private void handleDeleteGoods() {
-        GoodsVO selected = goodsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("提示", "请先在商品列表中选择要删除的商品", Alert.AlertType.WARNING);
+        if (selectedGoods == null) {
+            showAlert("提示", "请先点击卡片选择要删除的商品", Alert.AlertType.WARNING);
             return;
         }
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("确认删除");
         confirm.setHeaderText(null);
-        confirm.setContentText("确定要删除商品 [" + selected.getGoodsName() + "] 吗？");
+        confirm.setContentText("确定要删除商品 [" + selectedGoods.getGoodsName() + "] 吗？");
         Optional<ButtonType> result = confirm.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            submitGoods(MessageType.GOODS_DELETE, selected, "删除商品成功");
+            submitGoods(MessageType.GOODS_DELETE, selectedGoods, "删除商品成功");
         }
     }
 
@@ -593,22 +783,21 @@ public class ShopPanel extends VBox {
      * 强制下架商品：仅管理员可见该按钮，确认后提交 GOODS_OFF_SHELF 请求。
      */
     private void handleOffShelf() {
-        GoodsVO selected = goodsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("提示", "请先在商品列表中选择要下架的商品", Alert.AlertType.WARNING);
+        if (selectedGoods == null) {
+            showAlert("提示", "请先点击卡片选择要下架的商品", Alert.AlertType.WARNING);
             return;
         }
-        if ("OFF_SHELF".equals(selected.getStatus())) {
+        if ("OFF_SHELF".equals(selectedGoods.getStatus())) {
             showAlert("提示", "该商品已下架", Alert.AlertType.INFORMATION);
             return;
         }
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("确认下架");
         confirm.setHeaderText(null);
-        confirm.setContentText("确定强制下架商品 [" + selected.getGoodsName() + "] 吗？下架后所有用户将无法购买。");
+        confirm.setContentText("确定强制下架商品 [" + selectedGoods.getGoodsName() + "] 吗？下架后所有用户将无法购买。");
         Optional<ButtonType> result = confirm.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            submitGoods(MessageType.GOODS_OFF_SHELF, selected, "商品已强制下架");
+            submitGoods(MessageType.GOODS_OFF_SHELF, selectedGoods, "商品已强制下架");
         }
     }
 
@@ -723,18 +912,6 @@ public class ShopPanel extends VBox {
                 Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
             }
         });
-    }
-
-    /**
-     * 组装购买成功提示内容。
-     */
-    private String buildOrderSuccessMessage(OrderVO order) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("订单号: ").append(order.getOrderId() == null ? "--" : order.getOrderId()).append('\n');
-        sb.append("商品: ").append(order.getGoodsName()).append(" × ").append(order.getCount()).append('\n');
-        sb.append("实付金额: ¥ ").append(formatPrice(order.getTotalPrice())).append('\n');
-        sb.append("下单时间: ").append(order.getOrderTime() == null ? "--" : order.getOrderTime());
-        return sb.toString();
     }
 
     /**

@@ -5,6 +5,8 @@
     -fx-padding: 4px;
 }
 
+/* ========== 顶部标题 / 余额 / 充值 ========== */
+
 /* 余额徽标 */
 .shop-balance-label {
     -fx-font-size: 12px;
@@ -30,7 +32,7 @@
     -fx-text-fill: -fx-text-main;
 }
 
-/* 立即购买按钮 */
+/* ========== 立即购买按钮 ========== */
 .shop-btn-buy {
     -fx-background-color: -fx-primary;
     -fx-text-fill: -fx-bg-surface;
@@ -50,11 +52,18 @@
     -fx-background-color: -fx-primary-pressed;
 }
 
+.shop-btn-buy:disabled {
+    -fx-background-color: -fx-bg-nav;
+    -fx-text-fill: -fx-text-disabled;
+    -fx-opacity: 1;
+    -fx-cursor: default;
+}
+
 .shop-buy-icon {
     -fx-fill: -fx-bg-surface;
 }
 
-/* 数量微调框 */
+/* ========== 数量微调框 ========== */
 .spinner {
     -fx-background-color: -fx-bg-base;
     -fx-border-color: -fx-border-base;
@@ -73,7 +82,133 @@
     -fx-background-color: -fx-bg-nav;
 }
 
-/* 商品上下架状态标签 */
+/* ========== 商品卡片网格 ========== */
+.shop-card-flow {
+    -fx-padding: 4px;
+}
+
+.shop-card-scroll {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 0;
+}
+
+.shop-card-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* 滚动条美化 */
+.shop-card-scroll .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-width: 10px;
+}
+
+.shop-card-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: -fx-border-base;
+    -fx-background-radius: 5px;
+}
+
+.shop-card-scroll .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+}
+
+/* ========== 单张商品卡片 ========== */
+.shop-card {
+    -fx-background-color: -fx-bg-surface;
+    -fx-border-color: -fx-border-base;
+    -fx-border-width: 1px;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-padding: 14px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(31, 35, 41, 0.03), 6, 0, 0, 2);
+    -fx-transition: border-color 0.15s, -fx-effect 0.15s;
+}
+
+.shop-card:hover {
+    -fx-border-color: -fx-primary;
+    -fx-effect: dropshadow(gaussian, rgba(72, 122, 50, 0.15), 10, 0, 0, 3);
+}
+
+/* 选中态 */
+.shop-card-selected {
+    -fx-border-color: -fx-primary;
+    -fx-border-width: 2px;
+    -fx-background-color: -fx-primary-light;
+    -fx-effect: dropshadow(gaussian, rgba(72, 122, 50, 0.2), 12, 0, 0, 3);
+}
+
+/* 已下架（灰色） */
+.shop-card-off-shelf {
+    -fx-background-color: -fx-bg-nav;
+    -fx-border-color: -fx-border-base;
+    -fx-opacity: 0.7;
+}
+
+.shop-card-off-shelf:hover {
+    -fx-border-color: -fx-border-base;
+    -fx-effect: dropshadow(gaussian, rgba(31, 35, 41, 0.03), 6, 0, 0, 2);
+}
+
+.shop-card-off-shelf.shop-card-selected {
+    -fx-border-color: -fx-text-disabled;
+    -fx-background-color: -fx-bg-nav;
+    -fx-opacity: 0.85;
+}
+
+/* 卡片内部文字 */
+.shop-card-id {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-disabled;
+    -fx-font-family: "Consolas", "Courier New", monospace;
+}
+
+.shop-card-name {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+    -fx-wrap-text: true;
+}
+
+.shop-card-desc {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+    -fx-wrap-text: true;
+    -fx-line-spacing: 2px;
+}
+
+.shop-card-price {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+}
+
+.shop-card-stock {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+/* ========== 状态徽标 ========== */
+.shop-card-badge {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4px;
+    -fx-padding: 2px 8px;
+}
+
+.shop-card-badge-on {
+    -fx-text-fill: -fx-primary;
+    -fx-background-color: -fx-primary-light;
+}
+
+.shop-card-badge-off {
+    -fx-text-fill: -fx-text-disabled;
+    -fx-background-color: -fx-bg-nav;
+}
+
+/* ========== 商品上下架状态标签（旧 TableView 残留兼容） ========== */
 .status-on-shelf {
     -fx-text-fill: -fx-primary;
     -fx-font-weight: bold;
@@ -81,4 +216,73 @@
 
 .status-off-shelf {
     -fx-text-fill: -fx-text-disabled;
+}
+
+/* ========== 购买成功弹窗 ========== */
+.shop-order-dialog-pane {
+    -fx-background-color: -fx-bg-surface;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+}
+
+.shop-order-dialog-content {
+    -fx-background-color: -fx-bg-surface;
+}
+
+/* 绿色勾选圆圈 */
+.shop-order-check {
+    -fx-background-color: -fx-primary-light;
+    -fx-background-radius: 20px;
+    -fx-border-radius: 20px;
+}
+
+.shop-order-check-icon {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+}
+
+/* "订单提交成功" 标题 */
+.shop-order-success-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+/* 订单详情 GridPane */
+.shop-order-detail-grid {
+    -fx-background-color: -fx-bg-base;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 14px 18px;
+}
+
+.shop-order-detail-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.shop-order-detail-value {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-main;
+    -fx-font-weight: bold;
+}
+
+/* 弹窗确定按钮 */
+.shop-order-dialog-btn {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: -fx-bg-surface;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6px;
+    -fx-padding: 8px 24px;
+    -fx-cursor: hand;
+}
+
+.shop-order-dialog-btn:hover {
+    -fx-background-color: -fx-primary-hover;
+}
+
+.shop-order-dialog-btn:pressed {
+    -fx-background-color: -fx-primary-pressed;
 }
