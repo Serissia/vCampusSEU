@@ -7,7 +7,7 @@ USE `db_vcampus`;
 CREATE TABLE `tbl_user` (
     `uid` VARCHAR(32) NOT NULL COMMENT '一卡通号/学号/教工号',
     `password` VARCHAR(64) NOT NULL COMMENT '登录密码',
-    `role` VARCHAR(16) NOT NULL COMMENT '角色: STUDENT, TEACHER, ADMIN',
+    `role` VARCHAR(32) NOT NULL COMMENT '角色: ADMIN, ACADEMIC_AFFAIRS_TEACHER, LIBRARIAN, STORE_MANAGER, TEACHER, STUDENT',
     `name` VARCHAR(32) NOT NULL COMMENT '真实姓名',
     `balance` DECIMAL(10, 2) NOT NULL DEFAULT 0.00 COMMENT '一卡通虚拟账户余额',
     `status` INT NOT NULL DEFAULT 1 COMMENT '状态: 1正常, 0冻结',
@@ -34,25 +34,65 @@ CREATE TABLE `tbl_course` (
     `teacher_name` VARCHAR(32) NOT NULL COMMENT '任课教师姓名',
     `credits` FLOAT NOT NULL DEFAULT 2.0 COMMENT '学分',
     `open_semester` VARCHAR(32) NOT NULL COMMENT '开课学期',
-    `status` VARCHAR(16) NOT NULL DEFAULT '待审核' COMMENT '状态: 开课, 已停开, 待审核',
+    `status` VARCHAR(16) NOT NULL DEFAULT 'PENDING' COMMENT '状态: ACTIVE, DISABLED, PENDING',
     `max_capacity` INT NOT NULL DEFAULT 60 COMMENT '课程总容量',
     `current_num` INT NOT NULL DEFAULT 0 COMMENT '已选人数',
-    `time_slot` VARCHAR(64) NOT NULL COMMENT '上课时间',
+    `time_slot` VARCHAR(512) DEFAULT NULL COMMENT '上课时间，由教务老师统一安排，可包含多个时间段',
     `classroom` VARCHAR(64) NOT NULL COMMENT '上课地点',
+    `start_week` INT NOT NULL DEFAULT 0 COMMENT '起始周次，0 表示待安排',
+    `end_week` INT NOT NULL DEFAULT 0 COMMENT '结束周次，0 表示待安排',
     PRIMARY KEY (`course_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程信息表';
+
+-- 3.1 课程成绩组成表（教师自定义成绩项及权重）
+CREATE TABLE `tbl_course_score_component` (
+    `id` INT AUTO_INCREMENT NOT NULL COMMENT '组成项ID',
+    `course_id` VARCHAR(32) NOT NULL COMMENT '课程编号',
+    `component_name` VARCHAR(64) NOT NULL COMMENT '成绩组成名称',
+    `weight` DECIMAL(5,4) NOT NULL COMMENT '权重',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_course_component` (`course_id`, `component_name`),
+    CONSTRAINT `fk_csc_course` FOREIGN KEY (`course_id`) REFERENCES `tbl_course`(`course_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程成绩组成表';
 
 -- 4. 选课记录与成绩表 (tbl_course_select)
 CREATE TABLE `tbl_course_select` (
     `id` INT AUTO_INCREMENT NOT NULL COMMENT '记录自增ID',
     `student_id` VARCHAR(32) NOT NULL COMMENT '学生学号',
     `course_id` VARCHAR(32) NOT NULL COMMENT '课程编号',
-    `score` DECIMAL(5, 2) DEFAULT NULL COMMENT '课程成绩',
+    `select_time` DATETIME DEFAULT NULL COMMENT '选课时间',
+    `status` VARCHAR(16) NOT NULL DEFAULT 'SELECTED' COMMENT '选课状态',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_student_course` (`student_id`, `course_id`),
     CONSTRAINT `fk_cs_student` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE,
     CONSTRAINT `fk_cs_course` FOREIGN KEY (`course_id`) REFERENCES `tbl_course`(`course_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='选课与成绩记录表';
+
+-- 4.1 课程成绩表
+CREATE TABLE `tbl_grade` (
+    `id` INT AUTO_INCREMENT NOT NULL COMMENT '成绩记录自增ID',
+    `student_id` VARCHAR(32) NOT NULL COMMENT '学生学号',
+    `course_id` VARCHAR(32) NOT NULL COMMENT '课程编号',
+    `course_name` VARCHAR(64) NOT NULL COMMENT '课程名称快照',
+    `final_score` DECIMAL(5, 2) NOT NULL DEFAULT 0 COMMENT '最终成绩',
+    `gpa` DECIMAL(4, 2) NOT NULL DEFAULT 0 COMMENT '绩点',
+    `status` VARCHAR(16) NOT NULL DEFAULT 'SUBMITTED' COMMENT '成绩状态',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_grade_student_course` (`student_id`, `course_id`),
+    CONSTRAINT `fk_grade_student` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE,
+    CONSTRAINT `fk_grade_course` FOREIGN KEY (`course_id`) REFERENCES `tbl_course`(`course_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程成绩表';
+
+-- 4.2 课程成绩单项得分表
+CREATE TABLE `tbl_grade_score` (
+    `id` INT AUTO_INCREMENT NOT NULL COMMENT '单项成绩ID',
+    `grade_id` INT NOT NULL COMMENT '成绩记录ID',
+    `component_name` VARCHAR(64) NOT NULL COMMENT '成绩组成名称',
+    `score` DECIMAL(5, 2) NOT NULL DEFAULT 0 COMMENT '单项得分',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_grade_component` (`grade_id`, `component_name`),
+    CONSTRAINT `fk_gs_grade` FOREIGN KEY (`grade_id`) REFERENCES `tbl_grade`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程成绩单项得分表';
 
 -- 5. 图书馆藏表 (tbl_book)
 CREATE TABLE `tbl_book` (
@@ -88,6 +128,7 @@ CREATE TABLE `tbl_goods` (
     `price` DECIMAL(10, 2) NOT NULL COMMENT '售价',
     `stock` INT NOT NULL DEFAULT 100 COMMENT '当前库存',
     `description` VARCHAR(255) DEFAULT NULL COMMENT '商品描述',
+    `status` VARCHAR(16) NOT NULL DEFAULT 'ON_SHELF' COMMENT '状态: ON_SHELF 上架, OFF_SHELF 已下架',
     PRIMARY KEY (`goods_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商店商品表';
 
@@ -113,14 +154,25 @@ INSERT INTO `tbl_user` (`uid`, `password`, `role`, `name`, `balance`) VALUES
 ('admin', '123456', 'ADMIN', '系统管理员', 9999.00),
 ('213000001', '123456', 'STUDENT', '张三', 500.00),
 ('100001', '123456', 'TEACHER', '李教授', 1000.00),
-('300001', '123456', 'LIBRARIAN', '图书管理员', 1000.00);
+('300001', '123456', 'LIBRARIAN', '图书管理员', 1000.00),
+('jwc_test', '123456', 'ACADEMIC_AFFAIRS_TEACHER', '测试教务老师', 1000.00);
+
+INSERT INTO `tbl_user` (`uid`, `password`, `role`, `name`, `balance`, `status`) VALUES
+('200001', '123456', 'SELLER', '高老板', 0.00, 1);
 
 INSERT INTO `tbl_student` (`uid`, `gender`, `department`, `major`, `class_name`, `phone`) VALUES
 ('213000001', '男', '计算机科学与工程学院', '软件工程', '2101班', '13800000000');
 
-INSERT INTO `tbl_course` (`course_id`, `course_name`, `teacher_id`, `teacher_name`, `credits`, `open_semester`, `status`, `max_capacity`, `current_num`, `time_slot`, `classroom`) VALUES
-('CS101', 'Java程序设计', '100001', '李教授', 3.0, '2026-2027-1', '开课', 50, 0, '周一 1-2节', '九龙湖计算机楼101'),
-('CS102', '数据结构与算法', '100001', '李教授', 4.0, '2026-2027-1', '开课', 40, 0, '周三 3-4节', '九龙湖计算机楼203');
+INSERT INTO `tbl_course` (`course_id`, `course_name`, `teacher_id`, `teacher_name`, `credits`, `open_semester`, `status`, `max_capacity`, `current_num`, `time_slot`, `classroom`, `start_week`, `end_week`) VALUES
+('CS101', 'Java程序设计', '100001', '李教授', 3.0, '2026-2027-1', 'ACTIVE', 50, 0, '周一 第1-2节', '九龙湖计算机楼101', 1, 4),
+('CS102', '数据结构与算法', '100001', '李教授', 4.0, '2026-2027-1', 'ACTIVE', 40, 0, '周三 第3-4节', '九龙湖计算机楼203', 1, 4);
+
+INSERT INTO `tbl_course_score_component` (`course_id`, `component_name`, `weight`) VALUES
+('CS101', '平时成绩', 0.400),
+('CS101', '期末成绩', 0.600),
+('CS102', '平时成绩', 0.300),
+('CS102', '实验成绩', 0.200),
+('CS102', '期末成绩', 0.500);
 
 INSERT INTO `tbl_book` (`isbn`, `title`, `author`, `publisher`, `location`, `resource_file`, `total_num`, `current_num`) VALUES
 ('9787111213826', 'Java编程思想', 'Bruce Eckel', '机械工业出版社', '九龙湖馆三楼 TP312 区', NULL, 10, 10),

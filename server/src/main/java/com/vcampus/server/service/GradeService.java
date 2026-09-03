@@ -1,6 +1,7 @@
 package com.vcampus.server.service;
 
 import com.vcampus.common.message.ResponseCode;
+import com.vcampus.common.vo.GradeStatisticsVO;
 import com.vcampus.common.vo.GradeVO;
 
 import java.util.List;
@@ -26,4 +27,9 @@ public interface GradeService {
      * 查询某课程下所有学生的成绩。
      */
     List<GradeVO> queryByCourse(String courseCode);
+
+    /**
+     * 查询某课程成绩统计信息。
+     */
+    GradeStatisticsVO getCourseStatistics(String courseCode);
 }

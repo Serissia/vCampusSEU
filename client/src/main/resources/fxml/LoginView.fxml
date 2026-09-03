@@ -3,11 +3,12 @@
 <?import java.net.URL?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Hyperlink?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.ProgressIndicator?>
-<?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -58,9 +59,9 @@
         </VBox>
 
         <VBox spacing="6.0">
-            <Label text="用户名" styleClass="input-label" />
-            <TextField fx:id="usernameField" promptText="请输入一卡通号 / 别名"
-                       styleClass="modern-underline-field" />
+            <Label text="一卡通号" styleClass="input-label" />
+            <ComboBox fx:id="accountComboBox" editable="true" maxWidth="Infinity"
+                      promptText="请输入一卡通号" styleClass="modern-underline-combo" />
         </VBox>
 
         <VBox spacing="6.0">
@@ -69,7 +70,9 @@
                            styleClass="modern-underline-field" />
         </VBox>
 
-        <HBox alignment="CENTER_RIGHT">
+        <HBox alignment="CENTER_LEFT">
+            <CheckBox fx:id="rememberPasswordCheck" text="记住密码" styleClass="modern-checkbox" />
+            <Region HBox.hgrow="ALWAYS" />
             <Hyperlink onAction="#handleForgotPassword" text="忘记密码？" styleClass="forget-pwd-link" />
         </HBox>
 

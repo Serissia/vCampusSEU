@@ -114,4 +114,40 @@ public class UserDaoImpl implements UserDao {
             return pstmt.executeUpdate() > 0;
         }
     }
+
+    @Override
+    public UserVO queryByUidForUpdate(Connection conn, String uid) throws SQLException {
+        String sql = "SELECT uid, password, role, name, balance, status FROM tbl_user WHERE uid = ? FOR UPDATE";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, uid);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    UserVO user = new UserVO();
+                    user.setUid(rs.getString("uid"));
+                    user.setPassword(rs.getString("password"));
+                    user.setName(rs.getString("name"));
+                    user.setBalance(rs.getBigDecimal("balance"));
+                    user.setStatus(rs.getInt("status"));
+                    try {
+                        user.setRole(UserRole.valueOf(rs.getString("role")));
+                    } catch (Exception e) {
+                        user.setRole(UserRole.STUDENT);
+                    }
+                    return user;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public boolean deductBalance(Connection conn, String uid, BigDecimal amount) throws SQLException {
+        String sql = "UPDATE tbl_user SET balance = balance - ? WHERE uid = ? AND balance >= ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setBigDecimal(1, amount);
+            pstmt.setString(2, uid);
+            pstmt.setBigDecimal(3, amount);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
 }

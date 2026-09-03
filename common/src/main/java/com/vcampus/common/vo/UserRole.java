@@ -12,7 +12,8 @@ public enum UserRole { // 角色枚举
     LIBRARIAN("图书管理员", 2),
     STORE_MANAGER("商店管理员", 3),
     TEACHER("教职工", 4),
-    STUDENT("学生", 5);
+    STUDENT("学生", 5),
+    SELLER("商店卖家", 6);
 
     private final String label;
     private final int jurisdiction;

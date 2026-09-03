@@ -18,7 +18,7 @@
 <?import javafx.scene.layout.VBox?>
 
 <?import javafx.scene.layout.StackPane?>
-<ScrollPane fx:id="settingsScrollPane" fitToWidth="true" styleClass="settings-scroll-pane"
+<ScrollPane fx:id="settingsScrollPane" fitToWidth="true" hbarPolicy="NEVER" styleClass="settings-scroll-pane, scroll-pane-clean"
             xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.vcampus.client.controller.SettingsController">
     <stylesheets>
@@ -27,10 +27,8 @@
         <URL value="@../css/settings.css" />
     </stylesheets>
 
-    <VBox spacing="18.0" styleClass="settings-container">
-        <padding>
-            <Insets bottom="30.0" left="10.0" right="10.0" top="10.0" />
-        </padding>
+    <VBox alignment="TOP_CENTER" spacing="20.0" style="-fx-padding: 32px;">
+        <VBox maxWidth="1000.0" spacing="18.0" styleClass="settings-container">
 
         <!-- 顶部 Banner 卡片 -->
         <HBox alignment="CENTER_LEFT" spacing="20.0" styleClass="settings-card, settings-banner-card">
@@ -71,7 +69,7 @@
                     <Separator orientation="VERTICAL" maxHeight="20.0" />
                     <!-- 莫奈衍生色按钮与预览圆圈 -->
                     <Button fx:id="monetExtractBtn" onAction="#handleExtractMonetColor" text="莫奈取色" styleClass="btn-secondary-action" />
-                    <StackPane fx:id="monetColorContainer" alignment="CENTER">
+                    <StackPane fx:id="monetColorContainer" >
                         <Region fx:id="monetColorCircle" styleClass="color-circle" />
                     </StackPane>
                     <Label fx:id="monetColorTip" text="壁纸衍生色" styleClass="setting-hint-label" />
@@ -94,7 +92,7 @@
                         <Region HBox.hgrow="ALWAYS" />
                         <Label fx:id="bgOpacityValueLabel" text="25%" styleClass="slider-value-badge" />
                     </HBox>
-                    <Slider fx:id="bgOpacitySlider" min="0.0" max="0.8" value="0.25" blockIncrement="0.05" />
+                    <Slider fx:id="bgOpacitySlider" max="0.8" value="0.25" blockIncrement="0.05" />
                 </VBox>
             </VBox>
         </VBox>
@@ -122,7 +120,7 @@
             <HBox alignment="CENTER_LEFT" spacing="12.0">
                 <Button onAction="#handleTestConnection" text="测试网络连接" styleClass="btn-secondary-action" />
                 <ProgressIndicator fx:id="testingSpinner" maxHeight="18.0" maxWidth="18.0" visible="false" />
-                <Label fx:id="testResultLabel" text="" styleClass="test-result-label" />
+                <Label fx:id="testResultLabel" styleClass="test-result-label" />
             </HBox>
         </VBox>
 
@@ -147,8 +145,6 @@
                 <ComboBox fx:id="closeBehaviorCombo" prefWidth="380.0" styleClass="modern-combo-box" />
             </VBox>
 
-            <!-- 记住卡号 -->
-            <CheckBox fx:id="rememberCardNumCheck" text="在登录页记住上次登录的一卡通号" styleClass="modern-checkbox" />
         </VBox>
 
         <!-- 卡片 4: 配置文件与存储 -->
@@ -167,6 +163,7 @@
             </HBox>
 
             <Label fx:id="statusMessageLabel" managed="false" visible="false" styleClass="status-message-label" />
+        </VBox>
         </VBox>
     </VBox>
 </ScrollPane>

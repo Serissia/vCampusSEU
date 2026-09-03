@@ -1,6 +1,8 @@
 package com.vcampus.common.vo;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 课程成绩值对象。
@@ -17,10 +19,8 @@ public class GradeVO implements Serializable {
     private String courseCode;
     /** 课程名称 */
     private String courseName;
-    /** 平时成绩 */
-    private double usualScore;
-    /** 考试成绩 */
-    private double examScore;
+    /** 各成绩组成项的得分 */
+    private List<GradeScoreVO> componentScores = new ArrayList<GradeScoreVO>();
     /** 最终成绩 */
     private double finalScore;
     /** 绩点 */
@@ -55,20 +55,12 @@ public class GradeVO implements Serializable {
         this.courseName = courseName;
     }
 
-    public double getUsualScore() {
-        return usualScore;
+    public List<GradeScoreVO> getComponentScores() {
+        return componentScores;
     }
 
-    public void setUsualScore(double usualScore) {
-        this.usualScore = usualScore;
-    }
-
-    public double getExamScore() {
-        return examScore;
-    }
-
-    public void setExamScore(double examScore) {
-        this.examScore = examScore;
+    public void setComponentScores(List<GradeScoreVO> componentScores) {
+        this.componentScores = componentScores;
     }
 
     public double getFinalScore() {

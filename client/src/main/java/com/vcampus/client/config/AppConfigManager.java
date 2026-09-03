@@ -10,6 +10,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 
 /**
  * 客户端偏好设置管理器
@@ -92,9 +96,6 @@ public class AppConfigManager {
         // 文件不存在时创建新配置并持久化；解析失败时禁止自动覆盖原文件
         this.currentConfig = new AppConfig();
         this.currentConfig.setCardNum(this.currentCardNum);
-        if (!this.currentCardNum.isEmpty()) {
-            this.currentConfig.setLastCardNum(this.currentCardNum);
-        }
         if (!parseFailed) {
             saveConfig();
         }
@@ -125,11 +126,60 @@ public class AppConfigManager {
     public synchronized boolean saveConfig() {
         File configFile = ConfigPathUtil.getConfigFile(this.currentCardNum);
         try (FileWriter writer = new FileWriter(configFile, StandardCharsets.UTF_8)) {
+            // 核心约束：当未勾选记住密码时，清除密码并置空
+            if (!currentConfig.isRememberPassword()) {
+                currentConfig.setPassword("");
+            }
+
             GSON.toJson(getConfig(), writer);
             return true;
         } catch (IOException e) {
             System.err.println("[AppConfigManager] 写入配置文件失败: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * 获取本地所有已登录过的账号配置，并按文件最近修改时间降序排序
+     *
+     * @return 账号配置列表
+     */
+    public List<AppConfig> getAllUserConfigs() {
+        List<AppConfig> list = new ArrayList<>();
+        File dir = new File(ConfigPathUtil.getAppDirectory(), "config");
+        if (dir.exists() && dir.isDirectory()) {
+            File[] files = dir.listFiles((d, name) -> name.endsWith("-config.json") && !"default-config.json".equals(name));
+            if (files != null) {
+                Arrays.sort(files, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
+                for (File file : files) {
+                    try (FileReader reader = new FileReader(file, StandardCharsets.UTF_8)) {
+                        AppConfig cfg = GSON.fromJson(reader, AppConfig.class);
+                        if (cfg != null && cfg.getCardNum() != null && !cfg.getCardNum().trim().isEmpty()) {
+                            list.add(cfg);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        return list;
+    }
+
+    /**
+     * 删除指定账号对应的本地配置文件
+     *
+     * @param cardNum 一卡通号
+     * @return 是否成功删除
+     */
+    public boolean deleteUserConfig(String cardNum) {
+        if (cardNum == null || cardNum.trim().isEmpty()) {
+            return false;
+        }
+        File file = ConfigPathUtil.getConfigFile(cardNum.trim());
+        if (file.exists() && file.isFile()) {
+            return file.delete();
+        }
+        return false;
     }
 }

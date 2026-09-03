@@ -62,6 +62,7 @@ public class MainController {
     }
 
     private final SocketClient socketClient = new SocketClient();
+    private final AcademicController academicController = new AcademicController(socketClient);
     private final List<Button> navButtons = new ArrayList<>();
 
     /**
@@ -89,6 +90,7 @@ public class MainController {
         if (user != null) {
             AppConfigManager.getInstance().switchUser(user.getAccountNumber());
         }
+        academicController.setUid(user.getAccountNumber());
         renderHeaderInfo();
         buildRoleBasedNavigation();
 
@@ -177,10 +179,13 @@ public class MainController {
                 menus.add(new MenuItem("商品库存", "boxes", "SHOP_MANAGE"));
                 menus.add(new MenuItem("流水订单", "receipt", "SHOP_ORDER_MANAGE"));
                 break;
+            case SELLER:
+                menus.add(new MenuItem("校园超市", "store", "SHOP"));
+                break;
             case ADMIN:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
-                menus.add(new MenuItem("超市管理", "store", "SHOP_MANAGE"));
+                menus.add(new MenuItem("校园超市", "store", "SHOP"));
                 menus.add(new MenuItem("用户权限", "user-shield", "ADMIN_USER"));
                 break;
             default:
@@ -247,6 +252,31 @@ public class MainController {
             }
         }
 
+        // 教务模块统一由 AcademicView.fxml 承载，样式与图书馆系统保持一致
+        if (moduleKey.startsWith("ACADEMIC_")) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/AcademicView.fxml"));
+                Node academicRoot = loader.load();
+                AcademicViewController controller = loader.getController();
+                controller.initData(moduleKey, currentUser, academicController);
+                return academicRoot;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if ("LIBRARY".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LibraryView.fxml"));
+                Node libraryRoot = loader.load();
+                LibraryController controller = loader.getController();
+                controller.initData(currentUser);
+                return libraryRoot;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         if ("SETTINGS".equals(moduleKey)) {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/SettingsView.fxml"));
@@ -268,6 +298,11 @@ public class MainController {
             }
         }
 
+        if ("SHOP".equals(moduleKey)) {
+            ShopPanel shopPanel = new ShopPanel();
+            shopPanel.initData(currentUser, this);
+            return shopPanel;
+        }
         // 其他尚未接入的模块仍保留占位卡片
         VBox card = new VBox(16.0);
         card.setAlignment(Pos.CENTER);
@@ -296,6 +331,12 @@ public class MainController {
             Scene scene = new Scene(root, 920, 580);
             stage.setTitle("东南大学智慧校园 - vCampusSEU");
             stage.setScene(scene);
+            stage.setMaximized(false);
+            stage.setResizable(false);
+            stage.setMinWidth(920);
+            stage.setMinHeight(580);
+            stage.setWidth(920);
+            stage.setHeight(580);
             stage.centerOnScreen();
         } catch (IOException e) {
             e.printStackTrace();

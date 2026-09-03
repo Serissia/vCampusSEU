@@ -5,6 +5,7 @@ import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.CourseVO;
+import com.vcampus.common.vo.GradeStatisticsVO;
 import com.vcampus.common.vo.GradeVO;
 
 import java.io.IOException;
@@ -48,6 +49,98 @@ public class AcademicController {
             }
         }
         return result;
+    }
+
+    public List<CourseVO> listAllCourses() {
+        Message request = new Message(uid, MessageType.COURSE_LIST_ALL, null, null);
+        return toCourseList(send(request));
+    }
+
+    /**
+     * 按教师工号查询课程。
+     */
+    public List<CourseVO> queryByTeacher(String teacherId) {
+        Message request = new Message(uid, MessageType.COURSE_QUERY_BY_TEACHER, null, teacherId);
+        return toCourseList(send(request));
+    }
+
+    /**
+     * 按开课学期查询课程。
+     */
+    public List<CourseVO> queryBySemester(String semester) {
+        Message request = new Message(uid, MessageType.COURSE_QUERY_BY_SEMESTER, null, semester);
+        return toCourseList(send(request));
+    }
+
+    /**
+     * 查询待教务审核的课程列表。
+     */
+    public List<CourseVO> listPendingCourses() {
+        Message request = new Message(uid, MessageType.COURSE_PENDING_LIST, null, null);
+        return toCourseList(send(request));
+    }
+
+    /**
+     * 审核通过课程。
+     */
+    public ResponseCode approveCourse(String courseCode) {
+        Message request = new Message(uid, MessageType.COURSE_APPROVE, null, courseCode);
+        return send(request).getCode();
+    }
+
+    /**
+     * 新增课程并提交审批。
+     */
+    public ResponseCode addCourse(CourseVO course) {
+        Message request = new Message(uid, MessageType.COURSE_ADD, null, course);
+        return send(request).getCode();
+    }
+
+    /**
+     * 更新课程信息。
+     */
+    public ResponseCode updateCourse(CourseVO course) {
+        Message request = new Message(uid, MessageType.COURSE_UPDATE, null, course);
+        return send(request).getCode();
+    }
+
+    /**
+     * 停开指定课程。
+     */
+    public ResponseCode disableCourse(String courseCode) {
+        Message request = new Message(uid, MessageType.COURSE_DISABLE, null, courseCode);
+        return send(request).getCode();
+    }
+
+    /**
+     * 删除指定课程。
+     */
+    public ResponseCode deleteCourse(String courseCode) {
+        Message request = new Message(uid, MessageType.COURSE_DELETE, null, courseCode);
+        return send(request).getCode();
+    }
+
+    public ResponseCode rejectCourse(String courseCode) {
+        Message request = new Message(uid, MessageType.COURSE_REJECT, null, courseCode);
+        return send(request).getCode();
+    }
+
+    /**
+     * 教务老师安排或修改课程上课时间。
+     */
+    public ResponseCode scheduleCourseTime(String courseCode, String classTime) {
+        Message request = new Message(uid, MessageType.COURSE_SCHEDULE, null,
+                new String[]{courseCode, classTime});
+        return send(request).getCode();
+    }
+
+    /**
+     * 教务老师安排或修改课程起止周次。
+     */
+    public ResponseCode scheduleCourseWeeks(String courseCode, int startWeek, int endWeek) {
+        Message request = new Message(uid, MessageType.COURSE_WEEK_SCHEDULE, null,
+                new String[]{courseCode, String.valueOf(startWeek), String.valueOf(endWeek)});
+        return send(request).getCode();
     }
 
     /**
@@ -99,6 +192,37 @@ public class AcademicController {
             }
         }
         return result;
+    }
+
+    /**
+     * 查询指定课程下所有学生的成绩。
+     */
+    public List<GradeVO> queryCourseGrades(String courseCode) {
+        Message request = new Message(uid, MessageType.GRADE_QUERY_BY_COURSE, null, courseCode);
+        Message response = send(request);
+        if (response.getCode() != ResponseCode.SUCCESS || !(response.getData() instanceof List)) {
+            return new ArrayList<GradeVO>();
+        }
+        List<GradeVO> result = new ArrayList<GradeVO>();
+        for (Object item : (List<?>) response.getData()) {
+            if (item instanceof GradeVO) {
+                result.add((GradeVO) item);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 查询指定课程的成绩统计结果。
+     */
+    public GradeStatisticsVO getCourseStatistics(String courseCode) {
+        Message request = new Message(uid, MessageType.GRADE_STATISTICS, null, courseCode);
+        Message response = send(request);
+        if (response.getCode() == ResponseCode.SUCCESS
+                && response.getData() instanceof GradeStatisticsVO) {
+            return (GradeStatisticsVO) response.getData();
+        }
+        return null;
     }
 
     /**
