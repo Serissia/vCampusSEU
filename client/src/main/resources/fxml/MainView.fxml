@@ -68,7 +68,7 @@
 
         <!-- 左侧导航栏 -->
         <left>
-            <VBox prefWidth="220.0" styleClass="sidebar-container">
+            <VBox prefWidth="220.0" minWidth="220.0" maxWidth="220.0" styleClass="sidebar-container">
                 <ScrollPane fitToWidth="true" styleClass="sidebar-scroll" VBox.vgrow="ALWAYS">
                     <VBox fx:id="navButtonGroup" spacing="4.0">
                         <padding>

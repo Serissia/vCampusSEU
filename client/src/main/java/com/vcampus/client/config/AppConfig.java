@@ -19,6 +19,21 @@ public class AppConfig implements Serializable {
     private String cardNum = "";
 
     /**
+     * 用户身份角色名称
+     */
+    private String role = "";
+
+    /**
+     * 是否在登录页记住密码
+     */
+    private boolean rememberPassword = false;
+
+    /**
+     * 保存的明文密码（未勾选记住密码时为空）
+     */
+    private String password = "";
+
+    /**
      * 服务器主机地址
      */
     private String serverHost = "127.0.0.1";
@@ -63,6 +78,9 @@ public class AppConfig implements Serializable {
      */
     private String savedMonetColor = "";
 
+    /**
+     * 滚轮平滑滚动速度倍率
+     */
     private double scrollSpeedFactor = 2.5;
 
     /**
@@ -70,21 +88,20 @@ public class AppConfig implements Serializable {
      */
     private String closeBehavior = "exit";
 
-    /**
-     * 是否记住卡号
-     */
-    private boolean rememberCardNum = true;
-
-    /**
-     * 上次成功登录的卡号
-     */
-    private String lastCardNum = "";
-
     public AppConfig() {
     }
 
     public String getCardNum() { return cardNum; }
     public void setCardNum(String cardNum) { this.cardNum = cardNum; }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
+    public boolean isRememberPassword() { return rememberPassword; }
+    public void setRememberPassword(boolean rememberPassword) { this.rememberPassword = rememberPassword; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 
     public String getServerHost() { return serverHost; }
     public void setServerHost(String serverHost) { this.serverHost = serverHost; }
@@ -118,10 +135,4 @@ public class AppConfig implements Serializable {
 
     public String getCloseBehavior() { return closeBehavior; }
     public void setCloseBehavior(String closeBehavior) { this.closeBehavior = closeBehavior; }
-
-    public boolean isRememberCardNum() { return rememberCardNum; }
-    public void setRememberCardNum(boolean rememberCardNum) { this.rememberCardNum = rememberCardNum; }
-
-    public String getLastCardNum() { return lastCardNum; }
-    public void setLastCardNum(String lastCardNum) { this.lastCardNum = lastCardNum; }
 }

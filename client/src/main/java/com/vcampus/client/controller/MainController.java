@@ -328,6 +328,12 @@ public class MainController {
             Scene scene = new Scene(root, 920, 580);
             stage.setTitle("东南大学智慧校园 - vCampusSEU");
             stage.setScene(scene);
+            stage.setMaximized(false);
+            stage.setResizable(false);
+            stage.setMinWidth(920);
+            stage.setMinHeight(580);
+            stage.setWidth(920);
+            stage.setHeight(580);
             stage.centerOnScreen();
         } catch (IOException e) {
             e.printStackTrace();
