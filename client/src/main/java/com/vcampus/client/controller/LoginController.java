@@ -160,8 +160,7 @@ public class LoginController {
                 // 禁止删除按钮获得焦点
                 deleteButton.setFocusTraversable(false);
 
-                // ComboBox 弹窗内控件无法正常完成 MOUSE_RELEASED 生命周期，
-                // 在 MOUSE_PRESSED 阶段立即执行删除并彻底 consume 事件，阻断外层 ListCell 选中或关闭。
+                // 在 MOUSE_PRESSED 阶段立即执行删除并阻断外层事件
                 deleteButton.setOnMousePressed(e -> {
                     e.consume();
                     deleteAccount(getItem());
@@ -243,6 +242,7 @@ public class LoginController {
 
     /**
      * 删除指定账号记录及本地配置
+     * 解决视觉停留优化：先收起浮层再清理输入框，且本地磁盘 I/O 异步化
      *
      * @param item 需删除的账号配置
      */
@@ -251,20 +251,31 @@ public class LoginController {
             return;
         }
         String deleteCard = item.getCardNum().trim();
-        AppConfigManager.getInstance().deleteUserConfig(deleteCard);
-        accountComboBox.getItems().removeIf(cfg -> deleteCard.equals(cfg.getCardNum()));
-
         String currentInput = accountComboBox.getEditor().getText();
-        if (currentInput != null && deleteCard.equals(currentInput.trim())) {
-            accountComboBox.getEditor().clear();
-            accountComboBox.setValue(null);
-            passwordField.clear();
-            rememberPasswordCheck.setSelected(false);
-        }
+        boolean isCurrent = currentInput != null && deleteCard.equals(currentInput.trim());
 
-        if (accountComboBox.getItems().isEmpty()) {
+        // 优先关闭下拉框，消除浮层慢半拍悬停的观感
+        if (isCurrent || accountComboBox.getItems().size() <= 1) {
             accountComboBox.hide();
         }
+
+        // 从下拉数据源中移除
+        accountComboBox.getItems().removeIf(cfg -> deleteCard.equals(cfg.getCardNum()));
+
+        // 将输入框及密码重置延迟至下一渲染微任务，确保下拉框完全闭合后再呈现清空状态
+        if (isCurrent) {
+            Platform.runLater(() -> {
+                accountComboBox.getEditor().clear();
+                accountComboBox.setValue(null);
+                passwordField.clear();
+                rememberPasswordCheck.setSelected(false);
+            });
+        }
+
+        // 本地文件删除放入后台线程池，避免主线程 I/O 阻塞 UI 刷新
+        THREAD_POOL.execute(() -> {
+            AppConfigManager.getInstance().deleteUserConfig(deleteCard);
+        });
     }
 
     /**
