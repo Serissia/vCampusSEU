@@ -104,7 +104,6 @@ public class SettingsController {
     @FXML private Slider scrollSpeedSlider;
     @FXML private Label scrollSpeedValueLabel;
     @FXML private ComboBox<String> closeBehaviorCombo;
-    @FXML private CheckBox rememberCardNumCheck;
 
     @FXML private TextField configFilePathField;
     @FXML private Label statusMessageLabel;
@@ -141,8 +140,6 @@ public class SettingsController {
         preview.setSavedMonetColor(source.getSavedMonetColor());
         preview.setScrollSpeedFactor(source.getScrollSpeedFactor());
         preview.setCloseBehavior(source.getCloseBehavior());
-        preview.setRememberCardNum(source.isRememberCardNum());
-        preview.setLastCardNum(source.getLastCardNum());
         return preview;
     }
 
@@ -282,7 +279,6 @@ public class SettingsController {
         scrollSpeedSlider.setValue(config.getScrollSpeedFactor());
         scrollSpeedValueLabel.setText(config.getScrollSpeedFactor() + "x");
         closeBehaviorCombo.getSelectionModel().select("minimize".equalsIgnoreCase(config.getCloseBehavior()) ? 1 : 0);
-        rememberCardNumCheck.setSelected(config.isRememberCardNum());
 
         // 存储路径
         File currentFile = ConfigPathUtil.getConfigFile(config.getCardNum());
@@ -417,7 +413,6 @@ public class SettingsController {
             double speedFactor = Math.round(scrollSpeedSlider.getValue() * 10.0) / 10.0;
             config.setScrollSpeedFactor(speedFactor);
             config.setCloseBehavior(closeBehaviorCombo.getSelectionModel().getSelectedIndex() == 1 ? "minimize" : "exit");
-            config.setRememberCardNum(rememberCardNumCheck.isSelected());
 
             boolean ok = AppConfigManager.getInstance().saveConfig();
             ScrollSpeedUtil.SPEED_MULTIPLIER.set(speedFactor);
@@ -514,7 +509,6 @@ public class SettingsController {
         config.setSavedMonetColor(defaultConfig.getSavedMonetColor());
         config.setScrollSpeedFactor(defaultConfig.getScrollSpeedFactor());
         config.setCloseBehavior(defaultConfig.getCloseBehavior());
-        config.setRememberCardNum(defaultConfig.isRememberCardNum());
 
         AppConfigManager.getInstance().saveConfig();
         ScrollSpeedUtil.SPEED_MULTIPLIER.set(defaultConfig.getScrollSpeedFactor());

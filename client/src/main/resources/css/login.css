@@ -108,3 +108,113 @@
 .login-primary-btn:pressed {
     -fx-background-color: -fx-primary-pressed;
 }
+
+/* ===================== 账号下拉框现代下划线风格 ===================== */
+.modern-underline-combo {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent -fx-border-base transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-padding: 0;
+}
+
+.modern-underline-combo:focused,
+.modern-underline-combo:showing {
+    -fx-border-color: transparent transparent -fx-primary transparent;
+    -fx-border-width: 0 0 2px 0;
+}
+
+.modern-underline-combo .text-field {
+    -fx-background-color: transparent;
+    -fx-font-size: 14px;
+    -fx-text-fill: -fx-text-main;
+    -fx-prompt-text-fill: -fx-text-muted;
+    -fx-padding: 8px 0;
+}
+
+.modern-underline-combo .arrow-button {
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 0 4px;
+}
+
+.modern-underline-combo .arrow {
+    -fx-background-color: -fx-text-muted;
+}
+
+.modern-underline-combo:hover .arrow {
+    -fx-background-color: -fx-primary;
+}
+
+/* 下拉菜单浮层容器 */
+.modern-underline-combo .combo-box-popup .list-view {
+    -fx-background-color: -fx-bg-surface;
+    -fx-background-radius: 6px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 6px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 12, 0, 0, 4);
+    -fx-padding: 4px;
+}
+
+.modern-underline-combo .combo-box-popup .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-radius: 4px;
+    -fx-padding: 6px 8px;
+}
+
+.modern-underline-combo .combo-box-popup .list-cell:hover {
+    -fx-background-color: -fx-primary-light;
+}
+
+/* 账号项角色徽标 */
+.account-role-badge {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-primary;
+    -fx-background-color: -fx-primary-light;
+    -fx-background-radius: 4px;
+    -fx-padding: 2px 6px;
+}
+
+/* 账号项删除按钮 */
+.account-delete-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-disabled;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-padding: 0 4px;
+}
+
+.account-delete-btn:hover {
+    -fx-text-fill: -fx-danger;
+}
+
+/* 现代复选框样式适配 */
+.modern-checkbox {
+    -fx-text-fill: -fx-text-main;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+
+.modern-checkbox .text {
+    -fx-fill: -fx-text-muted;
+}
+
+.modern-checkbox .box {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+}
+
+.modern-checkbox:hover .box {
+    -fx-border-color: -fx-primary;
+}
+
+.modern-checkbox:selected .box {
+    -fx-background-color: -fx-primary;
+    -fx-border-color: -fx-primary;
+}
+
+.modern-checkbox:selected .mark {
+    -fx-background-color: #FFFFFF;
+}
