@@ -2,6 +2,7 @@ target/
 out/
 /config/
 /ebooks/
+/goods_images/
 /log.txt
 /server/src/main/resources/db.properties
 !/server/src/main/resources/db.properties.default
