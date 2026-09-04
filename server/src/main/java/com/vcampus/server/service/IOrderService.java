@@ -18,6 +18,16 @@ public interface IOrderService {
     ResponseCode createOrder(OrderVO order);
 
     /**
+     * 购物车批量结算：在单一事务内校验并扣减购物车内全部商品的库存与
+     * 用户余额，逐件生成订单并清空购物车，任一环节失败整体回滚。
+     *
+     * @param studentId     购物人一卡通号
+     * @param createdOrders 成功后回填本次生成的订单列表（可为空，忽略即可）
+     * @return 具体业务状态码
+     */
+    ResponseCode checkoutCart(String studentId, List<OrderVO> createdOrders);
+
+    /**
      * 查询某学生的全部消费订单。
      */
     List<OrderVO> listOrders(String studentId);

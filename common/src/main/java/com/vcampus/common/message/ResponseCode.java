@@ -46,5 +46,7 @@ public enum ResponseCode {
     /** 一卡通余额不足 */
     BALANCE_INSUFFICIENT,
     /** 当前角色无权执行该操作 */
-    PERMISSION_DENIED
+    PERMISSION_DENIED,
+    /** 购物车为空 */
+    CART_EMPTY
 }

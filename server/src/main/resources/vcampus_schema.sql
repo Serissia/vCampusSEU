@@ -146,6 +146,19 @@ CREATE TABLE `tbl_order` (
     CONSTRAINT `fk_order_goods` FOREIGN KEY (`goods_id`) REFERENCES `tbl_goods`(`goods_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消费订单记录表';
 
+-- 9. 超市购物车表 (tbl_cart)
+CREATE TABLE `tbl_cart` (
+    `id` INT AUTO_INCREMENT NOT NULL COMMENT '记录自增ID',
+    `student_id` VARCHAR(32) NOT NULL COMMENT '购物人一卡通号',
+    `goods_id` VARCHAR(32) NOT NULL COMMENT '商品编码',
+    `count` INT NOT NULL DEFAULT 1 COMMENT '数量',
+    `add_time` VARCHAR(32) NOT NULL COMMENT '加入时间 (yyyy-MM-dd HH:mm:ss)',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_cart_user_goods` (`student_id`, `goods_id`),
+    CONSTRAINT `fk_cart_user` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE,
+    CONSTRAINT `fk_cart_goods` FOREIGN KEY (`goods_id`) REFERENCES `tbl_goods`(`goods_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='超市购物车表';
+
 -- ==========================================
 -- 插入初始模拟测试数据
 -- ==========================================
