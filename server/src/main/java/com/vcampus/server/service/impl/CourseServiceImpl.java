@@ -8,6 +8,7 @@ import com.vcampus.server.service.CourseService;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 课程管理业务实现。
@@ -77,6 +78,9 @@ public class CourseServiceImpl implements CourseService {
                     || course.getCourseCode().trim().length() == 0) {
                 return false;
             }
+            String displayCode = course.getCourseCode().trim();
+            course.setDisplayCode(displayCode);
+            course.setCourseCode(UUID.randomUUID().toString().replace("-", "").substring(0, 24));
             // 未指定状态时默认按待审核处理
             if (course.getStatus() == null || course.getStatus().trim().length() == 0) {
                 course.setStatus(CourseVO.STATUS_PENDING);
@@ -87,6 +91,9 @@ public class CourseServiceImpl implements CourseService {
             }
             if (course.getTimeSlots() != null && !course.getTimeSlots().isEmpty()) {
                 course.setClassTime(course.toScheduleText());
+            }
+            if (course.getNature() == null || course.getNature().trim().isEmpty()) {
+                course.setNature("选修");
             }
             if (!isValidScoreComponents(course)) {
                 return false;
@@ -108,6 +115,9 @@ public class CourseServiceImpl implements CourseService {
             }
             if (course != null && course.getTimeSlots() != null && !course.getTimeSlots().isEmpty()) {
                 course.setClassTime(course.toScheduleText());
+            }
+            if (course != null && (course.getNature() == null || course.getNature().trim().isEmpty())) {
+                course.setNature("选修");
             }
             return course != null && isValidScoreComponents(course) && courseDao.updateCourse(course);
         } catch (SQLException e) {
@@ -198,6 +208,22 @@ public class CourseServiceImpl implements CourseService {
             return courseDao.updateCourseWeeks(courseCode.trim(), startWeek, endWeek);
         } catch (SQLException e) {
             throw new RuntimeException("安排课程周次失败", e);
+        }
+    }
+
+    /**
+     * 教务老师安排或修改课程上课地点。
+     */
+    @Override
+    public boolean scheduleCourseLocation(String courseCode, String location) {
+        try {
+            if (courseCode == null || courseCode.trim().isEmpty()
+                    || location == null || location.trim().isEmpty()) {
+                return false;
+            }
+            return courseDao.updateCourseLocation(courseCode.trim(), location.trim());
+        } catch (SQLException e) {
+            throw new RuntimeException("安排课程地点失败", e);
         }
     }
 

@@ -150,8 +150,9 @@ public class CourseSelectionDaoImpl implements CourseSelectionDao {
      */
     @Override
     public List<CourseVO> listByStudent(String studentId) throws SQLException {
-        String sql = "SELECT c.course_id, c.course_name, c.credits, c.teacher_id, c.teacher_name, "
-                + "c.max_capacity, c.current_num, c.open_semester, c.time_slot, c.classroom, c.status "
+        String sql = "SELECT c.course_id, c.course_name, c.display_code, c.course_nature, c.credits, "
+                + "c.teacher_id, c.teacher_name, c.max_capacity, c.current_num, c.open_semester, "
+                + "c.time_slot, c.classroom, c.start_week, c.end_week, c.status "
                 + "FROM tbl_course_select cs JOIN tbl_course c ON cs.course_id = c.course_id "
                 + "WHERE cs.student_id = ?";
         List<CourseVO> result = new ArrayList<CourseVO>();
@@ -164,6 +165,8 @@ public class CourseSelectionDaoImpl implements CourseSelectionDao {
                     CourseVO course = new CourseVO();
                     course.setCourseCode(rs.getString("course_id"));
                     course.setCourseName(rs.getString("course_name"));
+                    course.setDisplayCode(rs.getString("display_code"));
+                    course.setNature(rs.getString("course_nature"));
                     course.setCredit(rs.getDouble("credits"));
                     course.setTeacherId(rs.getString("teacher_id"));
                     course.setTeacherName(rs.getString("teacher_name"));
@@ -172,6 +175,8 @@ public class CourseSelectionDaoImpl implements CourseSelectionDao {
                     course.setSemester(rs.getString("open_semester"));
                     course.setClassTime(rs.getString("time_slot"));
                     course.setLocation(rs.getString("classroom"));
+                    course.setStartWeek(rs.getInt("start_week"));
+                    course.setEndWeek(rs.getInt("end_week"));
                     course.setStatus(rs.getString("status"));
                     result.add(course);
                 }

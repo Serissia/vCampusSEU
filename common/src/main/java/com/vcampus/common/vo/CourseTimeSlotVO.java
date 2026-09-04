@@ -21,6 +21,8 @@ public class CourseTimeSlotVO implements Serializable {
     private int startPeriod;
     /** 结束节次 */
     private int endPeriod;
+    /** 该时间段的上课地点 */
+    private String location;
 
     public CourseTimeSlotVO() {
     }
@@ -32,6 +34,12 @@ public class CourseTimeSlotVO implements Serializable {
         this.day = day;
         this.startPeriod = startPeriod;
         this.endPeriod = endPeriod;
+    }
+
+    public CourseTimeSlotVO(int startWeek, int endWeek, String day,
+                            int startPeriod, int endPeriod, String location) {
+        this(startWeek, endWeek, day, startPeriod, endPeriod);
+        this.location = location;
     }
 
     public int getStartWeek() {
@@ -72,5 +80,13 @@ public class CourseTimeSlotVO implements Serializable {
 
     public void setEndPeriod(int endPeriod) {
         this.endPeriod = endPeriod;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
     }
 }

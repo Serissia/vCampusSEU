@@ -5,6 +5,7 @@ import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.BookVO;
 import com.vcampus.common.vo.CourseVO;
+import com.vcampus.common.vo.CourseReviewVO;
 import com.vcampus.common.vo.GoodsVO;
 import com.vcampus.common.vo.GradeVO;
 import com.vcampus.common.vo.OrderVO;
@@ -27,6 +28,7 @@ import com.vcampus.server.service.UserService;
 import com.vcampus.server.service.impl.BookServiceImpl;
 import com.vcampus.server.service.impl.BorrowServiceImpl;
 import com.vcampus.server.service.impl.CourseSelectionServiceImpl;
+import com.vcampus.server.service.impl.CourseReviewServiceImpl;
 import com.vcampus.server.service.impl.CourseServiceImpl;
 import com.vcampus.server.service.impl.GradeServiceImpl;
 import com.vcampus.server.service.impl.GoodsServiceImpl;
@@ -45,6 +47,7 @@ public class Dispatcher {
     private final CourseService courseService = new CourseServiceImpl();
     private final CourseSelectionService selectionService = new CourseSelectionServiceImpl();
     private final GradeService gradeService = new GradeServiceImpl();
+    private final CourseReviewServiceImpl courseReviewService = new CourseReviewServiceImpl();
     private final UserService userService = new UserServiceImpl();
     private final BookService bookService = new BookServiceImpl();
     private final BorrowService borrowService = new BorrowServiceImpl();
@@ -112,6 +115,9 @@ public class Dispatcher {
                 case COURSE_WEEK_SCHEDULE:
                     response.setCode(handleCourseWeekSchedule(request));
                     break;
+                case COURSE_LOCATION_SCHEDULE:
+                    response.setCode(handleCourseLocationSchedule(request));
+                    break;
                 case COURSE_QUERY:
                     response.setData(courseService.queryCourses(String.valueOf(request.getData())));
                     response.setCode(ResponseCode.SUCCESS);
@@ -158,6 +164,17 @@ public class Dispatcher {
                 case GRADE_STATISTICS:
                     response.setData(gradeService.getCourseStatistics(String.valueOf(request.getData())));
                     response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case COURSE_REVIEW_SUBMIT:
+                    response.setCode(courseReviewService.submit((CourseReviewVO) request.getData()));
+                    break;
+                case COURSE_REVIEW_LIST:
+                    response.setData(courseReviewService.listByCourse(String.valueOf(request.getData())));
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case COURSE_REVIEW_DELETE:
+                    response.setCode(courseReviewService.delete(request.getUid(),
+                            String.valueOf(request.getData())));
                     break;
                 case BOOK_QUERY:
                     response.setData(bookService.queryBooks(String.valueOf(request.getData())));
@@ -262,6 +279,7 @@ public class Dispatcher {
             case COURSE_PENDING_LIST:
             case COURSE_SCHEDULE:
             case COURSE_WEEK_SCHEDULE:
+            case COURSE_LOCATION_SCHEDULE:
             case COURSE_SELECT:
             case COURSE_DROP:
             case COURSE_TIMETABLE:
@@ -269,6 +287,9 @@ public class Dispatcher {
             case GRADE_QUERY:
             case GRADE_QUERY_BY_COURSE:
             case GRADE_STATISTICS:
+            case COURSE_REVIEW_SUBMIT:
+            case COURSE_REVIEW_LIST:
+            case COURSE_REVIEW_DELETE:
             case BOOK_QUERY:
             case BOOK_ADD:
             case BOOK_UPDATE:
@@ -314,6 +335,8 @@ public class Dispatcher {
                 return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
             case COURSE_WEEK_SCHEDULE:
                 return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
+            case COURSE_LOCATION_SCHEDULE:
+                return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
             case COURSE_SELECT:
             case COURSE_DROP:
             case COURSE_TIMETABLE:
@@ -332,6 +355,14 @@ public class Dispatcher {
                 return role == UserRole.ADMIN
                         || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
                         || role == UserRole.TEACHER;
+            case COURSE_REVIEW_SUBMIT:
+            case COURSE_REVIEW_DELETE:
+                return role == UserRole.STUDENT;
+            case COURSE_REVIEW_LIST:
+                return role == UserRole.STUDENT
+                        || role == UserRole.TEACHER
+                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
+                        || role == UserRole.ADMIN;
             case BOOK_QUERY:
                 return true;
             case BOOK_ADD:
@@ -738,6 +769,18 @@ public class Dispatcher {
         } catch (NumberFormatException e) {
             return ResponseCode.INVALID_REQUEST;
         }
+    }
+
+    /**
+     * 处理教务老师安排或修改课程上课地点请求。
+     */
+    private ResponseCode handleCourseLocationSchedule(Message request) {
+        String[] payload = toBorrowPayload(request.getData());
+        if (payload == null || payload[0] == null || payload[1] == null) {
+            return ResponseCode.INVALID_REQUEST;
+        }
+        boolean ok = courseService.scheduleCourseLocation(payload[0].trim(), payload[1].trim());
+        return ok ? ResponseCode.SUCCESS : ResponseCode.FAIL;
     }
 
     /**

@@ -19,8 +19,9 @@ import java.util.List;
  */
 public class CourseDaoImpl implements CourseDao {
 
-    private static final String COURSE_COLUMNS = "course_id, course_name, credits, teacher_id, teacher_name, "
-            + "max_capacity, current_num, open_semester, time_slot, classroom, start_week, end_week, status";
+    private static final String COURSE_COLUMNS = "course_id, course_name, display_code, course_nature, credits, "
+            + "teacher_id, teacher_name, max_capacity, current_num, open_semester, time_slot, classroom, "
+            + "start_week, end_week, status";
 
     /**
      * 按课程代码、名称或教师姓名进行模糊查询。
@@ -28,7 +29,8 @@ public class CourseDaoImpl implements CourseDao {
     @Override
     public List<CourseVO> queryCourses(String keyword) throws SQLException {
         String sql = "SELECT " + COURSE_COLUMNS
-                + " FROM tbl_course WHERE course_id LIKE ? OR course_name LIKE ? OR teacher_name LIKE ?";
+                + " FROM tbl_course WHERE course_id LIKE ? OR display_code LIKE ? "
+                + "OR course_name LIKE ? OR teacher_name LIKE ?";
         List<CourseVO> result = new ArrayList<CourseVO>();
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -37,6 +39,7 @@ public class CourseDaoImpl implements CourseDao {
             ps.setString(1, like);
             ps.setString(2, like);
             ps.setString(3, like);
+            ps.setString(4, like);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     result.add(mapCourse(rs));
@@ -140,10 +143,10 @@ public class CourseDaoImpl implements CourseDao {
      */
     @Override
     public boolean insertCourse(CourseVO course) throws SQLException {
-        String sql = "INSERT INTO tbl_course(course_id, course_name, credits, teacher_id, "
-                + "teacher_name, max_capacity, current_num, open_semester, time_slot, classroom, "
+        String sql = "INSERT INTO tbl_course(course_id, course_name, display_code, course_nature, credits, "
+                + "teacher_id, teacher_name, max_capacity, current_num, open_semester, time_slot, classroom, "
                 + "start_week, end_week, status) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         Connection conn = null;
         try {
@@ -153,17 +156,19 @@ public class CourseDaoImpl implements CourseDao {
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, course.getCourseCode());
                 ps.setString(2, course.getCourseName());
-                ps.setDouble(3, course.getCredit());
-                ps.setString(4, course.getTeacherId());
-                ps.setString(5, course.getTeacherName());
-                ps.setInt(6, course.getCapacity());
-                ps.setInt(7, course.getSelectedCount());
-                ps.setString(8, course.getSemester());
-                ps.setString(9, course.getClassTime());
-                ps.setString(10, course.getLocation());
-                ps.setInt(11, course.getStartWeek());
-                ps.setInt(12, course.getEndWeek());
-                ps.setString(13, course.getStatus());
+                ps.setString(3, course.getDisplayCode());
+                ps.setString(4, course.getNature());
+                ps.setDouble(5, course.getCredit());
+                ps.setString(6, course.getTeacherId());
+                ps.setString(7, course.getTeacherName());
+                ps.setInt(8, course.getCapacity());
+                ps.setInt(9, course.getSelectedCount());
+                ps.setString(10, course.getSemester());
+                ps.setString(11, course.getClassTime());
+                ps.setString(12, course.getLocation());
+                ps.setInt(13, course.getStartWeek());
+                ps.setInt(14, course.getEndWeek());
+                ps.setString(15, course.getStatus());
                 ps.executeUpdate();
             }
 
@@ -188,8 +193,9 @@ public class CourseDaoImpl implements CourseDao {
      */
     @Override
     public boolean updateCourse(CourseVO course) throws SQLException {
-        String sql = "UPDATE tbl_course SET course_name=?, credits=?, teacher_id=?, teacher_name=?, "
-                + "max_capacity=?, current_num=?, open_semester=?, time_slot=?, classroom=?, "
+        String sql = "UPDATE tbl_course SET course_name=?, display_code=?, course_nature=?, credits=?, "
+                + "teacher_id=?, teacher_name=?, max_capacity=?, current_num=?, open_semester=?, "
+                + "time_slot=?, classroom=?, "
                 + "start_week=?, end_week=?, status=? "
                 + "WHERE course_id=?";
 
@@ -200,18 +206,20 @@ public class CourseDaoImpl implements CourseDao {
 
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, course.getCourseName());
-                ps.setDouble(2, course.getCredit());
-                ps.setString(3, course.getTeacherId());
-                ps.setString(4, course.getTeacherName());
-                ps.setInt(5, course.getCapacity());
-                ps.setInt(6, course.getSelectedCount());
-                ps.setString(7, course.getSemester());
-                ps.setString(8, course.getClassTime());
-                ps.setString(9, course.getLocation());
-                ps.setInt(10, course.getStartWeek());
-                ps.setInt(11, course.getEndWeek());
-                ps.setString(12, course.getStatus());
-                ps.setString(13, course.getCourseCode());
+                ps.setString(2, course.getDisplayCode());
+                ps.setString(3, course.getNature());
+                ps.setDouble(4, course.getCredit());
+                ps.setString(5, course.getTeacherId());
+                ps.setString(6, course.getTeacherName());
+                ps.setInt(7, course.getCapacity());
+                ps.setInt(8, course.getSelectedCount());
+                ps.setString(9, course.getSemester());
+                ps.setString(10, course.getClassTime());
+                ps.setString(11, course.getLocation());
+                ps.setInt(12, course.getStartWeek());
+                ps.setInt(13, course.getEndWeek());
+                ps.setString(14, course.getStatus());
+                ps.setString(15, course.getCourseCode());
                 ps.executeUpdate();
             }
 
@@ -327,12 +335,28 @@ public class CourseDaoImpl implements CourseDao {
     }
 
     /**
+     * 更新课程上课地点。
+     */
+    @Override
+    public boolean updateCourseLocation(String courseCode, String location) throws SQLException {
+        String sql = "UPDATE tbl_course SET classroom = ? WHERE course_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, location);
+            ps.setString(2, courseCode);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
      * 将 ResultSet 当前行转换为 CourseVO。
      */
     private CourseVO mapCourse(ResultSet rs) throws SQLException {
         CourseVO course = new CourseVO();
         course.setCourseCode(rs.getString("course_id"));
         course.setCourseName(rs.getString("course_name"));
+        course.setDisplayCode(rs.getString("display_code"));
+        course.setNature(rs.getString("course_nature"));
         course.setCredit(rs.getDouble("credits"));
         course.setTeacherId(rs.getString("teacher_id"));
         course.setTeacherName(rs.getString("teacher_name"));
@@ -345,6 +369,11 @@ public class CourseDaoImpl implements CourseDao {
         course.setStartWeek(rs.getInt("start_week"));
         course.setEndWeek(rs.getInt("end_week"));
         course.parseScheduleText(scheduleText);
+        if (course.getTimeSlots() != null && !course.getTimeSlots().isEmpty()
+                && course.getTimeSlots().get(0).getLocation() != null
+                && !course.getTimeSlots().get(0).getLocation().trim().isEmpty()) {
+            course.setLocation(course.getTimeSlots().get(0).getLocation());
+        }
         course.setStatus(rs.getString("status"));
         return course;
     }

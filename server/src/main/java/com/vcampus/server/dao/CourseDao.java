@@ -86,4 +86,9 @@ public interface CourseDao {
      * 更新课程起止周次。
      */
     boolean updateCourseWeeks(String courseCode, int startWeek, int endWeek) throws SQLException;
+
+    /**
+     * 更新课程上课地点。
+     */
+    boolean updateCourseLocation(String courseCode, String location) throws SQLException;
 }
