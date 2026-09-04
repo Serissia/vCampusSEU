@@ -159,6 +159,8 @@ public class MainController {
         switch (role) {
             case STUDENT:
                 menus.add(new MenuItem("学生选课", "graduation-cap", "ACADEMIC_SELECT"));
+                menus.add(new MenuItem("我的课表", "calendar-alt", "ACADEMIC_TIMETABLE"));
+                menus.add(new MenuItem("课程评价", "chart-bar", "ACADEMIC_REVIEW"));
                 menus.add(new MenuItem("我的成绩", "chart-bar", "ACADEMIC_GRADE"));
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
@@ -166,11 +168,14 @@ public class MainController {
                 break;
             case TEACHER:
                 menus.add(new MenuItem("课程管理", "calendar-alt", "ACADEMIC_TEACHER"));
+                menus.add(new MenuItem("授课课表", "calendar-alt", "ACADEMIC_TEACHER_TIMETABLE"));
+                menus.add(new MenuItem("课程评分", "chart-bar", "ACADEMIC_TEACHER_REVIEW"));
                 menus.add(new MenuItem("成绩登记", "edit", "ACADEMIC_GRADE_SUBMIT"));
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 break;
             case ACADEMIC_AFFAIRS_TEACHER:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
+                menus.add(new MenuItem("调课管理", "calendar-alt", "ACADEMIC_ADJUST"));
                 menus.add(new MenuItem("开课审批", "edit", "ACADEMIC_APPROVE"));
                 break;
             case LIBRARIAN:
@@ -186,6 +191,7 @@ public class MainController {
                 break;
             case ADMIN:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
+                menus.add(new MenuItem("调课管理", "calendar-alt", "ACADEMIC_ADJUST"));
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
                 menus.add(new MenuItem("订单管理", "receipt", "ORDER_MANAGE"));

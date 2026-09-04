@@ -41,6 +41,7 @@ public enum MessageType implements Serializable {
     COURSE_PENDING_LIST,
     COURSE_SCHEDULE,
     COURSE_WEEK_SCHEDULE,
+    COURSE_LOCATION_SCHEDULE,
 
     /** 教务选课流转 */
     COURSE_SELECT,
@@ -52,6 +53,9 @@ public enum MessageType implements Serializable {
     GRADE_QUERY,
     GRADE_QUERY_BY_COURSE,
     GRADE_STATISTICS,
+    COURSE_REVIEW_SUBMIT,
+    COURSE_REVIEW_LIST,
+    COURSE_REVIEW_DELETE,
 
     /** 图书馆图书检索与采编 */
     BOOK_QUERY,

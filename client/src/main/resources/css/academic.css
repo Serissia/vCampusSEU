@@ -32,3 +32,201 @@
     -fx-background-color: -fx-bg-surface;
     -fx-border-color: -fx-border-base;
 }
+
+/* 学生选课卡片 */
+.course-card {
+    -fx-background-color: -fx-bg-surface;
+    -fx-background-radius: 8px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 8px;
+    -fx-border-width: 1px;
+    -fx-padding: 16px;
+    -fx-effect: dropshadow(gaussian, rgba(31, 35, 41, 0.04), 8, 0, 0, 1);
+}
+
+.course-card:hover {
+    -fx-border-color: -fx-primary;
+}
+
+.course-card.selected {
+    -fx-border-color: -fx-primary;
+    -fx-background-color: -fx-primary-light;
+}
+
+.course-card-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.course-time {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.course-teacher {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-disabled;
+}
+
+.course-count {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.course-badge {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4px;
+    -fx-padding: 3px 9px;
+}
+
+.badge-conflict {
+    -fx-background-color: -fx-danger;
+    -fx-text-fill: -fx-bg-surface;
+}
+
+.badge-selected {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: -fx-bg-surface;
+}
+
+.badge-nature {
+    -fx-background-color: -fx-bg-nav;
+    -fx-text-fill: -fx-text-main;
+}
+
+/* 学生可视化课表 */
+.timetable-grid {
+    -fx-background-color: -fx-bg-surface;
+    -fx-background-radius: 8px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 8px;
+    -fx-border-width: 1px;
+}
+
+.timetable-day-header {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.timetable-period-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.timetable-period-num {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.timetable-period-time {
+    -fx-font-size: 10px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.timetable-cell {
+    -fx-background-color: transparent;
+    -fx-border-color: -fx-border-base;
+    -fx-border-width: 1px;
+    -fx-border-style: dashed;
+    -fx-border-radius: 4px;
+}
+
+.timetable-block {
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1px;
+    -fx-padding: 6px;
+    -fx-cursor: hand;
+}
+
+.timetable-block:hover {
+    -fx-effect: dropshadow(gaussian, rgba(31, 35, 41, 0.12), 8, 0, 0, 2);
+}
+
+.timetable-block-name {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.timetable-block-period {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+}
+
+.timetable-block-text {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.course-color-0 {
+    -fx-background-color: #F6CBCB;
+    -fx-border-color: #D98A8A;
+}
+
+.course-color-1 {
+    -fx-background-color: #CBDCF2;
+    -fx-border-color: #6A9CC8;
+}
+
+.course-color-2 {
+    -fx-background-color: #CFE5D6;
+    -fx-border-color: #6FAE83;
+}
+
+.course-color-3 {
+    -fx-background-color: #D2E4EE;
+    -fx-border-color: #7FAEC8;
+}
+
+.course-color-4 {
+    -fx-background-color: #D6E2F6;
+    -fx-border-color: #83A0D6;
+}
+
+.course-color-5 {
+    -fx-background-color: #E3D4EF;
+    -fx-border-color: #B18CCB;
+}
+
+.course-color-6 {
+    -fx-background-color: #F5ECCC;
+    -fx-border-color: #C9AD5E;
+}
+
+/* 课程评价 */
+.review-summary {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+}
+
+.review-item {
+    -fx-background-color: -fx-bg-surface;
+    -fx-background-radius: 6px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1px;
+    -fx-padding: 10px;
+}
+
+.review-head {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.review-comment {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-main;
+}
+
+.review-time {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-disabled;
+}

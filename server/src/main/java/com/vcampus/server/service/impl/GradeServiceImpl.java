@@ -68,8 +68,9 @@ public class GradeServiceImpl implements GradeService {
                     finalScore += score.getScore() * weight / weightSum;
                 }
             }
-            grade.setFinalScore(round(finalScore));
-            grade.setGpa(calculateGpa(finalScore));
+            double roundedFinal = Math.round(finalScore);
+            grade.setFinalScore(roundedFinal);
+            grade.setGpa(calculateGpa(roundedFinal));
             boolean exists = gradeDao.exists(grade.getStudentId(), grade.getCourseCode());
             boolean ok = exists ? gradeDao.update(grade) : gradeDao.insert(grade);
             return ok ? ResponseCode.SUCCESS : ResponseCode.FAIL;

@@ -5,6 +5,7 @@ import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.CourseVO;
+import com.vcampus.common.vo.CourseReviewVO;
 import com.vcampus.common.vo.GradeStatisticsVO;
 import com.vcampus.common.vo.GradeVO;
 
@@ -144,6 +145,15 @@ public class AcademicController {
     }
 
     /**
+     * 教务老师安排或修改课程上课地点。
+     */
+    public ResponseCode scheduleCourseLocation(String courseCode, String location) {
+        Message request = new Message(uid, MessageType.COURSE_LOCATION_SCHEDULE, null,
+                new String[]{courseCode, location});
+        return send(request).getCode();
+    }
+
+    /**
      * 请求服务端执行选课。
      */
     public ResponseCode selectCourse(String courseCode) {
@@ -223,6 +233,40 @@ public class AcademicController {
             return (GradeStatisticsVO) response.getData();
         }
         return null;
+    }
+
+    /**
+     * 提交课程评价。
+     */
+    public ResponseCode submitReview(CourseReviewVO review) {
+        Message request = new Message(uid, MessageType.COURSE_REVIEW_SUBMIT, null, review);
+        return send(request).getCode();
+    }
+
+    /**
+     * 查询课程评价列表。
+     */
+    public List<CourseReviewVO> listReviews(String courseCode) {
+        Message request = new Message(uid, MessageType.COURSE_REVIEW_LIST, null, courseCode);
+        Message response = send(request);
+        if (response.getCode() != ResponseCode.SUCCESS || !(response.getData() instanceof List)) {
+            return new ArrayList<CourseReviewVO>();
+        }
+        List<CourseReviewVO> result = new ArrayList<CourseReviewVO>();
+        for (Object item : (List<?>) response.getData()) {
+            if (item instanceof CourseReviewVO) {
+                result.add((CourseReviewVO) item);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 删除当前学生自己的课程评价。
+     */
+    public ResponseCode deleteReview(String courseCode) {
+        Message request = new Message(uid, MessageType.COURSE_REVIEW_DELETE, null, courseCode);
+        return send(request).getCode();
     }
 
     /**
