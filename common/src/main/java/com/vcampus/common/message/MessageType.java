@@ -77,6 +77,11 @@ public enum MessageType implements Serializable {
     /** 商品强制下架（仅管理员） */
     GOODS_OFF_SHELF,
 
+    /** 校园超市商品图片上传、下载与删除 */
+    GOODS_IMAGE_UPLOAD,
+    GOODS_IMAGE_DOWNLOAD,
+    GOODS_IMAGE_DELETE,
+
     /** 校园超市订单创建 */
     ORDER_CREATE,
 

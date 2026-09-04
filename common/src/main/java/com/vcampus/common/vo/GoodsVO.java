@@ -25,6 +25,8 @@ public class GoodsVO implements Serializable {
 
     /** 商品状态: ON_SHELF 上架, OFF_SHELF 已下架 */
     private String status;
+    /** 商品图片文件名（服务端本地存储索引，为空表示未上传，商品展示使用“暂无图片”） */
+    private String image;
 
     public GoodsVO() {
     }
@@ -74,5 +76,13 @@ public class GoodsVO implements Serializable {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
     }
 }

@@ -214,6 +214,15 @@ public class Dispatcher {
                 case GOODS_OFF_SHELF:
                     handleGoodsOffShelf(request, response);
                     break;
+                case GOODS_IMAGE_UPLOAD:
+                    handleGoodsImageUpload(request, response);
+                    break;
+                case GOODS_IMAGE_DOWNLOAD:
+                    handleGoodsImageDownload(request, response);
+                    break;
+                case GOODS_IMAGE_DELETE:
+                    handleGoodsImageDelete(request, response);
+                    break;
                 case ORDER_CREATE:
                     OrderVO orderPayload = (OrderVO) request.getData();
                     orderPayload.setStudentId(request.getUid());
@@ -745,6 +754,68 @@ public class Dispatcher {
     private boolean isAdmin(Message request) {
         UserVO user = userService.queryByUid(request.getUid());
         return user != null && user.getRole() == UserRole.ADMIN;
+    }
+
+    /**
+     * 处理商品图片上传：仅管理员或卖家允许，保存后返回服务端文件名。
+     */
+    private void handleGoodsImageUpload(Message request, Message response) {
+        if (!isGoodsManager(request)) {
+            response.setCode(ResponseCode.UNAUTHORIZED);
+            response.setData("无权执行该操作：仅管理员或卖家可上传商品图片");
+            return;
+        }
+        if (!(request.getData() instanceof ResourceFileVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("图片参数不合法");
+            return;
+        }
+        ResourceFileVO file = (ResourceFileVO) request.getData();
+        if (file.getData() == null || file.getData().length == 0) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("上传图片为空");
+            return;
+        }
+        String name = resourceService.storeImage(file.getData(), file.getFileName());
+        response.setCode(ResponseCode.SUCCESS);
+        response.setData(name);
+    }
+
+    /**
+     * 处理商品图片下载：按文件名读取图片字节并返回。所有登录用户均可浏览商品图片。
+     */
+    private void handleGoodsImageDownload(Message request, Message response) {
+        String name = request.getData() == null ? "" : String.valueOf(request.getData());
+        if (name.isEmpty() || "null".equals(name)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("图片标识为空");
+            return;
+        }
+        byte[] data = resourceService.loadImage(name.trim());
+        ResourceFileVO file = new ResourceFileVO();
+        file.setFileName(name.trim());
+        file.setData(data);
+        response.setCode(ResponseCode.SUCCESS);
+        response.setData(file);
+    }
+
+    /**
+     * 处理商品图片删除：仅管理员或卖家允许。
+     */
+    private void handleGoodsImageDelete(Message request, Message response) {
+        if (!isGoodsManager(request)) {
+            response.setCode(ResponseCode.UNAUTHORIZED);
+            response.setData("无权执行该操作：仅管理员或卖家可删除商品图片");
+            return;
+        }
+        String name = request.getData() == null ? "" : String.valueOf(request.getData());
+        if (name.isEmpty() || "null".equals(name)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("图片标识为空");
+            return;
+        }
+        boolean ok = resourceService.deleteImage(name.trim());
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
     }
 
     /**

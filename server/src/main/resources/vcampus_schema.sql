@@ -130,6 +130,7 @@ CREATE TABLE `tbl_goods` (
     `stock` INT NOT NULL DEFAULT 100 COMMENT '当前库存',
     `description` VARCHAR(255) DEFAULT NULL COMMENT '商品描述',
     `status` VARCHAR(16) NOT NULL DEFAULT 'ON_SHELF' COMMENT '状态: ON_SHELF 上架, OFF_SHELF 已下架',
+    `image_path` VARCHAR(255) DEFAULT NULL COMMENT '商品图片文件名（服务器本地存储索引），为空表示暂无图片',
     PRIMARY KEY (`goods_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商店商品表';
 
