@@ -131,6 +131,15 @@ public class BorrowServiceImpl implements BorrowService {
         }
     }
 
+    @Override
+    public boolean hasActiveBorrows(String uid) {
+        try {
+            return borrowRecordDao.countActiveBorrows(uid) > 0;
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
     /**
      * 获取当前日期字符串。
      */

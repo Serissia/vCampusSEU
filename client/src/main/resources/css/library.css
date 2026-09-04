@@ -123,6 +123,40 @@
     -fx-font-weight: bold;
 }
 
+/* 现代下拉选择框 */
+.lib-combo {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-main;
+}
+
+.lib-combo .list-cell {
+    -fx-text-fill: -fx-text-main;
+}
+
+.lib-combo .combo-box-popup .list-view {
+    -fx-background-color: -fx-bg-surface;
+    -fx-border-color: -fx-border-base;
+}
+
+.lib-combo:focused {
+    -fx-background-color: -fx-bg-surface;
+    -fx-border-color: -fx-primary;
+    -fx-effect: dropshadow(gaussian, rgba(72, 122, 50, 0.2), 6, 0, 0, 0);
+}
+
+.lib-combo .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 6px;
+}
+
+.lib-combo .arrow-button:hover {
+    -fx-background-color: -fx-primary-light;
+}
+
 /* 表单标签 */
 .lib-form-label {
     -fx-font-size: 12px;

@@ -10,6 +10,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 用户 DAO 实现类
@@ -148,6 +150,80 @@ public class UserDaoImpl implements UserDao {
             pstmt.setString(2, uid);
             pstmt.setBigDecimal(3, amount);
             return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean createUser(UserVO user) throws SQLException {
+        String sql = "INSERT INTO tbl_user(uid, password, role, name, balance, status) VALUES (?, ?, ?, ?, 0, 1)";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, user.getUid());
+            ps.setString(2, user.getPassword());
+            ps.setString(3, user.getRole().name());
+            ps.setString(4, user.getName());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public List<UserVO> listAllUsers() throws SQLException {
+        String sql = "SELECT uid, password, role, name, balance, status FROM tbl_user ORDER BY uid";
+        List<UserVO> users = new ArrayList<>();
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                UserVO user = new UserVO();
+                user.setUid(rs.getString("uid"));
+                user.setPassword(rs.getString("password"));
+                user.setName(rs.getString("name"));
+                user.setBalance(rs.getBigDecimal("balance"));
+                user.setStatus(rs.getInt("status"));
+                try {
+                    user.setRole(UserRole.valueOf(rs.getString("role")));
+                } catch (Exception e) {
+                    user.setRole(UserRole.STUDENT);
+                }
+                users.add(user);
+            }
+        }
+        return users;
+    }
+
+    @Override
+    public boolean updateUserInfo(String oldUid, String newUid, String name, String role, String status) throws SQLException {
+        String sql = "UPDATE tbl_user SET uid = ?, name = ?, role = ?, status = ? WHERE uid = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newUid);
+            ps.setString(2, name);
+            ps.setString(3, role);
+            ps.setInt(4, Integer.parseInt(status));
+            ps.setString(5, oldUid);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean deleteUser(String uid) throws SQLException {
+        String sql = "DELETE FROM tbl_user WHERE uid = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, uid);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean uidExists(String uid) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM tbl_user WHERE uid = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, uid);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 }

@@ -12,10 +12,6 @@ import com.vcampus.common.vo.OrderVO;
 import com.vcampus.common.vo.ResourceFileVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
-import com.vcampus.common.vo.UserRole;
-import com.vcampus.server.service.BookService;
-import com.vcampus.server.service.BorrowService;
-import com.vcampus.common.vo.UserRole;
 import com.vcampus.server.service.BookService;
 import com.vcampus.server.service.BorrowService;
 import com.vcampus.server.service.CourseSelectionService;
@@ -87,6 +83,21 @@ public class Dispatcher {
                     break;
                 case UPDATE_USER_INFO:
                     handleUpdateUserInfo(request, response);
+                    break;
+                case USER_REGISTER:
+                    handleUserRegister(request, response);
+                    break;
+                case USER_LIST:
+                    handleUserList(request, response);
+                    break;
+                case USER_UPDATE:
+                    handleUserUpdate(request, response);
+                    break;
+                case USER_DELETE:
+                    handleUserDelete(request, response);
+                    break;
+                case USER_RESET_PASSWORD:
+                    handleUserResetPassword(request, response);
                     break;
                 case COURSE_ADD:
                     response.setCode(courseService.addCourse((CourseVO) request.getData())
@@ -322,6 +333,11 @@ public class Dispatcher {
             case BOOK_RESOURCE_UPLOAD:
             case BOOK_RESOURCE_DOWNLOAD:
             case BOOK_RESOURCE_DELETE:
+            case USER_REGISTER:
+            case USER_LIST:
+            case USER_UPDATE:
+            case USER_DELETE:
+            case USER_RESET_PASSWORD:
             case ORDER_LIST_ALL:
             case ORDER_STATISTICS:
                 return true;
@@ -397,6 +413,12 @@ public class Dispatcher {
                         || role == UserRole.LIBRARIAN
                         || role == UserRole.STUDENT
                         || role == UserRole.TEACHER;
+            case USER_REGISTER:
+            case USER_LIST:
+            case USER_UPDATE:
+            case USER_DELETE:
+            case USER_RESET_PASSWORD:
+                return role == UserRole.ADMIN;
             case ORDER_LIST_ALL:
             case ORDER_STATISTICS:
                 return role == UserRole.ADMIN || role == UserRole.SELLER;
@@ -421,12 +443,100 @@ public class Dispatcher {
                 loginInfo.getPassword());
         if (user == null) {
             response.setCode(ResponseCode.UNAUTHORIZED);
-            response.setData(null);
+            response.setData("账号或密码错误");
+            return;
+        }
+        if (user.getStatus() != null && user.getStatus() == 0) {
+            response.setCode(ResponseCode.ACCOUNT_FROZEN);
+            response.setData("账号已被冻结，请联系管理员");
             return;
         }
         response.setUid(user.getAccountNumber());
         response.setData(user);
         response.setCode(ResponseCode.SUCCESS);
+    }
+
+    /**
+     * 注册新用户（仅系统管理员）。
+     */
+    private void handleUserRegister(Message request, Message response) {
+        Object data = request.getData();
+        if (!(data instanceof UserVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("注册参数不合法");
+            return;
+        }
+        UserVO user = (UserVO) data;
+        if (userService.uidExists(user.getUid())) {
+            response.setCode(ResponseCode.USER_EXISTS);
+            response.setData("账号已存在");
+            return;
+        }
+        boolean ok = userService.createUser(user);
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+    }
+
+    /**
+     * 列出所有用户（仅系统管理员）。
+     */
+    private void handleUserList(Message request, Message response) {
+        response.setData(userService.listAllUsers());
+        response.setCode(ResponseCode.SUCCESS);
+    }
+
+    /**
+     * 修改用户信息（账号/姓名/角色/状态，仅系统管理员）。
+     */
+    private void handleUserUpdate(Message request, Message response) {
+        Object data = request.getData();
+        if (!(data instanceof String[]) || ((String[]) data).length < 5) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("修改参数不合法");
+            return;
+        }
+        String[] payload = (String[]) data;
+        boolean ok = userService.updateUserInfo(payload[0], payload[1], payload[2], payload[3], payload[4]);
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+    }
+
+    /**
+     * 删除用户（仅系统管理员，且不能删除自己、不能删除有未归还图书的用户）。
+     */
+    private void handleUserDelete(Message request, Message response) {
+        String uid = String.valueOf(request.getData());
+        if (uid == null || "null".equals(uid) || uid.trim().isEmpty()) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("账号为空");
+            return;
+        }
+        uid = uid.trim();
+        if (uid.equals(request.getUid())) {
+            response.setCode(ResponseCode.FAIL);
+            response.setData("不能删除当前登录的账号");
+            return;
+        }
+        if (borrowService.hasActiveBorrows(uid)) {
+            response.setCode(ResponseCode.USER_HAS_ACTIVE_BORROW);
+            response.setData("该用户还有未归还图书，请先办理归还");
+            return;
+        }
+        boolean ok = userService.deleteUser(uid);
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+    }
+
+    /**
+     * 管理员重置用户密码（仅系统管理员）。
+     */
+    private void handleUserResetPassword(Message request, Message response) {
+        Object data = request.getData();
+        if (!(data instanceof String[]) || ((String[]) data).length < 2) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("参数不合法");
+            return;
+        }
+        String[] payload = (String[]) data;
+        boolean ok = userService.resetPassword(payload[0], payload[1]);
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
     }
 
     /**

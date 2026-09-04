@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.URL?>
+<?import javafx.scene.layout.StackPane?>
+
+<StackPane fx:id="userManageRoot"
+           xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.vcampus.client.controller.UserManageController">
+    <stylesheets>
+        <URL value="@../css/tokens.css" />
+        <URL value="@../css/base.css" />
+        <URL value="@../css/library.css" />
+    </stylesheets>
+</StackPane>

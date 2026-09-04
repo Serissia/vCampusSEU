@@ -7,6 +7,7 @@ import com.vcampus.server.service.UserService;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * 用户业务接口实现
@@ -23,7 +24,15 @@ public class UserServiceImpl implements UserService {
         if (uid == null || password == null) {
             return null;
         }
-        return userDao.login(uid.trim(), password.trim());
+        // 直接按 uid 查询（不过滤状态），登录时由上层判断账号是否被冻结
+        UserVO user = userDao.queryByUid(uid.trim());
+        if (user == null) {
+            return null;
+        }
+        if (!password.trim().equals(user.getPassword())) {
+            return null;
+        }
+        return user;
     }
 
     @Override
@@ -64,6 +73,83 @@ public class UserServiceImpl implements UserService {
         }
         try {
             return userDao.updateBalance(uid.trim(), newBalance);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    @Override
+    public boolean createUser(UserVO user) {
+        if (user == null || user.getUid() == null || user.getUid().trim().isEmpty()
+                || user.getName() == null || user.getName().trim().isEmpty()
+                || user.getPassword() == null || user.getPassword().trim().isEmpty()
+                || user.getRole() == null) {
+            return false;
+        }
+        try {
+            return userDao.createUser(user);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    @Override
+    public List<UserVO> listAllUsers() {
+        try {
+            return userDao.listAllUsers();
+        } catch (SQLException e) {
+            throw new RuntimeException("查询用户列表失败", e);
+        }
+    }
+
+    @Override
+    public boolean uidExists(String uid) {
+        if (uid == null || uid.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            return userDao.uidExists(uid.trim());
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    @Override
+    public boolean updateUserInfo(String oldUid, String newUid, String name, String role, String status) {
+        if (oldUid == null || newUid == null || name == null || role == null || status == null) {
+            return false;
+        }
+        try {
+            return userDao.updateUserInfo(oldUid.trim(), newUid.trim(), name.trim(), role.trim(), status.trim());
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    @Override
+    public boolean resetPassword(String uid, String newPassword) {
+        if (uid == null || newPassword == null || newPassword.trim().length() < 6) {
+            return false;
+        }
+        try {
+            return userDao.updatePassword(uid.trim(), newPassword.trim());
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    @Override
+    public boolean deleteUser(String uid) {
+        if (uid == null || uid.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            return userDao.deleteUser(uid.trim());
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
