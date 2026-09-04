@@ -23,7 +23,7 @@ CREATE TABLE `tbl_student` (
     `class_name` VARCHAR(32) DEFAULT NULL COMMENT '班级',
     `phone` VARCHAR(32) DEFAULT NULL COMMENT '联系电话',
     PRIMARY KEY (`uid`),
-    CONSTRAINT `fk_student_user` FOREIGN KEY (`uid`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE
+    CONSTRAINT `fk_student_user` FOREIGN KEY (`uid`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学生扩展档案表';
 
 -- 3. 课程信息表 (tbl_course)
@@ -64,7 +64,7 @@ CREATE TABLE `tbl_course_select` (
     `status` VARCHAR(16) NOT NULL DEFAULT 'SELECTED' COMMENT '选课状态',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_student_course` (`student_id`, `course_id`),
-    CONSTRAINT `fk_cs_student` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE,
+    CONSTRAINT `fk_cs_student` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT `fk_cs_course` FOREIGN KEY (`course_id`) REFERENCES `tbl_course`(`course_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='选课与成绩记录表';
 
@@ -79,7 +79,7 @@ CREATE TABLE `tbl_grade` (
     `status` VARCHAR(16) NOT NULL DEFAULT 'SUBMITTED' COMMENT '成绩状态',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_grade_student_course` (`student_id`, `course_id`),
-    CONSTRAINT `fk_grade_student` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE,
+    CONSTRAINT `fk_grade_student` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT `fk_grade_course` FOREIGN KEY (`course_id`) REFERENCES `tbl_course`(`course_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程成绩表';
 
@@ -118,7 +118,7 @@ CREATE TABLE `tbl_borrow_record` (
     `status` VARCHAR(16) NOT NULL DEFAULT 'BORROWED' COMMENT '状态: BORROWED, RETURNED',
     `renew_count` INT NOT NULL DEFAULT 0 COMMENT '续借次数',
     PRIMARY KEY (`id`),
-    CONSTRAINT `fk_br_student` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE,
+    CONSTRAINT `fk_br_student` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT `fk_br_book` FOREIGN KEY (`isbn`) REFERENCES `tbl_book`(`isbn`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='借阅记录表';
 
@@ -143,7 +143,7 @@ CREATE TABLE `tbl_order` (
     `total_price` DECIMAL(10, 2) NOT NULL COMMENT '交易总金额',
     `order_time` VARCHAR(32) NOT NULL COMMENT '下单时间',
     PRIMARY KEY (`order_id`),
-    CONSTRAINT `fk_order_student` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE,
+    CONSTRAINT `fk_order_student` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT `fk_order_goods` FOREIGN KEY (`goods_id`) REFERENCES `tbl_goods`(`goods_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消费订单记录表';
 

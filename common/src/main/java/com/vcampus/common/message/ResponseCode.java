@@ -50,5 +50,13 @@ public enum ResponseCode {
     /** 一卡通余额不足 */
     BALANCE_INSUFFICIENT,
     /** 当前角色无权执行该操作 */
-    PERMISSION_DENIED
+    PERMISSION_DENIED,
+    /** 账号已冻结 */
+    ACCOUNT_FROZEN,
+    /** 账号已存在 */
+    USER_EXISTS,
+    /** 用户不存在 */
+    USER_NOT_FOUND,
+    /** 用户存在未归还图书，无法删除 */
+    USER_HAS_ACTIVE_BORROW
 }

@@ -20,6 +20,13 @@ public enum MessageType implements Serializable {
     UPDATE_USER_INFO,
     CHANGE_PASSWORD,
 
+    /** 用户管理（系统管理员） */
+    USER_REGISTER,
+    USER_LIST,
+    USER_UPDATE,
+    USER_DELETE,
+    USER_RESET_PASSWORD,
+
     /** 教务课程管理 */
     COURSE_QUERY,
     COURSE_ADD,
