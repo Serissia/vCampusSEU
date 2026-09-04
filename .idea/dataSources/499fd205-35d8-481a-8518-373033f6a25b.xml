@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <dataSource name="@localhost">
-  <database-model serializer="dbm" dbms="MYSQL" family-id="MYSQL" format-version="4.54">
+  <database-model serializer="dbm" dbms="MYSQL" family-id="MYSQL" format-version="4.55">
     <root id="1">
       <DefaultAuthPlugin>caching_sha2_password</DefaultAuthPlugin>
       <DefaultCasing>lower/lower</DefaultCasing>
       <DefaultEngine>InnoDB</DefaultEngine>
       <DefaultTmpEngine>InnoDB</DefaultTmpEngine>
-      <Grants>|root||root|localhost|ALTER|G
+      <Grants>|root||root|localhost|ALLOW_NONEXISTENT_DEFINER|G
+|root||root|localhost|ALTER|G
 |root||root|localhost|ALTER ROUTINE|G
 |root||root|localhost|APPLICATION_PASSWORD_ADMIN|G
 |root||mysql.infoschema|localhost|AUDIT_ABORT_EXEMPT|G
@@ -31,6 +32,7 @@
 |root||root|localhost|CREATE TEMPORARY TABLES|G
 |root||root|localhost|CREATE USER|G
 |root||root|localhost|CREATE VIEW|G
+|root||root|localhost|CREATE_SPATIAL_REFERENCE_SYSTEM|G
 |root||root|localhost|DELETE|G
 |root||root|localhost|DROP|G
 |root||root|localhost|DROP ROLE|G
@@ -43,6 +45,7 @@
 |root||mysql.sys|localhost|FIREWALL_EXEMPT|G
 |root||root|localhost|FIREWALL_EXEMPT|G
 |root||root|localhost|FLUSH_OPTIMIZER_COSTS|G
+|root||root|localhost|FLUSH_PRIVILEGES|G
 |root||root|localhost|FLUSH_STATUS|G
 |root||root|localhost|FLUSH_TABLES|G
 |root||root|localhost|FLUSH_USER_RESOURCES|G
@@ -53,6 +56,8 @@
 |root||root|localhost|INNODB_REDO_LOG_ENABLE|G
 |root||root|localhost|INSERT|G
 |root||root|localhost|LOCK TABLES|G
+|root||root|localhost|MANAGE_DATA_MASKING_POLICY|G
+|root||root|localhost|OPTIMIZE_LOCAL_TABLE|G
 |root||root|localhost|PASSWORDLESS_USER_ADMIN|G
 |root||mysql.session|localhost|PERSIST_RO_VARIABLES_ADMIN|G
 |root||root|localhost|PERSIST_RO_VARIABLES_ADMIN|G
@@ -72,7 +77,7 @@
 |root||root|localhost|SERVICE_CONNECTION_ADMIN|G
 |root||mysql.session|localhost|SESSION_VARIABLES_ADMIN|G
 |root||root|localhost|SESSION_VARIABLES_ADMIN|G
-|root||root|localhost|SET_USER_ID|G
+|root||root|localhost|SET_ANY_DEFINER|G
 |root||root|localhost|SHOW DATABASES|G
 |root||root|localhost|SHOW VIEW|G
 |root||root|localhost|SHOW_ROUTINE|G
@@ -88,13 +93,14 @@
 |root||root|localhost|SYSTEM_VARIABLES_ADMIN|G
 |root||root|localhost|TABLE_ENCRYPTION_ADMIN|G
 |root||root|localhost|TELEMETRY_LOG_ADMIN|G
+|root||root|localhost|TRANSACTION_GTID_TAG|G
 |root||root|localhost|TRIGGER|G
 |root||root|localhost|UPDATE|G
 |root||root|localhost|XA_RECOVER_ADMIN|G
 |root||root|localhost|grant option|G
 performance_schema|schema||mysql.session|localhost|SELECT|G
 sys|schema||mysql.sys|localhost|TRIGGER|G</Grants>
-      <ServerVersion>8.0.45</ServerVersion>
+      <ServerVersion>26.7.0</ServerVersion>
     </root>
     <collation id="2" parent="1" name="armscii8_bin">
       <Charset>armscii8</Charset>
@@ -995,43 +1001,34 @@ sys|schema||mysql.sys|localhost|TRIGGER|G</Grants>
     <collation id="287" parent="1" name="utf8mb4_zh_0900_as_cs">
       <Charset>utf8mb4</Charset>
     </collation>
-    <schema id="288" parent="1" name="emotion_hub">
-      <CollationName>utf8mb4_unicode_ci</CollationName>
+    <schema id="288" parent="1" name="db_vcampus">
+      <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </schema>
-    <schema id="289" parent="1" name="emotion_hub_test">
-      <CollationName>utf8mb4_unicode_ci</CollationName>
-    </schema>
-    <schema id="290" parent="1" name="emotionhub">
-      <CollationName>utf8mb4_unicode_ci</CollationName>
-    </schema>
-    <schema id="291" parent="1" name="information_schema">
+    <schema id="289" parent="1" name="information_schema">
       <CollationName>utf8mb3_general_ci</CollationName>
     </schema>
-    <schema id="292" parent="1" name="mysql">
+    <schema id="290" parent="1" name="mysql">
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </schema>
-    <schema id="293" parent="1" name="performance_schema">
+    <schema id="291" parent="1" name="performance_schema">
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </schema>
-    <schema id="294" parent="1" name="sys">
+    <schema id="292" parent="1" name="sys">
       <CollationName>utf8mb4_0900_ai_ci</CollationName>
     </schema>
-    <schema id="295" parent="1" name="test">
-      <CollationName>utf8mb4_0900_ai_ci</CollationName>
-    </schema>
-    <user id="296" parent="1" name="mysql.infoschema">
+    <user id="293" parent="1" name="mysql.infoschema">
       <CanLogin>0</CanLogin>
       <Host>localhost</Host>
     </user>
-    <user id="297" parent="1" name="mysql.session">
+    <user id="294" parent="1" name="mysql.session">
       <CanLogin>0</CanLogin>
       <Host>localhost</Host>
     </user>
-    <user id="298" parent="1" name="mysql.sys">
+    <user id="295" parent="1" name="mysql.sys">
       <CanLogin>0</CanLogin>
       <Host>localhost</Host>
     </user>
-    <user id="299" parent="1" name="root">
+    <user id="296" parent="1" name="root">
       <Host>localhost</Host>
     </user>
   </database-model>

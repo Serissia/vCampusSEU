@@ -250,6 +250,14 @@ public class Dispatcher {
                 case ORDER_CHECKOUT:
                     handleCartCheckout(request, response);
                     break;
+                case ORDER_LIST_ALL:
+                    response.setData(orderService.listAll());
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case ORDER_STATISTICS:
+                    response.setData(orderService.getStatistics());
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
                 case BOOK_RESOURCE_UPLOAD:
                     handleResourceUpload(request, response);
                     break;
@@ -305,6 +313,8 @@ public class Dispatcher {
             case BOOK_RESOURCE_UPLOAD:
             case BOOK_RESOURCE_DOWNLOAD:
             case BOOK_RESOURCE_DELETE:
+            case ORDER_LIST_ALL:
+            case ORDER_STATISTICS:
                 return true;
             default:
                 return false;
@@ -378,6 +388,9 @@ public class Dispatcher {
                         || role == UserRole.LIBRARIAN
                         || role == UserRole.STUDENT
                         || role == UserRole.TEACHER;
+            case ORDER_LIST_ALL:
+            case ORDER_STATISTICS:
+                return role == UserRole.ADMIN || role == UserRole.SELLER;
             default:
                 return false;
         }

@@ -162,6 +162,7 @@ public class MainController {
                 menus.add(new MenuItem("我的成绩", "chart-bar", "ACADEMIC_GRADE"));
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
+                menus.add(new MenuItem("我的订单", "receipt", "ORDER_HISTORY"));
                 break;
             case TEACHER:
                 menus.add(new MenuItem("课程管理", "calendar-alt", "ACADEMIC_TEACHER"));
@@ -181,11 +182,13 @@ public class MainController {
                 break;
             case SELLER:
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
+                menus.add(new MenuItem("订单管理", "receipt", "ORDER_MANAGE"));
                 break;
             case ADMIN:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
+                menus.add(new MenuItem("订单管理", "receipt", "ORDER_MANAGE"));
                 menus.add(new MenuItem("用户权限", "user-shield", "ADMIN_USER"));
                 break;
             default:
@@ -302,6 +305,17 @@ public class MainController {
             ShopPanel shopPanel = new ShopPanel();
             shopPanel.initData(currentUser, this);
             return shopPanel;
+        }
+        if ("ORDER_HISTORY".equals(moduleKey)) {
+            OrderHistoryPanel historyPanel = new OrderHistoryPanel();
+            historyPanel.initData(currentUser);
+            return historyPanel;
+        }
+
+        if ("ORDER_MANAGE".equals(moduleKey)) {
+            OrderManagementPanel managePanel = new OrderManagementPanel();
+            managePanel.initData(currentUser);
+            return managePanel;
         }
         // 其他尚未接入的模块仍保留占位卡片
         VBox card = new VBox(16.0);

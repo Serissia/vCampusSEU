@@ -97,5 +97,11 @@ public enum MessageType implements Serializable {
     CART_CLEAR,
 
     /** 购物车批量结算 */
-    ORDER_CHECKOUT
+    ORDER_CHECKOUT,
+
+    /** 全部订单查询（管理员/卖家） */
+    ORDER_LIST_ALL,
+
+    /** 订单统计（管理员/卖家） */
+    ORDER_STATISTICS
 }
