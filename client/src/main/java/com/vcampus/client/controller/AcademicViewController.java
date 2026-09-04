@@ -526,7 +526,21 @@ public class AcademicViewController {
         semesterBox.getStyleClass().add("academic-combo");
         semesterBox.setPrefWidth(150);
         semesterBox.setPromptText("选择学期");
-        headerControls.getChildren().addAll(semesterBox, weekBox);
+        Label semesterPrefix = new Label("第");
+        semesterPrefix.getStyleClass().add("lib-form-label");
+        Label semesterSuffix = new Label("学期");
+        semesterSuffix.getStyleClass().add("lib-form-label");
+        HBox semesterGroup = new HBox(4, semesterPrefix, semesterBox, semesterSuffix);
+        semesterGroup.setAlignment(Pos.CENTER_LEFT);
+
+        Label weekPrefix = new Label("第");
+        weekPrefix.getStyleClass().add("lib-form-label");
+        Label weekSuffix = new Label("周");
+        weekSuffix.getStyleClass().add("lib-form-label");
+        HBox weekGroup = new HBox(4, weekPrefix, weekBox, weekSuffix);
+        weekGroup.setAlignment(Pos.CENTER_LEFT);
+
+        headerControls.getChildren().addAll(semesterGroup, weekGroup);
 
         GridPane grid = new GridPane();
         grid.getStyleClass().add("timetable-grid");
