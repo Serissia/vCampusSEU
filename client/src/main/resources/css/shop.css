@@ -424,3 +424,28 @@
 .shop-card-add.shop-card-added:hover {
     -fx-background-color: #22C55E;
 }
+
+/* ===================== 商品图片 ===================== */
+/* 卡片图片容器：统一尺寸、圆角、浅灰底，无图时自然透出“暂无图片”占位图 */
+.shop-card-image-box {
+    -fx-alignment: CENTER;
+    -fx-background-color: -fx-bg-nav;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-width: 1px;
+}
+
+.shop-card-image {
+    -fx-smooth: true;
+}
+
+/* 商品编辑弹窗中的图片预览 */
+.shop-dialog-image-preview {
+    -fx-background-color: -fx-bg-nav;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-width: 1px;
+    -fx-padding: 4px;
+}
