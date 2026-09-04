@@ -16,6 +16,9 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.SVGPath;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -34,6 +37,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
@@ -56,6 +60,8 @@ import java.time.Year;
  * 回到 JavaFX Application 线程刷新界面，避免阻塞 UI。</p>
  */
 public class AcademicViewController {
+
+    private static final String STAR_PATH = "m476 283.2c-23.3 54-36.2 82.5-37.5 83.3-1.1 0.7-4.9 1.6-8.5 2-3.6 0.3-8.1 0.8-10 1-1.9 0.2-10.3 1.1-18.5 2-8.3 0.8-17 1.7-19.5 2-2.5 0.2-15.8 1.6-29.5 3-13.8 1.4-26.8 2.7-29 3-2.2 0.2-17.5 1.8-34 3.5-16.5 1.7-30.1 3.2-30.2 3.3-0.2 0.1 30.3 28.3 67.7 62.7 45.2 41.5 68.2 63.3 68.6 65 0.4 1.6-7 32.3-20.6 85.5-11.6 45.6-21.3 83.8-21.6 84.8-0.2 0.9-0.1 1.7 0.4 1.7 0.4-0.1 35.6-21.2 78.2-47 47.4-28.7 78.5-46.9 80-46.9 1.5 0 32.6 18.2 80 46.9 42.6 25.8 77.8 46.9 78.3 47 0.4 0 0.5-0.8 0.3-1.7-0.3-1-10-39.2-21.6-84.8-13.6-53.2-21-83.9-20.6-85.5 0.4-1.7 23.4-23.5 68.6-65 37.4-34.4 67.9-62.6 67.7-62.7-0.1-0.1-13.7-1.6-30.2-3.3-16.5-1.7-31.8-3.3-34-3.5-2.2-0.3-15.2-1.6-29-3-13.7-1.4-27-2.8-29.5-3-2.5-0.3-11.2-1.2-19.5-2-8.2-0.9-16.6-1.8-18.5-2-1.9-0.2-6.4-0.7-10-1-3.6-0.4-7.4-1.3-8.5-2-1.3-0.8-13.9-29.1-37.2-83.4-19.4-45.1-35.6-82.1-36-82.1-0.5 0-16.8 37-36.3 82.2z";
 
     private static final ExecutorService THREAD_POOL = new ThreadPoolExecutor(
             2,
@@ -516,7 +522,11 @@ public class AcademicViewController {
         weekBox.getStyleClass().add("academic-combo");
         weekBox.setPrefWidth(90);
         weekBox.setPromptText("第几周");
-        headerControls.getChildren().add(weekBox);
+        ComboBox<String> semesterBox = new ComboBox<>();
+        semesterBox.getStyleClass().add("academic-combo");
+        semesterBox.setPrefWidth(150);
+        semesterBox.setPromptText("选择学期");
+        headerControls.getChildren().addAll(semesterBox, weekBox);
 
         GridPane grid = new GridPane();
         grid.getStyleClass().add("timetable-grid");
@@ -580,25 +590,32 @@ public class AcademicViewController {
         dataCard.getChildren().remove(dataTable);
         dataCard.getChildren().add(grid);
 
-        loadStudentTimetable(grid, weekBox, courseLoader);
+        loadStudentTimetable(grid, semesterBox, weekBox, courseLoader);
     }
 
-    private void loadStudentTimetable(GridPane grid, ComboBox<Integer> weekBox,
+    private void loadStudentTimetable(GridPane grid, ComboBox<String> semesterBox,
+                                      ComboBox<Integer> weekBox,
                                       Supplier<List<CourseVO>> courseLoader) {
         THREAD_POOL.execute(() -> {
             try {
                 List<CourseVO> courses = courseLoader.get();
                 Platform.runLater(() -> {
-                    int maxWeek = computeMaxWeek(courses);
-                    List<Integer> weeks = buildWeekNumbers(maxWeek);
-                    weekBox.setItems(FXCollections.observableArrayList(weeks));
-                    weekBox.setValue(weeks.isEmpty() ? 1 : weeks.get(0));
-                    weekBox.valueProperty().addListener((obs, oldValue, newValue) -> {
+                    List<String> semesters = collectSemesters(courses);
+                    semesterBox.setItems(FXCollections.observableArrayList(semesters));
+                    semesterBox.setValue(semesters.isEmpty() ? null : semesters.get(0));
+                    semesterBox.valueProperty().addListener((obs, oldValue, newValue) -> {
                         if (newValue != null) {
-                            renderStudentTimetable(grid, courses, newValue);
+                            updateWeekOptionsForSemester(weekBox, courses, newValue);
+                            renderStudentTimetable(grid, courses, semesterBox.getValue(), weekBox.getValue());
                         }
                     });
-                    renderStudentTimetable(grid, courses, weekBox.getValue());
+                    updateWeekOptionsForSemester(weekBox, courses, semesterBox.getValue());
+                    weekBox.valueProperty().addListener((obs, oldValue, newValue) -> {
+                        if (newValue != null) {
+                            renderStudentTimetable(grid, courses, semesterBox.getValue(), newValue);
+                        }
+                    });
+                    renderStudentTimetable(grid, courses, semesterBox.getValue(), weekBox.getValue());
                 });
             } catch (Exception e) {
                 Platform.runLater(() -> showError("加载课表失败：" + e.getMessage()));
@@ -618,7 +635,39 @@ public class AcademicViewController {
         return Math.max(1, maxWeek);
     }
 
-    private void renderStudentTimetable(GridPane grid, List<CourseVO> courses, int selectedWeek) {
+    private List<String> collectSemesters(List<CourseVO> courses) {
+        List<String> semesters = new ArrayList<>();
+        if (courses != null) {
+            for (CourseVO course : courses) {
+                String semester = course.getSemester();
+                if (semester != null && !semester.trim().isEmpty() && !semesters.contains(semester)) {
+                    semesters.add(semester);
+                }
+            }
+        }
+        return semesters;
+    }
+
+    private void updateWeekOptionsForSemester(ComboBox<Integer> weekBox,
+                                              List<CourseVO> courses,
+                                              String semester) {
+        int maxWeek = 1;
+        if (courses != null && semester != null) {
+            for (CourseVO course : courses) {
+                if (semester.equals(course.getSemester())) {
+                    for (CourseTimeSlotVO slot : effectiveSlots(course)) {
+                        maxWeek = Math.max(maxWeek, slot.getEndWeek());
+                    }
+                }
+            }
+        }
+        List<Integer> weeks = buildWeekNumbers(maxWeek);
+        weekBox.setItems(FXCollections.observableArrayList(weeks));
+        weekBox.setValue(weeks.isEmpty() ? 1 : weeks.get(0));
+    }
+
+    private void renderStudentTimetable(GridPane grid, List<CourseVO> courses,
+                                        String selectedSemester, int selectedWeek) {
         // 清除之前可能添加的课程卡片，保留左侧节次/时间标签与表头
         for (javafx.scene.Node node : new ArrayList<>(grid.getChildren())) {
             if (node.getStyleClass().contains("timetable-block")) {
@@ -632,6 +681,9 @@ public class AcademicViewController {
             return;
         }
         for (CourseVO course : courses) {
+            if (selectedSemester != null && !selectedSemester.equals(course.getSemester())) {
+                continue;
+            }
             for (CourseTimeSlotVO slot : effectiveSlots(course)) {
                 if (slot == null) {
                     continue;
@@ -736,6 +788,48 @@ public class AcademicViewController {
     }
 
     /**
+     * 创建可拖拽评分的五角星控件。
+     */
+    private HBox createStarRatingControl(int[] selectedRating) {
+        HBox box = new HBox(2);
+        box.setAlignment(Pos.CENTER_LEFT);
+        List<SVGPath> stars = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            SVGPath star = new SVGPath();
+            star.setContent(STAR_PATH);
+            star.setScaleX(36.0 / 1024.0);
+            star.setScaleY(36.0 / 1024.0);
+            StackPane wrapper = new StackPane(star);
+            wrapper.setMinSize(40, 40);
+            wrapper.setPrefSize(40, 40);
+            wrapper.setMaxSize(40, 40);
+            stars.add(star);
+            box.getChildren().add(wrapper);
+        }
+        setStarRating(stars, selectedRating[0]);
+        box.setOnMousePressed(e -> updateStarRatingFromMouse(e, box, stars, selectedRating));
+        box.setOnMouseDragged(e -> updateStarRatingFromMouse(e, box, stars, selectedRating));
+        return box;
+    }
+
+    private void updateStarRatingFromMouse(MouseEvent event, HBox box,
+                                           List<SVGPath> stars, int[] selectedRating) {
+        double width = box.getWidth();
+        if (width <= 0) {
+            width = 5 * 30.0;
+        }
+        int rating = Math.max(1, Math.min(5, (int) Math.ceil(event.getX() / width * 5)));
+        selectedRating[0] = rating;
+        setStarRating(stars, rating);
+    }
+
+    private void setStarRating(List<SVGPath> stars, int rating) {
+        for (int i = 0; i < stars.size(); i++) {
+            stars.get(i).setFill(i < rating ? Color.web("#FFD700") : Color.web("#E0E0E0"));
+        }
+    }
+
+    /**
      * 学生课程评价模块：选择课程后评分、评论并查看历史评价。
      */
     private void configureCourseReview() {
@@ -750,24 +844,7 @@ public class AcademicViewController {
         selectedCourseLabel.setMaxWidth(Double.MAX_VALUE);
 
         int[] selectedRating = {0};
-        List<Button> starButtons = new ArrayList<>();
-        HBox starBox = new HBox(6);
-        starBox.setAlignment(Pos.CENTER_LEFT);
-        for (int i = 1; i <= 5; i++) {
-            final int rating = i;
-            Button star = button(rating + "★", "btn-recharge-preset");
-            star.setOnAction(e -> {
-                selectedRating[0] = rating;
-                for (int j = 0; j < starButtons.size(); j++) {
-                    starButtons.get(j).getStyleClass().removeAll(
-                            "btn-primary-action", "btn-recharge-preset");
-                    starButtons.get(j).getStyleClass().add(
-                            j < rating ? "btn-primary-action" : "btn-recharge-preset");
-                }
-            });
-            starButtons.add(star);
-            starBox.getChildren().add(star);
-        }
+        HBox starBox = createStarRatingControl(selectedRating);
 
         TextArea commentArea = new TextArea();
         commentArea.setPromptText("写下你的课程评价");
