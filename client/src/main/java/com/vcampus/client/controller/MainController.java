@@ -286,11 +286,17 @@ public class MainController {
             }
         }
 
-        if ("LIBRARY".equals(moduleKey)) {
+        if ("SHOP".equals(moduleKey)) {
+            ShopPanel shopPanel = new ShopPanel();
+            shopPanel.initData(currentUser, this);
+            return shopPanel;
+        }
+
+        if ("ADMIN_USER".equals(moduleKey)) {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LibraryView.fxml"));
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/UserManageView.fxml"));
                 Node root = loader.load();
-                LibraryController controller = loader.getController();
+                UserManageController controller = loader.getController();
                 controller.initData(currentUser);
                 return root;
             } catch (IOException e) {
@@ -298,11 +304,6 @@ public class MainController {
             }
         }
 
-        if ("SHOP".equals(moduleKey)) {
-            ShopPanel shopPanel = new ShopPanel();
-            shopPanel.initData(currentUser, this);
-            return shopPanel;
-        }
         // 其他尚未接入的模块仍保留占位卡片
         VBox card = new VBox(16.0);
         card.setAlignment(Pos.CENTER);
