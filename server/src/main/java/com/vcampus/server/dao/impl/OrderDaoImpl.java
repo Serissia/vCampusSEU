@@ -1,6 +1,7 @@
 package com.vcampus.server.dao.impl;
 
 import com.vcampus.common.vo.OrderVO;
+import com.vcampus.common.vo.StatisticsVO;
 import com.vcampus.server.dao.IOrderDao;
 import com.vcampus.server.util.DBUtil;
 
@@ -58,6 +59,57 @@ public class OrderDaoImpl implements IOrderDao {
         return result;
     }
 
+    /**
+     * 查询全部订单（最新在前，管理员/卖家）。
+     */
+    @Override
+    public List<OrderVO> listAll() throws SQLException {
+        String sql = "SELECT " + COLUMNS + " FROM tbl_order ORDER BY order_time DESC, order_id DESC";
+        List<OrderVO> result = new ArrayList<OrderVO>();
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(mapOrder(rs));
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 统计全部订单：总订单数、总销售额与热门商品 Top3。
+     */
+    @Override
+    public StatisticsVO queryStatistics() throws SQLException {
+        StatisticsVO stats = new StatisticsVO();
+        try (Connection conn = DBUtil.getConnection()) {
+            String countSql = "SELECT COUNT(*), COALESCE(SUM(total_price), 0) FROM tbl_order";
+            try (PreparedStatement ps = conn.prepareStatement(countSql);
+                 ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    stats.setTotalOrders(rs.getLong(1));
+                    stats.setTotalRevenue(rs.getBigDecimal(2));
+                }
+            }
+            String topSql = "SELECT goods_name, SUM(`count`) AS total_count, SUM(total_price) AS revenue "
+                    + "FROM tbl_order GROUP BY goods_name "
+                    + "ORDER BY total_count DESC, revenue DESC LIMIT 3";
+            List<StatisticsVO.TopProduct> tops = new ArrayList<StatisticsVO.TopProduct>();
+            try (PreparedStatement ps = conn.prepareStatement(topSql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    StatisticsVO.TopProduct product = new StatisticsVO.TopProduct();
+                    product.setGoodsName(rs.getString("goods_name"));
+                    product.setTotalCount(rs.getLong("total_count"));
+                    product.setRevenue(rs.getBigDecimal("revenue"));
+                    tops.add(product);
+                }
+            }
+            stats.setTopProducts(tops);
+        }
+        return stats;
+    }
     /**
      * 将 ResultSet 当前行转换为 OrderVO。
      */

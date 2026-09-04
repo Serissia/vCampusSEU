@@ -5,6 +5,7 @@ import com.vcampus.common.util.DateUtil;
 import com.vcampus.common.vo.CartVO;
 import com.vcampus.common.vo.GoodsVO;
 import com.vcampus.common.vo.OrderVO;
+import com.vcampus.common.vo.StatisticsVO;
 import com.vcampus.common.vo.UserVO;
 import com.vcampus.server.dao.ICartDao;
 import com.vcampus.server.dao.IGoodsDao;
@@ -247,6 +248,29 @@ public class OrderServiceImpl implements IOrderService {
         }
     }
 
+    /**
+     * 查询全部订单（最新在前，管理员/卖家）。
+     */
+    @Override
+    public List<OrderVO> listAll() {
+        try {
+            return orderDao.listAll();
+        } catch (SQLException e) {
+            throw new RuntimeException("查询全部订单失败", e);
+        }
+    }
+
+    /**
+     * 统计全部订单（管理员/卖家）。
+     */
+    @Override
+    public StatisticsVO getStatistics() {
+        try {
+            return orderDao.queryStatistics();
+        } catch (SQLException e) {
+            throw new RuntimeException("统计订单失败", e);
+        }
+    }
     /**
      * 生成订单流水号（时间戳 + 随机后缀）。
      */

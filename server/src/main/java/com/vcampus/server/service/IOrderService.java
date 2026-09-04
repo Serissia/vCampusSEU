@@ -2,6 +2,7 @@ package com.vcampus.server.service;
 
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.OrderVO;
+import com.vcampus.common.vo.StatisticsVO;
 
 import java.util.List;
 
@@ -31,4 +32,14 @@ public interface IOrderService {
      * 查询某学生的全部消费订单。
      */
     List<OrderVO> listOrders(String studentId);
+
+    /**
+     * 查询全部订单（最新在前，管理员/卖家）。
+     */
+    List<OrderVO> listAll();
+
+    /**
+     * 统计全部订单（管理员/卖家）。
+     */
+    StatisticsVO getStatistics();
 }
