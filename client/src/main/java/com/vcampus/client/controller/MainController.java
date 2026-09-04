@@ -2,6 +2,7 @@ package com.vcampus.client.controller;
 
 import com.vcampus.client.config.AppConfigManager;
 import com.vcampus.client.net.SocketClient;
+import com.vcampus.client.util.ScrollSpeedUtil;
 import com.vcampus.client.util.SvgIcons;
 import com.vcampus.client.util.ThemeManager;
 import com.vcampus.common.vo.UserRole;
@@ -14,6 +15,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -316,13 +318,13 @@ public class MainController {
         if ("ORDER_HISTORY".equals(moduleKey)) {
             OrderHistoryPanel historyPanel = new OrderHistoryPanel();
             historyPanel.initData(currentUser);
-            return historyPanel;
+            return wrapScrollable(historyPanel);
         }
 
         if ("ORDER_MANAGE".equals(moduleKey)) {
             OrderManagementPanel managePanel = new OrderManagementPanel();
             managePanel.initData(currentUser);
-            return managePanel;
+            return wrapScrollable(managePanel);
         }
         // 其他尚未接入的模块仍保留占位卡片
         VBox card = new VBox(16.0);
@@ -339,6 +341,16 @@ public class MainController {
         return card;
     }
 
+    /**
+     * 将模块面板包装为可滚动的 ScrollPane，并应用偏好设置中的滚轮速度。
+     */
+    private Node wrapScrollable(VBox panel) {
+        ScrollPane scrollPane = new ScrollPane(panel);
+        scrollPane.setFitToWidth(true);
+        scrollPane.getStyleClass().add("profile-scroll-pane");
+        ScrollSpeedUtil.applyCustomScrollSpeed(scrollPane);
+        return scrollPane;
+    }
     /**
      * 处理登出操作并返回登录页
      */

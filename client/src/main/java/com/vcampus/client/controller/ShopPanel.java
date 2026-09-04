@@ -1,6 +1,7 @@
 package com.vcampus.client.controller;
 
 import com.vcampus.client.net.SocketClient;
+import com.vcampus.client.util.ScrollSpeedUtil;
 import com.vcampus.client.util.SvgIcons;
 import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
@@ -315,6 +316,8 @@ public class ShopPanel extends VBox {
         cardScrollPane.setFitToWidth(true);
         cardScrollPane.setFitToHeight(false);
         VBox.setVgrow(cardScrollPane, Priority.ALWAYS);
+        // 应用偏好设置中的滚轮速度
+        ScrollSpeedUtil.applyCustomScrollSpeed(cardScrollPane);
 
         card.getChildren().addAll(header, cardScrollPane);
         return card;
