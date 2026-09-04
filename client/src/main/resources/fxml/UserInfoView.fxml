@@ -57,12 +57,12 @@
 
                 <VBox spacing="4.0">
                     <Label text="角色" styleClass="lib-form-label" />
-                    <ComboBox fx:id="roleComboBox" maxWidth="Infinity" />
+                    <ComboBox fx:id="roleComboBox" maxWidth="Infinity" styleClass="lib-combo" />
                 </VBox>
 
                 <VBox spacing="4.0">
                     <Label text="状态" styleClass="lib-form-label" />
-                    <ComboBox fx:id="statusComboBox" maxWidth="Infinity" />
+                    <ComboBox fx:id="statusComboBox" maxWidth="Infinity" styleClass="lib-combo" />
                 </VBox>
 
                 <Label fx:id="msgLabel" managed="false" visible="false" styleClass="lib-msg-label" />

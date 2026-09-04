@@ -55,7 +55,7 @@
 
             <VBox spacing="4.0">
                 <Label text="角色" styleClass="lib-form-label" />
-                <ComboBox fx:id="roleComboBox" promptText="选择角色" maxWidth="Infinity" />
+                <ComboBox fx:id="roleComboBox" promptText="选择角色" maxWidth="Infinity" styleClass="lib-combo" />
             </VBox>
 
             <Label fx:id="msgLabel" managed="false" visible="false" styleClass="lib-msg-label" />
