@@ -58,5 +58,7 @@ public enum ResponseCode {
     /** 用户不存在 */
     USER_NOT_FOUND,
     /** 用户存在未归还图书，无法删除 */
-    USER_HAS_ACTIVE_BORROW
+    USER_HAS_ACTIVE_BORROW,
+    /** 购物车为空 */
+    CART_EMPTY
 }

@@ -4,6 +4,7 @@ import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.BookVO;
+import com.vcampus.common.vo.CartVO;
 import com.vcampus.common.vo.CourseVO;
 import com.vcampus.common.vo.GoodsVO;
 import com.vcampus.common.vo.GradeVO;
@@ -16,6 +17,7 @@ import com.vcampus.server.service.BorrowService;
 import com.vcampus.server.service.CourseSelectionService;
 import com.vcampus.server.service.CourseService;
 import com.vcampus.server.service.GradeService;
+import com.vcampus.server.service.ICartService;
 import com.vcampus.server.service.IGoodsService;
 import com.vcampus.server.service.IOrderService;
 import com.vcampus.server.service.ResourceService;
@@ -25,11 +27,14 @@ import com.vcampus.server.service.impl.BorrowServiceImpl;
 import com.vcampus.server.service.impl.CourseSelectionServiceImpl;
 import com.vcampus.server.service.impl.CourseServiceImpl;
 import com.vcampus.server.service.impl.GradeServiceImpl;
+import com.vcampus.server.service.impl.CartServiceImpl;
 import com.vcampus.server.service.impl.GoodsServiceImpl;
 import com.vcampus.server.service.impl.OrderServiceImpl;
 import com.vcampus.server.service.impl.UserServiceImpl;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 服务端消息路由与业务调度中心。
@@ -47,6 +52,7 @@ public class Dispatcher {
     private final ResourceService resourceService = new ResourceService();
     private final IGoodsService goodsService = new GoodsServiceImpl();
     private final IOrderService orderService = new OrderServiceImpl();
+    private final ICartService cartService = new CartServiceImpl();
 
     /**
      * 根据 Message.type 将请求分发到对应业务服务，并统一构造响应报文。
@@ -237,6 +243,32 @@ public class Dispatcher {
                 case PAYMENT_BALANCE:
                     handleBalance(request, response);
                     break;
+                case CART_ADD:
+                    handleCartAdd(request, response);
+                    break;
+                case CART_QUERY:
+                    handleCartQuery(request, response);
+                    break;
+                case CART_UPDATE:
+                    handleCartUpdate(request, response);
+                    break;
+                case CART_REMOVE:
+                    handleCartRemove(request, response);
+                    break;
+                case CART_CLEAR:
+                    handleCartClear(request, response);
+                    break;
+                case ORDER_CHECKOUT:
+                    handleCartCheckout(request, response);
+                    break;
+                case ORDER_LIST_ALL:
+                    response.setData(orderService.listAll());
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case ORDER_STATISTICS:
+                    response.setData(orderService.getStatistics());
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
                 case BOOK_RESOURCE_UPLOAD:
                     handleResourceUpload(request, response);
                     break;
@@ -297,6 +329,8 @@ public class Dispatcher {
             case USER_UPDATE:
             case USER_DELETE:
             case USER_RESET_PASSWORD:
+            case ORDER_LIST_ALL:
+            case ORDER_STATISTICS:
                 return true;
             default:
                 return false;
@@ -376,6 +410,9 @@ public class Dispatcher {
             case USER_DELETE:
             case USER_RESET_PASSWORD:
                 return role == UserRole.ADMIN;
+            case ORDER_LIST_ALL:
+            case ORDER_STATISTICS:
+                return role == UserRole.ADMIN || role == UserRole.SELLER;
             default:
                 return false;
         }
@@ -858,5 +895,72 @@ public class Dispatcher {
             return (String[]) data;
         }
         return null;
+    }
+    /**
+     * 处理加入购物车：负载为 CartVO（含 goodsId 与 count），studentId 以请求方为准。
+     */
+    private void handleCartAdd(Message request, Message response) {
+        if (!(request.getData() instanceof CartVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("购物车参数不合法");
+            return;
+        }
+        CartVO cart = (CartVO) request.getData();
+        String goodsId = cart.getGoodsId() == null ? "" : cart.getGoodsId();
+        ResponseCode code = cartService.addItem(request.getUid(), goodsId, cart.getCount());
+        response.setCode(code);
+        if (code != ResponseCode.SUCCESS) {
+            response.setData("加入购物车失败，商品可能不存在或已下架");
+        }
+    }
+
+    /**
+     * 处理查询购物车：返回购物车条目列表（含商品快照）。
+     */
+    private void handleCartQuery(Message request, Message response) {
+        response.setData(cartService.listCart(request.getUid()));
+        response.setCode(ResponseCode.SUCCESS);
+    }
+
+    /**
+     * 处理更新购物车数量：负载为 CartVO（含 goodsId 与新 count）。
+     */
+    private void handleCartUpdate(Message request, Message response) {
+        if (!(request.getData() instanceof CartVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("购物车参数不合法");
+            return;
+        }
+        CartVO cart = (CartVO) request.getData();
+        String goodsId = cart.getGoodsId() == null ? "" : cart.getGoodsId();
+        response.setCode(cartService.updateCount(request.getUid(), goodsId, cart.getCount()));
+    }
+
+    /**
+     * 处理移除购物车条目：负载为商品编码字符串。
+     */
+    private void handleCartRemove(Message request, Message response) {
+        response.setCode(cartService.removeItem(request.getUid(), String.valueOf(request.getData())));
+    }
+
+    /**
+     * 处理清空购物车。
+     */
+    private void handleCartClear(Message request, Message response) {
+        response.setCode(cartService.clearCart(request.getUid()));
+    }
+
+    /**
+     * 处理购物车批量结算：成功后返回本次生成的订单列表。
+     */
+    private void handleCartCheckout(Message request, Message response) {
+        List<OrderVO> created = new ArrayList<>();
+        ResponseCode code = orderService.checkoutCart(request.getUid(), created);
+        response.setCode(code);
+        if (code == ResponseCode.SUCCESS) {
+            response.setData(created);
+        } else {
+            response.setData("结算失败，请检查商品状态、库存与余额");
+        }
     }
 }

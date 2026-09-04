@@ -286,3 +286,141 @@
 .shop-order-dialog-btn:pressed {
     -fx-background-color: -fx-primary-pressed;
 }
+/* ===================== 购物车 ===================== */
+.shop-cart-icon {
+    -fx-fill: -fx-text-muted;
+}
+
+.btn-recharge-preset:hover .shop-cart-icon {
+    -fx-fill: -fx-primary;
+}
+
+.cart-dialog-root {
+    -fx-background-color: -fx-bg-surface;
+}
+
+.shop-cart-row {
+    -fx-background-color: -fx-bg-base;
+    -fx-background-radius: 6px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 6px;
+    -fx-padding: 10px 12px;
+}
+
+.shop-cart-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.shop-cart-meta {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.shop-cart-meta-off {
+    -fx-text-fill: -fx-danger;
+}
+
+.shop-cart-count {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+    -fx-min-width: 24px;
+    -fx-alignment: CENTER;
+}
+
+.shop-cart-step {
+    -fx-background-color: -fx-bg-surface;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-min-width: 26px;
+    -fx-min-height: 26px;
+    -fx-font-size: 14px;
+    -fx-text-fill: -fx-text-main;
+    -fx-cursor: hand;
+    -fx-padding: 0;
+}
+
+.shop-cart-step:hover {
+    -fx-border-color: -fx-primary;
+    -fx-text-fill: -fx-primary;
+}
+
+.shop-cart-step:disabled {
+    -fx-opacity: 0.4;
+    -fx-cursor: default;
+}
+
+.shop-cart-subtotal {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+    -fx-min-width: 90px;
+    -fx-alignment: CENTER_RIGHT;
+}
+
+.shop-cart-total {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+    -fx-alignment: CENTER_RIGHT;
+}
+
+.shop-cart-empty {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-disabled;
+    -fx-alignment: CENTER;
+    -fx-padding: 24px 0;
+}
+/* PNG 购物车按钮图标（普通 / 悬停态） */
+.shop-cart-icon-img {
+    -fx-opacity: 1.0;
+}
+
+.btn-recharge-preset:hover .shop-cart-icon-img {
+    -fx-opacity: 0.85;
+}
+/* ===================== 商品卡片“加入购物车”按钮 ===================== */
+.shop-card-add {
+    -fx-background-color: #4A6CF7;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 6px;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 6px 12px;
+    -fx-cursor: hand;
+    -fx-max-width: Infinity;
+    -fx-alignment: CENTER;
+}
+
+.shop-card-add:hover {
+    -fx-background-color: #3B5BDB;
+}
+
+.shop-card-add:pressed {
+    -fx-background-color: #2F4BC4;
+}
+
+.shop-card-add:disabled {
+    -fx-background-color: #E4E6EB;
+    -fx-text-fill: #98A2B3;
+    -fx-cursor: default;
+    -fx-opacity: 1.0;
+}
+
+.shop-card-add:disabled:hover {
+    -fx-background-color: #E4E6EB;
+    -fx-text-fill: #98A2B3;
+}
+
+/* “已加入 ✓”闪烁态（1.5s 后由代码恢复） */
+.shop-card-add.shop-card-added {
+    -fx-background-color: #22C55E;
+    -fx-text-fill: #FFFFFF;
+}
+
+.shop-card-add.shop-card-added:hover {
+    -fx-background-color: #22C55E;
+}

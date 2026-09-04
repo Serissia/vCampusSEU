@@ -94,5 +94,21 @@ public enum MessageType implements Serializable {
     PAYMENT_RECHARGE,
 
     /** 一卡通余额查询 */
-    PAYMENT_BALANCE
+    PAYMENT_BALANCE,
+
+    /** 校园超市购物车 */
+    CART_ADD,
+    CART_QUERY,
+    CART_UPDATE,
+    CART_REMOVE,
+    CART_CLEAR,
+
+    /** 购物车批量结算 */
+    ORDER_CHECKOUT,
+
+    /** 全部订单查询（管理员/卖家） */
+    ORDER_LIST_ALL,
+
+    /** 订单统计（管理员/卖家） */
+    ORDER_STATISTICS
 }

@@ -1,0 +1,58 @@
+/* 订单模块私有样式（通用组件见 base.css / library.css） */
+
+.orders-container {
+    -fx-padding: 4px;
+}
+
+/* 汇总行 / 底部计数 */
+.orders-summary {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+    -fx-alignment: CENTER_LEFT;
+}
+
+/* 统计卡 */
+.orders-stat-title {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.orders-stat-value {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.orders-stat-value.accent {
+    -fx-text-fill: -fx-primary;
+}
+
+.orders-stat-muted {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.orders-rank {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+}
+
+/* 详情弹窗 */
+.orders-detail-title {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.orders-detail-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.orders-empty {
+    -fx-font-size: 14px;
+    -fx-text-fill: -fx-text-muted;
+    -fx-alignment: CENTER;
+    -fx-padding: 60px 0;
+}
