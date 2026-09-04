@@ -11,6 +11,8 @@ import com.vcampus.common.vo.OrderVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
 import javafx.application.Platform;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -24,6 +26,8 @@ import javafx.scene.control.Spinner;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.DialogPane;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -33,6 +37,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.scene.paint.Paint;
 
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -99,7 +104,6 @@ public class ShopPanel extends VBox {
     private TextField searchField;
     private Spinner<Integer> quantitySpinner;
     private Button buyBtn;
-    private Button addCartBtn;
     private Button cartBtn;
 
     /** 商品卡片容器（FlowPane） */
@@ -179,6 +183,27 @@ public class ShopPanel extends VBox {
     }
 
     /**
+     * 创建购物车按钮图标：优先加载资源目录 /images/cart.png，
+     * 加载失败时回退到内建矢量购物车图标。
+     */
+    private Node createCartIconView() {
+        try (InputStream is = getClass().getResourceAsStream("/images/cart.png")) {
+            if (is != null) {
+                ImageView view = new ImageView(new Image(is));
+                view.setFitWidth(20.0);
+                view.setFitHeight(20.0);
+                view.setPreserveRatio(true);
+                view.setSmooth(true);
+                view.getStyleClass().add("shop-cart-icon-img");
+                return view;
+            }
+        } catch (Exception ignored) {
+            // 资源缺失或解码失败时回退矢量图标
+        }
+        return SvgIcons.createIcon("cart-shopping", 14.0, "shop-cart-icon");
+    }
+
+    /**
      * 顶部卡片：标题 + 余额徽标 + 在线充值区（所有登录用户可见）。
      */
     private Node buildTopCard() {
@@ -208,7 +233,7 @@ public class ShopPanel extends VBox {
 
         cartBtn = new Button("购物车 (0)");
         cartBtn.getStyleClass().add("btn-recharge-preset");
-        cartBtn.setGraphic(SvgIcons.createIcon("cart-shopping", 14.0, "shop-cart-icon"));
+        cartBtn.setGraphic(createCartIconView());
         cartBtn.setOnAction(e -> openCartDialog());
 
         headerRow.getChildren().addAll(titleBox, spacer, cartBtn, balanceBox);
@@ -341,6 +366,9 @@ public class ShopPanel extends VBox {
 
         card.getChildren().addAll(topRow, nameLabel, descLabel, bottomRow);
 
+        // 每个商品卡片底部：加入购物车按钮（单击直接加 1 件，无弹窗）
+        card.getChildren().add(buildCardAddButton(goods));
+
         // 点击选中（下架商品不可选中购买，但管理员/卖家仍可点击管理）
         card.setOnMouseClicked(event -> {
             if (offShelf && !managerMode) {
@@ -371,10 +399,9 @@ public class ShopPanel extends VBox {
                 n.getStyleClass().add("shop-card-selected");
             }
         }
-        // 同步购买/加购按钮的禁用状态
+        // 同步“立即购买”按钮的禁用状态
         boolean canBuy = goods != null && !"OFF_SHELF".equals(goods.getStatus());
         buyBtn.setDisable(!canBuy);
-        addCartBtn.setDisable(!canBuy);
     }
 
     /**
@@ -386,9 +413,6 @@ public class ShopPanel extends VBox {
             n.getStyleClass().remove("shop-card-selected");
         }
         buyBtn.setDisable(true);
-        if (addCartBtn != null) {
-            addCartBtn.setDisable(true);
-        }
     }
 
     /**
@@ -425,12 +449,7 @@ public class ShopPanel extends VBox {
         buyBtn.setOnAction(e -> handleBuy());
         buyBtn.setDisable(true); // 初始无选中
 
-        addCartBtn = new Button("加入购物车");
-        addCartBtn.getStyleClass().add("btn-recharge-preset");
-        addCartBtn.setOnAction(e -> handleAddToCart());
-        addCartBtn.setDisable(true); // 初始无选中
-
-        bar.getChildren().addAll(searchField, searchBtn, spacer, qtyLabel, quantitySpinner, addCartBtn, buyBtn);
+        bar.getChildren().addAll(searchField, searchBtn, spacer, qtyLabel, quantitySpinner, buyBtn);
         return bar;
     }
 
@@ -515,9 +534,6 @@ public class ShopPanel extends VBox {
         cardFlowPane.getChildren().clear();
         selectedGoods = null;
         buyBtn.setDisable(true);
-        if (addCartBtn != null) {
-            addCartBtn.setDisable(true);
-        }
 
         if (goods == null || goods.isEmpty()) {
             return;
@@ -533,9 +549,6 @@ public class ShopPanel extends VBox {
                 cardNode.getStyleClass().add("shop-card-selected");
                 if (!"OFF_SHELF".equals(g.getStatus())) {
                     buyBtn.setDisable(false);
-                    if (addCartBtn != null) {
-                        addCartBtn.setDisable(false);
-                    }
                 }
             }
         }
@@ -936,44 +949,76 @@ public class ShopPanel extends VBox {
     }
 
     /**
-     * 加入购物车：将当前选中的在售商品按数量加入购物车。
+     * 构建商品卡片上的“加入购物车”按钮：单击直接加 1 件，无弹窗。
+     * 已下架或库存为 0 时按钮禁用并显示相应文案。
      */
-    private void handleAddToCart() {
-        if (selectedGoods == null) {
-            showAlert("提示", "请先点击卡片选择要加入购物车的商品", Alert.AlertType.WARNING);
-            return;
+    private Button buildCardAddButton(GoodsVO goods) {
+        boolean offShelf = goods.getStatus() == null || "OFF_SHELF".equals(goods.getStatus());
+        boolean soldOut = !offShelf && goods.getStock() <= 0;
+
+        Button addBtn = new Button();
+        addBtn.getStyleClass().add("shop-card-add");
+        addBtn.setMaxWidth(Double.MAX_VALUE);
+        addBtn.setMinHeight(28.0);
+
+        if (offShelf) {
+            addBtn.setText("已下架");
+            addBtn.setDisable(true);
+        } else if (soldOut) {
+            addBtn.setText("已售罄");
+            addBtn.setDisable(true);
+        } else {
+            addBtn.setText("加入购物车");
+            addBtn.setOnAction(e -> addOneToCart(goods, addBtn));
         }
-        if ("OFF_SHELF".equals(selectedGoods.getStatus())) {
-            showAlert("提示", "该商品已下架，无法加入购物车", Alert.AlertType.WARNING);
-            return;
-        }
-        int count = quantitySpinner.getValue() == null ? 1 : quantitySpinner.getValue();
-        if (count <= 0) {
-            showAlert("提示", "数量必须大于 0", Alert.AlertType.WARNING);
-            return;
-        }
-        String goodsName = selectedGoods.getGoodsName();
+        return addBtn;
+    }
+
+    /**
+     * 单击卡片按钮将商品加 1 件到购物车：成功后按钮闪烁“已加入 ✓”并刷新角标。
+     */
+    private void addOneToCart(GoodsVO goods, Button addBtn) {
+        addBtn.setDisable(true);
         CartVO cart = new CartVO();
-        cart.setGoodsId(selectedGoods.getGoodsId());
-        cart.setCount(count);
+        cart.setGoodsId(goods.getGoodsId());
+        cart.setCount(1);
         THREAD_POOL.execute(() -> {
             try {
                 Message request = new Message(currentUser.getAccountNumber(), MessageType.CART_ADD, null, cart);
                 Message response = socketClient.send(request);
                 Platform.runLater(() -> {
                     if (response != null && response.getCode() == ResponseCode.SUCCESS) {
-                        showAlert("已加入购物车", goodsName + " × " + count + " 已放入购物车", Alert.AlertType.INFORMATION);
+                        flashAdded(addBtn);
                         refreshCartBadge();
                     } else {
-                        showAlert("加入失败", cartErrorText(response), Alert.AlertType.ERROR);
+                        // 静默失败：恢复按钮可重试，不打断用户
+                        addBtn.setText("加入购物车");
+                        addBtn.setDisable(false);
                     }
                 });
             } catch (Exception e) {
-                Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
+                Platform.runLater(() -> {
+                    addBtn.setText("加入购物车");
+                    addBtn.setDisable(false);
+                });
             }
         });
     }
 
+    /**
+     * 让按钮闪烁“已加入 ✓”1.5 秒后恢复原状。
+     */
+    private void flashAdded(Button addBtn) {
+        addBtn.getStyleClass().add("shop-card-added");
+        addBtn.setText("已加入 ✓");
+        PauseTransition pause = new PauseTransition(Duration.millis(1500));
+        pause.setOnFinished(e -> {
+            addBtn.setText("加入购物车");
+            addBtn.getStyleClass().remove("shop-card-added");
+            addBtn.setDisable(false);
+        });
+        pause.play();
+    }
     /**
      * 刷新顶部购物车按钮的数量角标（购物车内商品总件数）。
      */

@@ -374,3 +374,53 @@
     -fx-alignment: CENTER;
     -fx-padding: 24px 0;
 }
+/* PNG 购物车按钮图标（普通 / 悬停态） */
+.shop-cart-icon-img {
+    -fx-opacity: 1.0;
+}
+
+.btn-recharge-preset:hover .shop-cart-icon-img {
+    -fx-opacity: 0.85;
+}
+/* ===================== 商品卡片“加入购物车”按钮 ===================== */
+.shop-card-add {
+    -fx-background-color: #4A6CF7;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 6px;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 6px 12px;
+    -fx-cursor: hand;
+    -fx-max-width: Infinity;
+    -fx-alignment: CENTER;
+}
+
+.shop-card-add:hover {
+    -fx-background-color: #3B5BDB;
+}
+
+.shop-card-add:pressed {
+    -fx-background-color: #2F4BC4;
+}
+
+.shop-card-add:disabled {
+    -fx-background-color: #E4E6EB;
+    -fx-text-fill: #98A2B3;
+    -fx-cursor: default;
+    -fx-opacity: 1.0;
+}
+
+.shop-card-add:disabled:hover {
+    -fx-background-color: #E4E6EB;
+    -fx-text-fill: #98A2B3;
+}
+
+/* “已加入 ✓”闪烁态（1.5s 后由代码恢复） */
+.shop-card-add.shop-card-added {
+    -fx-background-color: #22C55E;
+    -fx-text-fill: #FFFFFF;
+}
+
+.shop-card-add.shop-card-added:hover {
+    -fx-background-color: #22C55E;
+}
