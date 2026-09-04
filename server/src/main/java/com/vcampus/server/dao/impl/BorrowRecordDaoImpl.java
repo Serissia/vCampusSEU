@@ -89,7 +89,7 @@ public class BorrowRecordDaoImpl implements BorrowRecordDao {
     @Override
     public List<BorrowRecordVO> listByStudent(String studentId) throws SQLException {
         String sql = "SELECT r.id, r.student_id, r.isbn, b.title, b.author, "
-                + "r.borrow_date, r.due_date, r.return_date, r.status "
+                + "r.borrow_date, r.due_date, r.return_date, r.status, r.renew_count "
                 + "FROM tbl_borrow_record r JOIN tbl_book b ON r.isbn = b.isbn "
                 + "WHERE r.student_id = ? ORDER BY r.id DESC";
         List<BorrowRecordVO> result = new ArrayList<BorrowRecordVO>();
@@ -106,6 +106,44 @@ public class BorrowRecordDaoImpl implements BorrowRecordDao {
     }
 
     /**
+     * 查询某学生某本书当前未归还的借阅记录。
+     */
+    @Override
+    public BorrowRecordVO findActiveBorrow(String studentId, String isbn) throws SQLException {
+        String sql = "SELECT r.id, r.student_id, r.isbn, b.title, b.author, "
+                + "r.borrow_date, r.due_date, r.return_date, r.status, r.renew_count "
+                + "FROM tbl_borrow_record r JOIN tbl_book b ON r.isbn = b.isbn "
+                + "WHERE r.student_id = ? AND r.isbn = ? AND r.status = 'BORROWED'";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, studentId);
+            ps.setString(2, isbn);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapRecord(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 续借：更新应还日期并将续借次数加一。
+     */
+    @Override
+    public boolean renew(String studentId, String isbn, String newDueDate) throws SQLException {
+        String sql = "UPDATE tbl_borrow_record SET due_date = ?, renew_count = renew_count + 1 "
+                + "WHERE student_id = ? AND isbn = ? AND status = 'BORROWED'";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newDueDate);
+            ps.setString(2, studentId);
+            ps.setString(3, isbn);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
      * 将 ResultSet 当前行转换为 BorrowRecordVO。
      */
     private BorrowRecordVO mapRecord(ResultSet rs) throws SQLException {
@@ -119,6 +157,7 @@ public class BorrowRecordDaoImpl implements BorrowRecordDao {
         record.setDueDate(rs.getString("due_date"));
         record.setReturnDate(rs.getString("return_date"));
         record.setStatus(rs.getString("status"));
+        record.setRenewCount(rs.getInt("renew_count"));
         return record;
     }
 }

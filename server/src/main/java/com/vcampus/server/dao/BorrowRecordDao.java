@@ -36,4 +36,14 @@ public interface BorrowRecordDao {
      * 查询某学生的全部借阅记录（含已归还）。
      */
     List<BorrowRecordVO> listByStudent(String studentId) throws SQLException;
+
+    /**
+     * 查询某学生某本书当前未归还的借阅记录。
+     */
+    BorrowRecordVO findActiveBorrow(String studentId, String isbn) throws SQLException;
+
+    /**
+     * 续借：更新应还日期并将续借次数加一。
+     */
+    boolean renew(String studentId, String isbn, String newDueDate) throws SQLException;
 }

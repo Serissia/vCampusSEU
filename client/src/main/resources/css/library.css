@@ -118,6 +118,11 @@
     -fx-text-fill: -fx-text-disabled;
 }
 
+.status-overdue {
+    -fx-text-fill: -fx-danger;
+    -fx-font-weight: bold;
+}
+
 /* 表单标签 */
 .lib-form-label {
     -fx-font-size: 12px;

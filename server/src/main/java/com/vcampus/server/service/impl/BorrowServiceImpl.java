@@ -12,6 +12,8 @@ import com.vcampus.server.service.BorrowService;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -88,12 +90,42 @@ public class BorrowServiceImpl implements BorrowService {
     }
 
     /**
+     * 学生自助续借：仅限借阅中、未逾期、未续借过的记录，续借后应还日期顺延。
+     */
+    @Override
+    public ResponseCode renew(String studentId, String isbn) {
+        try {
+            BorrowRecordVO record = borrowRecordDao.findActiveBorrow(studentId, isbn);
+            if (record == null) {
+                return ResponseCode.NOT_BORROWED;
+            }
+            if (record.getRenewCount() >= 1) {
+                return ResponseCode.RENEW_LIMIT_EXCEEDED;
+            }
+            LocalDate today = LocalDate.now();
+            if (isOverdue(record, today)) {
+                return ResponseCode.OVERDUE;
+            }
+            String newDueDate = addDays(record.getDueDate(), BORROW_DAYS);
+            borrowRecordDao.renew(studentId, isbn, newDueDate);
+            return ResponseCode.SUCCESS;
+        } catch (SQLException e) {
+            return ResponseCode.FAIL;
+        }
+    }
+
+    /**
      * 查询某学生的借阅记录。
      */
     @Override
     public List<BorrowRecordVO> listByStudent(String studentId) {
         try {
-            return borrowRecordDao.listByStudent(studentId);
+            List<BorrowRecordVO> records = borrowRecordDao.listByStudent(studentId);
+            LocalDate today = LocalDate.now();
+            for (BorrowRecordVO record : records) {
+                record.setOverdueDays(computeOverdueDays(record, today));
+            }
+            return records;
         } catch (SQLException e) {
             throw new RuntimeException("查询借阅记录失败", e);
         }
@@ -118,6 +150,40 @@ public class BorrowServiceImpl implements BorrowService {
             return sdf.format(calendar.getTime());
         } catch (ParseException e) {
             return dateStr;
+        }
+    }
+
+    /**
+     * 判断借阅记录是否已逾期（未归还且应还日期早于今天）。
+     */
+    private boolean isOverdue(BorrowRecordVO record, LocalDate today) {
+        if (record.getDueDate() == null || record.getDueDate().trim().isEmpty()) {
+            return false;
+        }
+        try {
+            LocalDate due = LocalDate.parse(record.getDueDate().trim());
+            return due.isBefore(today);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 计算借阅记录逾期天数（未归还且已逾期时返回正整数，否则为 0）。
+     */
+    private int computeOverdueDays(BorrowRecordVO record, LocalDate today) {
+        if (!"BORROWED".equals(record.getStatus())) {
+            return 0;
+        }
+        if (record.getDueDate() == null || record.getDueDate().trim().isEmpty()) {
+            return 0;
+        }
+        try {
+            LocalDate due = LocalDate.parse(record.getDueDate().trim());
+            long days = ChronoUnit.DAYS.between(due, today);
+            return days > 0 ? (int) days : 0;
+        } catch (Exception e) {
+            return 0;
         }
     }
 }

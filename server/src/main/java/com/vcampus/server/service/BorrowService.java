@@ -23,6 +23,11 @@ public interface BorrowService {
     ResponseCode returnBook(String studentId, String isbn);
 
     /**
+     * 学生自助续借，返回具体业务状态码。
+     */
+    ResponseCode renew(String studentId, String isbn);
+
+    /**
      * 查询某学生的借阅记录。
      */
     List<BorrowRecordVO> listByStudent(String studentId);

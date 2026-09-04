@@ -29,6 +29,10 @@ public class BorrowRecordVO implements Serializable {
     private String returnDate;
     /** 状态: BORROWED / RETURNED */
     private String status;
+    /** 续借次数 */
+    private int renewCount;
+    /** 逾期天数（0 表示未逾期） */
+    private int overdueDays;
 
     public BorrowRecordVO() {
     }
@@ -103,5 +107,21 @@ public class BorrowRecordVO implements Serializable {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public int getRenewCount() {
+        return renewCount;
+    }
+
+    public void setRenewCount(int renewCount) {
+        this.renewCount = renewCount;
+    }
+
+    public int getOverdueDays() {
+        return overdueDays;
+    }
+
+    public void setOverdueDays(int overdueDays) {
+        this.overdueDays = overdueDays;
     }
 }

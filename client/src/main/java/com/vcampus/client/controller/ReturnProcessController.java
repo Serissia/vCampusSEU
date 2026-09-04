@@ -119,17 +119,25 @@ public class ReturnProcessController {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
+                BorrowRecordVO record = getTableRow() == null ? null : getTableRow().getItem();
+                if (empty || record == null) {
                     setText(null);
+                } else if ("BORROWED".equals(record.getStatus()) && record.getOverdueDays() > 0) {
+                    setText("已逾期 " + record.getOverdueDays() + " 天");
+                    getStyleClass().removeAll("status-borrowed", "status-returned", "status-overdue");
+                    getStyleClass().add("status-overdue");
+                } else if ("BORROWED".equals(record.getStatus())) {
+                    setText("借阅中");
+                    getStyleClass().removeAll("status-borrowed", "status-returned", "status-overdue");
+                    getStyleClass().add("status-borrowed");
                 } else {
-                    boolean borrowed = "BORROWED".equals(item);
-                    setText(borrowed ? "借阅中" : "已归还");
-                    getStyleClass().removeAll("status-borrowed", "status-returned");
-                    getStyleClass().add(borrowed ? "status-borrowed" : "status-returned");
+                    setText("已归还");
+                    getStyleClass().removeAll("status-borrowed", "status-returned", "status-overdue");
+                    getStyleClass().add("status-returned");
                 }
             }
         });
-        statusCol.setPrefWidth(90);
+        statusCol.setPrefWidth(110);
 
         TableColumn<BorrowRecordVO, String> actionCol = new TableColumn<>("操作");
         actionCol.setCellFactory(col -> new TableCell<BorrowRecordVO, String>() {
