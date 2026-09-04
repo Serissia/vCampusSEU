@@ -38,6 +38,10 @@ public enum ResponseCode {
     ALREADY_BORROWED,
     /** 未借阅该书 */
     NOT_BORROWED,
+    /** 已续借过，不能再续借 */
+    RENEW_LIMIT_EXCEEDED,
+    /** 已逾期，不能续借 */
+    OVERDUE,
 
     /** 商品不存在 */
     GOODS_NOT_FOUND,

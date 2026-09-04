@@ -55,6 +55,7 @@ public enum MessageType implements Serializable {
     /** 图书借还流转 */
     BOOK_BORROW,
     BOOK_RETURN,
+    BOOK_RENEW,
 
     /** 借阅记录查询 */
     BORROW_MY_LIST,

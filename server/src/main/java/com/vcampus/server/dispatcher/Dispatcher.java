@@ -181,6 +181,9 @@ public class Dispatcher {
                 case BOOK_RETURN:
                     response.setCode(handleReturn(request));
                     break;
+                case BOOK_RENEW:
+                    response.setCode(borrowService.renew(request.getUid(), String.valueOf(request.getData())));
+                    break;
                 case BORROW_MY_LIST:
                     response.setData(borrowService.listByStudent(request.getUid()));
                     response.setCode(ResponseCode.SUCCESS);
@@ -267,10 +270,12 @@ public class Dispatcher {
             case BOOK_DELETE:
             case BOOK_BORROW:
             case BOOK_RETURN:
+            case BOOK_RENEW:
             case BORROW_MY_LIST:
             case BORROW_BY_STUDENT:
             case BOOK_RESOURCE_UPLOAD:
             case BOOK_RESOURCE_DOWNLOAD:
+            case BOOK_RESOURCE_DELETE:
                 return true;
             default:
                 return false;
@@ -328,15 +333,20 @@ public class Dispatcher {
             case BOOK_UPDATE:
             case BOOK_DELETE:
             case BOOK_RESOURCE_UPLOAD:
-                return role == UserRole.ADMIN;
+            case BOOK_RESOURCE_DELETE:
+                return role == UserRole.ADMIN || role == UserRole.LIBRARIAN;
             case BOOK_BORROW:
             case BOOK_RETURN:
+                return role == UserRole.ADMIN || role == UserRole.LIBRARIAN;
+            case BOOK_RENEW:
+                return role == UserRole.STUDENT || role == UserRole.TEACHER;
             case BORROW_MY_LIST:
-                return role == UserRole.STUDENT
-                        || role == UserRole.ADMIN;
+                return role == UserRole.STUDENT || role == UserRole.TEACHER;
             case BORROW_BY_STUDENT:
+                return role == UserRole.ADMIN || role == UserRole.LIBRARIAN;
             case BOOK_RESOURCE_DOWNLOAD:
                 return role == UserRole.ADMIN
+                        || role == UserRole.LIBRARIAN
                         || role == UserRole.STUDENT
                         || role == UserRole.TEACHER;
             default:

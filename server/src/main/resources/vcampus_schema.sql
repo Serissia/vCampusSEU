@@ -116,6 +116,7 @@ CREATE TABLE `tbl_borrow_record` (
     `due_date` VARCHAR(32) NOT NULL COMMENT '应还日期 (YYYY-MM-DD)',
     `return_date` VARCHAR(32) DEFAULT NULL COMMENT '归还日期',
     `status` VARCHAR(16) NOT NULL DEFAULT 'BORROWED' COMMENT '状态: BORROWED, RETURNED',
+    `renew_count` INT NOT NULL DEFAULT 0 COMMENT '续借次数',
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_br_student` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE,
     CONSTRAINT `fk_br_book` FOREIGN KEY (`isbn`) REFERENCES `tbl_book`(`isbn`) ON DELETE CASCADE

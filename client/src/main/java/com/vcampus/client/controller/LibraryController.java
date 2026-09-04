@@ -19,6 +19,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableCell;
@@ -209,22 +210,103 @@ public class LibraryController {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
+                BorrowRecordVO record = getTableRow() == null ? null : getTableRow().getItem();
+                if (empty || record == null) {
                     setText(null);
+                } else if ("BORROWED".equals(record.getStatus()) && record.getOverdueDays() > 0) {
+                    setText("已逾期 " + record.getOverdueDays() + " 天");
+                    getStyleClass().removeAll("status-borrowed", "status-returned", "status-overdue");
+                    getStyleClass().add("status-overdue");
+                } else if ("BORROWED".equals(record.getStatus())) {
+                    setText("借阅中");
+                    getStyleClass().removeAll("status-borrowed", "status-returned", "status-overdue");
+                    getStyleClass().add("status-borrowed");
                 } else {
-                    boolean borrowed = "BORROWED".equals(item);
-                    setText(borrowed ? "借阅中" : "已归还");
-                    getStyleClass().removeAll("status-borrowed", "status-returned");
-                    getStyleClass().add(borrowed ? "status-borrowed" : "status-returned");
+                    setText("已归还");
+                    getStyleClass().removeAll("status-borrowed", "status-returned", "status-overdue");
+                    getStyleClass().add("status-returned");
                 }
             }
         });
-        statusCol.setPrefWidth(90);
+        statusCol.setPrefWidth(110);
 
-        borrowTable.getColumns().addAll(titleCol, isbnCol, borrowCol, dueCol, returnCol, statusCol);
+        TableColumn<BorrowRecordVO, String> renewCol = new TableColumn<>("操作");
+        renewCol.setCellFactory(col -> new TableCell<BorrowRecordVO, String>() {
+            private final Button btn = new Button("续借");
+
+            {
+                btn.getStyleClass().add("lib-btn-borrow");
+                btn.setOnAction(e -> {
+                    BorrowRecordVO record = getTableRow().getItem();
+                    if (record != null) {
+                        renewBook(record);
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                BorrowRecordVO record = getTableRow() == null ? null : getTableRow().getItem();
+                if (empty || record == null) {
+                    setGraphic(null);
+                } else {
+                    boolean canRenew = "BORROWED".equals(record.getStatus())
+                            && record.getOverdueDays() == 0
+                            && record.getRenewCount() < 1;
+                    btn.setDisable(!canRenew);
+                    setGraphic(btn);
+                }
+            }
+        });
+        renewCol.setPrefWidth(80);
+
+        borrowTable.getColumns().addAll(titleCol, isbnCol, borrowCol, dueCol, returnCol, statusCol, renewCol);
         borrowTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         for (TableColumn<BorrowRecordVO, ?> col : borrowTable.getColumns()) {
             col.setMinWidth(80.0);
+        }
+    }
+
+    /**
+     * 学生自助续借。
+     */
+    private void renewBook(BorrowRecordVO record) {
+        THREAD_POOL.execute(() -> {
+            try {
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.BOOK_RENEW, null, record.getIsbn());
+                Message response = socketClient.send(request);
+                Platform.runLater(() -> {
+                    if (response != null && response.getCode() == ResponseCode.SUCCESS) {
+                        showAlert("续借成功", "《" + record.getTitle() + "》续借成功，应还日期已顺延 30 天。",
+                                Alert.AlertType.INFORMATION);
+                        refreshMyBorrows();
+                    } else {
+                        showAlert("续借失败", resolveRenewError(response), Alert.AlertType.WARNING);
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
+            }
+        });
+    }
+
+    /**
+     * 将续借状态码转换为可读提示。
+     */
+    private String resolveRenewError(Message response) {
+        if (response == null) {
+            return "请求被服务器拒绝";
+        }
+        switch (response.getCode()) {
+            case NOT_BORROWED:
+                return "您当前未借阅该书";
+            case RENEW_LIMIT_EXCEEDED:
+                return "该书已续借过一次，不能再次续借";
+            case OVERDUE:
+                return "该书已逾期，请先归还";
+            default:
+                return "续借失败，请稍后重试";
         }
     }
 
