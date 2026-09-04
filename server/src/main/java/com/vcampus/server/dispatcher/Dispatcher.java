@@ -12,10 +12,7 @@ import com.vcampus.common.vo.OrderVO;
 import com.vcampus.common.vo.ResourceFileVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
-import com.vcampus.common.vo.UserRole;
-import com.vcampus.server.service.BookService;
-import com.vcampus.server.service.BorrowService;
-import com.vcampus.common.vo.UserRole;
+import com.vcampus.common.vo.NoticeQueryVO;
 import com.vcampus.server.service.BookService;
 import com.vcampus.server.service.BorrowService;
 import com.vcampus.server.service.CourseSelectionService;
@@ -26,6 +23,7 @@ import com.vcampus.server.service.IGoodsService;
 import com.vcampus.server.service.IOrderService;
 import com.vcampus.server.service.ResourceService;
 import com.vcampus.server.service.UserService;
+import com.vcampus.server.service.NoticeService;
 import com.vcampus.server.service.impl.BookServiceImpl;
 import com.vcampus.server.service.impl.BorrowServiceImpl;
 import com.vcampus.server.service.impl.CourseSelectionServiceImpl;
@@ -34,6 +32,7 @@ import com.vcampus.server.service.impl.GradeServiceImpl;
 import com.vcampus.server.service.impl.CartServiceImpl;
 import com.vcampus.server.service.impl.GoodsServiceImpl;
 import com.vcampus.server.service.impl.OrderServiceImpl;
+import com.vcampus.server.service.impl.NoticeServiceImpl;
 import com.vcampus.server.service.impl.UserServiceImpl;
 
 import java.math.BigDecimal;
@@ -57,6 +56,7 @@ public class Dispatcher {
     private final IGoodsService goodsService = new GoodsServiceImpl();
     private final IOrderService orderService = new OrderServiceImpl();
     private final ICartService cartService = new CartServiceImpl();
+    private final NoticeService noticeService = new NoticeServiceImpl();
 
     /**
      * 根据 Message.type 将请求分发到对应业务服务，并统一构造响应报文。
@@ -267,6 +267,15 @@ public class Dispatcher {
                 case BOOK_RESOURCE_DELETE:
                     handleResourceDelete(request, response);
                     break;
+                case NOTICE_QUERY:
+                    handleNoticeQuery(request, response);
+                    break;
+                case NOTICE_TRIGGER_SYNC:
+                    handleNoticeTriggerSync(request, response);
+                    break;
+                case NOTICE_GET_STATUS:
+                    handleNoticeGetStatus(request, response);
+                    break;
                 default:
                     response.setCode(ResponseCode.INVALID_REQUEST);
                     response.setData("不支持的请求类型");
@@ -424,8 +433,7 @@ public class Dispatcher {
      * 处理修改密码请求（接收 String[]{oldPassword, newPassword}）
      */
     private void handlePasswordChange(Message request, Message response) {
-        if (request.getData() instanceof String[]) {
-            String[] pwdData = (String[]) request.getData();
+        if (request.getData() instanceof String[] pwdData) {
             if (pwdData.length >= 2) {
                 String oldPwd = pwdData[0];
                 String newPwd = pwdData[1];
@@ -852,5 +860,54 @@ public class Dispatcher {
         } else {
             response.setData("结算失败，请检查商品状态、库存与余额");
         }
+    }
+
+    /**
+     * 处理教务公告查询请求
+     *
+     * @author Serissia
+     */
+    private void handleNoticeQuery(Message request, Message response) {
+        NoticeQueryVO query;
+        if (request.getData() instanceof NoticeQueryVO) {
+            query = (NoticeQueryVO) request.getData();
+        } else if (request.getData() instanceof String) {
+            query = new NoticeQueryVO((String) request.getData(), null, null);
+        } else {
+            query = new NoticeQueryVO();
+        }
+        response.setData(noticeService.queryNotices(query));
+        response.setCode(ResponseCode.SUCCESS);
+    }
+
+    /**
+     * 处理手动同步教务公告请求
+     *
+     * @author Serissia
+     */
+    private void handleNoticeTriggerSync(Message request, Message response) {
+        int days = 7;
+        if (request.getData() instanceof Integer) {
+            days = (Integer) request.getData();
+        } else if (request.getData() instanceof String) {
+            try {
+                days = Integer.parseInt(((String) request.getData()).trim());
+            } catch (NumberFormatException ignored) {
+                days = 7;
+            }
+        }
+        ResponseCode code = noticeService.triggerSync(days);
+        response.setCode(code);
+        response.setData(noticeService.getStatus());
+    }
+
+    /**
+     * 处理获取教务公告同步状态请求
+     *
+     * @author Serissia
+     */
+    private void handleNoticeGetStatus(Message request, Message response) {
+        response.setData(noticeService.getStatus());
+        response.setCode(ResponseCode.SUCCESS);
     }
 }

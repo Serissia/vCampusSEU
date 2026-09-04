@@ -160,6 +160,28 @@ CREATE TABLE `tbl_cart` (
     CONSTRAINT `fk_cart_goods` FOREIGN KEY (`goods_id`) REFERENCES `tbl_goods`(`goods_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='超市购物车表';
 
+-- 10. 教务处公告表 (tbl_notice)
+CREATE TABLE `tbl_notice` (
+    `id` INT AUTO_INCREMENT NOT NULL COMMENT '公告自增ID',
+    `title` VARCHAR(255) NOT NULL COMMENT '公告标题',
+    `publish_date` VARCHAR(32) NOT NULL COMMENT '发布日期 (YYYY-MM-DD)',
+    `category` VARCHAR(64) DEFAULT '教务公告' COMMENT '所属栏目',
+    `url` VARCHAR(512) NOT NULL COMMENT '公告原文链接',
+    `crawled_time` VARCHAR(32) NOT NULL COMMENT '爬取入库时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_notice_url` (`url`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教务处公告信息表';
+
+-- 10.1 公告元数据表 (tbl_notice_meta)
+CREATE TABLE `tbl_notice_meta` (
+    `meta_key` VARCHAR(32) NOT NULL COMMENT '配置键',
+    `meta_value` VARCHAR(255) NOT NULL COMMENT '配置值',
+    PRIMARY KEY (`meta_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='公告系统元数据表';
+
+INSERT INTO `tbl_notice_meta` (`meta_key`, `meta_value`) VALUES
+('last_sync_time', '暂无记录');
+
 -- ==========================================
 -- 插入初始模拟测试数据
 -- ==========================================
