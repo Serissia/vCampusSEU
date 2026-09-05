@@ -326,7 +326,10 @@ public class MainController {
         if ("NOTICE".equals(moduleKey)) {
             try {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/NoticeView.fxml"));
-                return loader.load();
+                Node node = loader.load();
+                NoticeViewController controller = loader.getController();
+                controller.initData(currentUser);
+                return node;
             } catch (IOException e) {
                 e.printStackTrace();
             }
