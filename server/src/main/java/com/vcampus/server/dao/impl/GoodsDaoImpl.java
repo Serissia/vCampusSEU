@@ -18,7 +18,7 @@ import java.util.List;
  */
 public class GoodsDaoImpl implements IGoodsDao {
 
-    private static final String COLUMNS = "goods_id, goods_name, price, stock, description, status";
+    private static final String COLUMNS = "goods_id, goods_name, price, stock, description, status, image_path";
 
     /**
      * 按商品编码或名称进行模糊查询，关键字为空时返回全部商品（含已下架）。
@@ -89,8 +89,8 @@ public class GoodsDaoImpl implements IGoodsDao {
      */
     @Override
     public boolean insertGoods(GoodsVO goods) throws SQLException {
-        String sql = "INSERT INTO tbl_goods(goods_id, goods_name, price, stock, description, status) "
-                + "VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO tbl_goods(goods_id, goods_name, price, stock, description, status, image_path) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, goods.getGoodsId());
@@ -99,6 +99,7 @@ public class GoodsDaoImpl implements IGoodsDao {
             ps.setInt(4, goods.getStock());
             ps.setString(5, goods.getDescription());
             ps.setString(6, goods.getStatus() == null ? "ON_SHELF" : goods.getStatus());
+            ps.setString(7, goods.getImage());
             return ps.executeUpdate() > 0;
         }
     }
@@ -108,7 +109,7 @@ public class GoodsDaoImpl implements IGoodsDao {
      */
     @Override
     public boolean updateGoods(GoodsVO goods) throws SQLException {
-        String sql = "UPDATE tbl_goods SET goods_name=?, price=?, stock=?, description=? "
+        String sql = "UPDATE tbl_goods SET goods_name=?, price=?, stock=?, description=?, image_path=? "
                 + "WHERE goods_id=?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -116,7 +117,8 @@ public class GoodsDaoImpl implements IGoodsDao {
             ps.setBigDecimal(2, goods.getPrice());
             ps.setInt(3, goods.getStock());
             ps.setString(4, goods.getDescription());
-            ps.setString(5, goods.getGoodsId());
+            ps.setString(5, goods.getImage());
+            ps.setString(6, goods.getGoodsId());
             return ps.executeUpdate() > 0;
         }
     }
@@ -159,6 +161,7 @@ public class GoodsDaoImpl implements IGoodsDao {
         goods.setStock(rs.getInt("stock"));
         goods.setDescription(rs.getString("description"));
         goods.setStatus(rs.getString("status"));
+        goods.setImage(rs.getString("image_path"));
         return goods;
     }
 }

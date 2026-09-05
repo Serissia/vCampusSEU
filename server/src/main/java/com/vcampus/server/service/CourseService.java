@@ -75,4 +75,9 @@ public interface CourseService {
      * 教务老师安排或修改课程起止周次。
      */
     boolean scheduleCourseWeeks(String courseCode, int startWeek, int endWeek);
+
+    /**
+     * 教务老师安排或修改课程上课地点。
+     */
+    boolean scheduleCourseLocation(String courseCode, String location);
 }

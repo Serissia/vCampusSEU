@@ -127,7 +127,7 @@ public class OrderHistoryPanel extends VBox {
         orderTable = new TableView<>();
         orderTable.getStyleClass().add("lib-table");
         orderTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        VBox.setVgrow(orderTable, Priority.ALWAYS);
+        // 在 ScrollPane 内保持固定高度、表格内部滚动        orderTable.setPrefHeight(470.0);
         setupTable();
 
         summaryLabel = new Label();

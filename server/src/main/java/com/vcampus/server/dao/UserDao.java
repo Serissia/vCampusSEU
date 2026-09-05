@@ -5,6 +5,7 @@ import com.vcampus.common.vo.UserVO;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * 统一用户身份验证 DAO 接口
@@ -59,4 +60,29 @@ public interface UserDao {
      * 在同一事务内原子扣减一卡通余额，余额不足时拒绝。
      */
     boolean deductBalance(Connection conn, String uid, BigDecimal amount) throws SQLException;
+
+    /**
+     * 注册新用户。
+     */
+    boolean createUser(UserVO user) throws SQLException;
+
+    /**
+     * 列出所有用户。
+     */
+    List<UserVO> listAllUsers() throws SQLException;
+
+    /**
+     * 修改用户账号、姓名、角色、状态（不修改余额与密码）。
+     */
+    boolean updateUserInfo(String oldUid, String newUid, String name, String role, String status) throws SQLException;
+
+    /**
+     * 删除用户。
+     */
+    boolean deleteUser(String uid) throws SQLException;
+
+    /**
+     * 判断账号是否已存在。
+     */
+    boolean uidExists(String uid) throws SQLException;
 }

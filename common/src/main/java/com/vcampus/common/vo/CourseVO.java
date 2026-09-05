@@ -19,6 +19,8 @@ public class CourseVO implements Serializable {
 
     /** 课程代码 */
     private String courseCode;
+    /** 课程展示代码，用于前端显示，支持不同教师教授同一门课程 */
+    private String displayCode;
     /** 课程名称 */
     private String courseName;
     /** 学分 */
@@ -35,6 +37,8 @@ public class CourseVO implements Serializable {
     private String semester;
     /** 上课时间 */
     private String classTime;
+    /** 课程性质：必修 / 选修 */
+    private String nature = "选修";
     /** 多个上课时间段 */
     private List<CourseTimeSlotVO> timeSlots = new ArrayList<CourseTimeSlotVO>();
     /** 起始周次 */
@@ -78,6 +82,14 @@ public class CourseVO implements Serializable {
 
     public void setCourseCode(String courseCode) {
         this.courseCode = courseCode;
+    }
+
+    public String getDisplayCode() {
+        return displayCode;
+    }
+
+    public void setDisplayCode(String displayCode) {
+        this.displayCode = displayCode;
     }
 
     public String getCourseName() {
@@ -142,6 +154,14 @@ public class CourseVO implements Serializable {
 
     public void setClassTime(String classTime) {
         this.classTime = classTime;
+    }
+
+    public String getNature() {
+        return nature;
+    }
+
+    public void setNature(String nature) {
+        this.nature = nature;
     }
 
     public List<CourseTimeSlotVO> getTimeSlots() {
@@ -211,6 +231,9 @@ public class CourseVO implements Serializable {
                     .append(slot.getDay()).append(" 第")
                     .append(slot.getStartPeriod()).append("-")
                     .append(slot.getEndPeriod()).append("节");
+            if (slot.getLocation() != null && !slot.getLocation().trim().isEmpty()) {
+                sb.append("@").append(slot.getLocation().trim());
+            }
         }
         return sb.toString();
     }
@@ -248,18 +271,23 @@ public class CourseVO implements Serializable {
         if (day == null || numbers.length < 2) {
             return null;
         }
+        String location = null;
+        int atIndex = text.indexOf("@");
+        if (atIndex >= 0 && atIndex < text.length() - 1) {
+            location = text.substring(atIndex + 1).trim();
+        }
         try {
             if (numbers.length >= 4) {
                 int startWeek = Integer.parseInt(numbers[0]);
                 int endWeek = Integer.parseInt(numbers[1]);
                 int startPeriod = Integer.parseInt(numbers[2]);
                 int endPeriod = Integer.parseInt(numbers[3]);
-                return new CourseTimeSlotVO(startWeek, endWeek, day, startPeriod, endPeriod);
+                return new CourseTimeSlotVO(startWeek, endWeek, day, startPeriod, endPeriod, location);
             }
             if (numbers.length >= 2 && startWeek > 0 && endWeek > 0) {
                 int startPeriod = Integer.parseInt(numbers[0]);
                 int endPeriod = Integer.parseInt(numbers[1]);
-                return new CourseTimeSlotVO(this.startWeek, this.endWeek, day, startPeriod, endPeriod);
+                return new CourseTimeSlotVO(this.startWeek, this.endWeek, day, startPeriod, endPeriod, location);
             }
             return null;
         } catch (NumberFormatException e) {

@@ -3,6 +3,7 @@ package com.vcampus.server.service;
 import com.vcampus.common.vo.UserVO;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 用户业务接口
@@ -47,4 +48,34 @@ public interface UserService {
      * @return 是否更新成功
      */
     boolean updateBalance(String uid, BigDecimal newBalance);
+
+    /**
+     * 注册新用户（初始余额为 0，状态正常）。
+     */
+    boolean createUser(UserVO user);
+
+    /**
+     * 列出所有用户。
+     */
+    List<UserVO> listAllUsers();
+
+    /**
+     * 判断账号是否已存在。
+     */
+    boolean uidExists(String uid);
+
+    /**
+     * 修改用户账号、姓名、角色、状态（不修改余额与密码）。
+     */
+    boolean updateUserInfo(String oldUid, String newUid, String name, String role, String status);
+
+    /**
+     * 管理员重置用户密码（不校验原密码）。
+     */
+    boolean resetPassword(String uid, String newPassword);
+
+    /**
+     * 删除用户。
+     */
+    boolean deleteUser(String uid);
 }

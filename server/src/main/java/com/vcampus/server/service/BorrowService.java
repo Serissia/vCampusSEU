@@ -31,4 +31,9 @@ public interface BorrowService {
      * 查询某学生的借阅记录。
      */
     List<BorrowRecordVO> listByStudent(String studentId);
+
+    /**
+     * 判断某用户是否存在未归还的借阅记录。
+     */
+    boolean hasActiveBorrows(String uid);
 }

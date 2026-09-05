@@ -6,6 +6,7 @@ import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.BookVO;
 import com.vcampus.common.vo.CartVO;
 import com.vcampus.common.vo.CourseVO;
+import com.vcampus.common.vo.CourseReviewVO;
 import com.vcampus.common.vo.GoodsVO;
 import com.vcampus.common.vo.GradeVO;
 import com.vcampus.common.vo.OrderVO;
@@ -27,6 +28,7 @@ import com.vcampus.server.service.NoticeService;
 import com.vcampus.server.service.impl.BookServiceImpl;
 import com.vcampus.server.service.impl.BorrowServiceImpl;
 import com.vcampus.server.service.impl.CourseSelectionServiceImpl;
+import com.vcampus.server.service.impl.CourseReviewServiceImpl;
 import com.vcampus.server.service.impl.CourseServiceImpl;
 import com.vcampus.server.service.impl.GradeServiceImpl;
 import com.vcampus.server.service.impl.CartServiceImpl;
@@ -48,6 +50,7 @@ public class Dispatcher {
 
     private final CourseService courseService = new CourseServiceImpl();
     private final CourseSelectionService selectionService = new CourseSelectionServiceImpl();
+    private final CourseReviewServiceImpl courseReviewService = new CourseReviewServiceImpl();
     private final GradeService gradeService = new GradeServiceImpl();
     private final UserService userService = new UserServiceImpl();
     private final BookService bookService = new BookServiceImpl();
@@ -88,6 +91,21 @@ public class Dispatcher {
                 case UPDATE_USER_INFO:
                     handleUpdateUserInfo(request, response);
                     break;
+                case USER_REGISTER:
+                    handleUserRegister(request, response);
+                    break;
+                case USER_LIST:
+                    handleUserList(request, response);
+                    break;
+                case USER_UPDATE:
+                    handleUserUpdate(request, response);
+                    break;
+                case USER_DELETE:
+                    handleUserDelete(request, response);
+                    break;
+                case USER_RESET_PASSWORD:
+                    handleUserResetPassword(request, response);
+                    break;
                 case COURSE_ADD:
                     response.setCode(courseService.addCourse((CourseVO) request.getData())
                             ? ResponseCode.SUCCESS : ResponseCode.FAIL);
@@ -117,6 +135,9 @@ public class Dispatcher {
                     break;
                 case COURSE_WEEK_SCHEDULE:
                     response.setCode(handleCourseWeekSchedule(request));
+                    break;
+                case COURSE_LOCATION_SCHEDULE:
+                    response.setCode(handleCourseLocationSchedule(request));
                     break;
                 case COURSE_QUERY:
                     response.setData(courseService.queryCourses(String.valueOf(request.getData())));
@@ -164,6 +185,17 @@ public class Dispatcher {
                 case GRADE_STATISTICS:
                     response.setData(gradeService.getCourseStatistics(String.valueOf(request.getData())));
                     response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case COURSE_REVIEW_SUBMIT:
+                    response.setCode(courseReviewService.submit((CourseReviewVO) request.getData()));
+                    break;
+                case COURSE_REVIEW_LIST:
+                    response.setData(courseReviewService.listByCourse(String.valueOf(request.getData())));
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case COURSE_REVIEW_DELETE:
+                    response.setCode(courseReviewService.delete(request.getUid(),
+                            String.valueOf(request.getData())));
                     break;
                 case BOOK_QUERY:
                     response.setData(bookService.queryBooks(String.valueOf(request.getData())));
@@ -213,6 +245,15 @@ public class Dispatcher {
                     break;
                 case GOODS_OFF_SHELF:
                     handleGoodsOffShelf(request, response);
+                    break;
+                case GOODS_IMAGE_UPLOAD:
+                    handleGoodsImageUpload(request, response);
+                    break;
+                case GOODS_IMAGE_DOWNLOAD:
+                    handleGoodsImageDownload(request, response);
+                    break;
+                case GOODS_IMAGE_DELETE:
+                    handleGoodsImageDelete(request, response);
                     break;
                 case ORDER_CREATE:
                     OrderVO orderPayload = (OrderVO) request.getData();
@@ -303,6 +344,7 @@ public class Dispatcher {
             case COURSE_PENDING_LIST:
             case COURSE_SCHEDULE:
             case COURSE_WEEK_SCHEDULE:
+            case COURSE_LOCATION_SCHEDULE:
             case COURSE_SELECT:
             case COURSE_DROP:
             case COURSE_TIMETABLE:
@@ -310,6 +352,9 @@ public class Dispatcher {
             case GRADE_QUERY:
             case GRADE_QUERY_BY_COURSE:
             case GRADE_STATISTICS:
+            case COURSE_REVIEW_SUBMIT:
+            case COURSE_REVIEW_LIST:
+            case COURSE_REVIEW_DELETE:
             case BOOK_QUERY:
             case BOOK_ADD:
             case BOOK_UPDATE:
@@ -322,6 +367,11 @@ public class Dispatcher {
             case BOOK_RESOURCE_UPLOAD:
             case BOOK_RESOURCE_DOWNLOAD:
             case BOOK_RESOURCE_DELETE:
+            case USER_REGISTER:
+            case USER_LIST:
+            case USER_UPDATE:
+            case USER_DELETE:
+            case USER_RESET_PASSWORD:
             case ORDER_LIST_ALL:
             case ORDER_STATISTICS:
                 return true;
@@ -357,6 +407,8 @@ public class Dispatcher {
                 return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
             case COURSE_WEEK_SCHEDULE:
                 return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
+            case COURSE_LOCATION_SCHEDULE:
+                return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
             case COURSE_SELECT:
             case COURSE_DROP:
             case COURSE_TIMETABLE:
@@ -375,6 +427,14 @@ public class Dispatcher {
                 return role == UserRole.ADMIN
                         || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
                         || role == UserRole.TEACHER;
+            case COURSE_REVIEW_SUBMIT:
+            case COURSE_REVIEW_DELETE:
+                return role == UserRole.STUDENT;
+            case COURSE_REVIEW_LIST:
+                return role == UserRole.STUDENT
+                        || role == UserRole.TEACHER
+                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
+                        || role == UserRole.ADMIN;
             case BOOK_QUERY:
                 return true;
             case BOOK_ADD:
@@ -397,6 +457,12 @@ public class Dispatcher {
                         || role == UserRole.LIBRARIAN
                         || role == UserRole.STUDENT
                         || role == UserRole.TEACHER;
+            case USER_REGISTER:
+            case USER_LIST:
+            case USER_UPDATE:
+            case USER_DELETE:
+            case USER_RESET_PASSWORD:
+                return role == UserRole.ADMIN;
             case ORDER_LIST_ALL:
             case ORDER_STATISTICS:
                 return role == UserRole.ADMIN || role == UserRole.SELLER;
@@ -421,12 +487,100 @@ public class Dispatcher {
                 loginInfo.getPassword());
         if (user == null) {
             response.setCode(ResponseCode.UNAUTHORIZED);
-            response.setData(null);
+            response.setData("账号或密码错误");
+            return;
+        }
+        if (user.getStatus() != null && user.getStatus() == 0) {
+            response.setCode(ResponseCode.ACCOUNT_FROZEN);
+            response.setData("账号已被冻结，请联系管理员");
             return;
         }
         response.setUid(user.getAccountNumber());
         response.setData(user);
         response.setCode(ResponseCode.SUCCESS);
+    }
+
+    /**
+     * 注册新用户（仅系统管理员）。
+     */
+    private void handleUserRegister(Message request, Message response) {
+        Object data = request.getData();
+        if (!(data instanceof UserVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("注册参数不合法");
+            return;
+        }
+        UserVO user = (UserVO) data;
+        if (userService.uidExists(user.getUid())) {
+            response.setCode(ResponseCode.USER_EXISTS);
+            response.setData("账号已存在");
+            return;
+        }
+        boolean ok = userService.createUser(user);
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+    }
+
+    /**
+     * 列出所有用户（仅系统管理员）。
+     */
+    private void handleUserList(Message request, Message response) {
+        response.setData(userService.listAllUsers());
+        response.setCode(ResponseCode.SUCCESS);
+    }
+
+    /**
+     * 修改用户信息（账号/姓名/角色/状态，仅系统管理员）。
+     */
+    private void handleUserUpdate(Message request, Message response) {
+        Object data = request.getData();
+        if (!(data instanceof String[]) || ((String[]) data).length < 5) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("修改参数不合法");
+            return;
+        }
+        String[] payload = (String[]) data;
+        boolean ok = userService.updateUserInfo(payload[0], payload[1], payload[2], payload[3], payload[4]);
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+    }
+
+    /**
+     * 删除用户（仅系统管理员，且不能删除自己、不能删除有未归还图书的用户）。
+     */
+    private void handleUserDelete(Message request, Message response) {
+        String uid = String.valueOf(request.getData());
+        if (uid == null || "null".equals(uid) || uid.trim().isEmpty()) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("账号为空");
+            return;
+        }
+        uid = uid.trim();
+        if (uid.equals(request.getUid())) {
+            response.setCode(ResponseCode.FAIL);
+            response.setData("不能删除当前登录的账号");
+            return;
+        }
+        if (borrowService.hasActiveBorrows(uid)) {
+            response.setCode(ResponseCode.USER_HAS_ACTIVE_BORROW);
+            response.setData("该用户还有未归还图书，请先办理归还");
+            return;
+        }
+        boolean ok = userService.deleteUser(uid);
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+    }
+
+    /**
+     * 管理员重置用户密码（仅系统管理员）。
+     */
+    private void handleUserResetPassword(Message request, Message response) {
+        Object data = request.getData();
+        if (!(data instanceof String[]) || ((String[]) data).length < 2) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("参数不合法");
+            return;
+        }
+        String[] payload = (String[]) data;
+        boolean ok = userService.resetPassword(payload[0], payload[1]);
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
     }
 
     /**
@@ -756,6 +910,68 @@ public class Dispatcher {
     }
 
     /**
+     * 处理商品图片上传：仅管理员或卖家允许，保存后返回服务端文件名。
+     */
+    private void handleGoodsImageUpload(Message request, Message response) {
+        if (!isGoodsManager(request)) {
+            response.setCode(ResponseCode.UNAUTHORIZED);
+            response.setData("无权执行该操作：仅管理员或卖家可上传商品图片");
+            return;
+        }
+        if (!(request.getData() instanceof ResourceFileVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("图片参数不合法");
+            return;
+        }
+        ResourceFileVO file = (ResourceFileVO) request.getData();
+        if (file.getData() == null || file.getData().length == 0) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("上传图片为空");
+            return;
+        }
+        String name = resourceService.storeImage(file.getData(), file.getFileName());
+        response.setCode(ResponseCode.SUCCESS);
+        response.setData(name);
+    }
+
+    /**
+     * 处理商品图片下载：按文件名读取图片字节并返回。所有登录用户均可浏览商品图片。
+     */
+    private void handleGoodsImageDownload(Message request, Message response) {
+        String name = request.getData() == null ? "" : String.valueOf(request.getData());
+        if (name.isEmpty() || "null".equals(name)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("图片标识为空");
+            return;
+        }
+        byte[] data = resourceService.loadImage(name.trim());
+        ResourceFileVO file = new ResourceFileVO();
+        file.setFileName(name.trim());
+        file.setData(data);
+        response.setCode(ResponseCode.SUCCESS);
+        response.setData(file);
+    }
+
+    /**
+     * 处理商品图片删除：仅管理员或卖家允许。
+     */
+    private void handleGoodsImageDelete(Message request, Message response) {
+        if (!isGoodsManager(request)) {
+            response.setCode(ResponseCode.UNAUTHORIZED);
+            response.setData("无权执行该操作：仅管理员或卖家可删除商品图片");
+            return;
+        }
+        String name = request.getData() == null ? "" : String.valueOf(request.getData());
+        if (name.isEmpty() || "null".equals(name)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("图片标识为空");
+            return;
+        }
+        boolean ok = resourceService.deleteImage(name.trim());
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+    }
+
+    /**
      * 处理教务老师安排或修改课程上课时间请求。
      */
     private ResponseCode handleCourseSchedule(Message request) {
@@ -783,6 +999,18 @@ public class Dispatcher {
         } catch (NumberFormatException e) {
             return ResponseCode.INVALID_REQUEST;
         }
+    }
+
+    /**
+     * 处理教务老师安排或修改课程上课地点请求。
+     */
+    private ResponseCode handleCourseLocationSchedule(Message request) {
+        String[] payload = toBorrowPayload(request.getData());
+        if (payload == null || payload[0] == null || payload[1] == null) {
+            return ResponseCode.INVALID_REQUEST;
+        }
+        boolean ok = courseService.scheduleCourseLocation(payload[0].trim(), payload[1].trim());
+        return ok ? ResponseCode.SUCCESS : ResponseCode.FAIL;
     }
 
     /**

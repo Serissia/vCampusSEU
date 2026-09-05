@@ -43,7 +43,7 @@
         </VBox>
 
         <!-- 数据列表卡片 -->
-        <VBox spacing="12.0" styleClass="profile-card" VBox.vgrow="ALWAYS">
+        <VBox fx:id="dataCard" spacing="12.0" styleClass="profile-card" VBox.vgrow="ALWAYS">
             <Label fx:id="sectionLabel" text="数据列表" styleClass="lib-section-title" />
             <TableView fx:id="dataTable" prefHeight="420.0" styleClass="lib-table" />
         </VBox>

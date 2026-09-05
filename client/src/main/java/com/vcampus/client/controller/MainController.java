@@ -2,6 +2,7 @@ package com.vcampus.client.controller;
 
 import com.vcampus.client.config.AppConfigManager;
 import com.vcampus.client.net.SocketClient;
+import com.vcampus.client.util.ScrollSpeedUtil;
 import com.vcampus.client.util.SvgIcons;
 import com.vcampus.client.util.ThemeManager;
 import com.vcampus.common.vo.UserRole;
@@ -14,6 +15,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -161,6 +163,8 @@ public class MainController {
         switch (role) {
             case STUDENT:
                 menus.add(new MenuItem("学生选课", "graduation-cap", "ACADEMIC_SELECT"));
+                menus.add(new MenuItem("我的课表", "calendar-alt", "ACADEMIC_TIMETABLE"));
+                menus.add(new MenuItem("课程评价", "chart-bar", "ACADEMIC_REVIEW"));
                 menus.add(new MenuItem("我的成绩", "chart-bar", "ACADEMIC_GRADE"));
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
@@ -169,11 +173,14 @@ public class MainController {
                 break;
             case TEACHER:
                 menus.add(new MenuItem("课程管理", "calendar-alt", "ACADEMIC_TEACHER"));
+                menus.add(new MenuItem("授课课表", "calendar-alt", "ACADEMIC_TEACHER_TIMETABLE"));
+                menus.add(new MenuItem("课程评分", "chart-bar", "ACADEMIC_TEACHER_REVIEW"));
                 menus.add(new MenuItem("成绩登记", "edit", "ACADEMIC_GRADE_SUBMIT"));
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 break;
             case ACADEMIC_AFFAIRS_TEACHER:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
+                menus.add(new MenuItem("调课管理", "calendar-alt", "ACADEMIC_ADJUST"));
                 menus.add(new MenuItem("开课审批", "edit", "ACADEMIC_APPROVE"));
                 break;
             case LIBRARIAN:
@@ -189,6 +196,7 @@ public class MainController {
                 break;
             case ADMIN:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
+                menus.add(new MenuItem("调课管理", "calendar-alt", "ACADEMIC_ADJUST"));
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
                 menus.add(new MenuItem("订单管理", "receipt", "ORDER_MANAGE"));
@@ -294,11 +302,17 @@ public class MainController {
             }
         }
 
-        if ("LIBRARY".equals(moduleKey)) {
+        if ("SHOP".equals(moduleKey)) {
+            ShopPanel shopPanel = new ShopPanel();
+            shopPanel.initData(currentUser, this);
+            return shopPanel;
+        }
+
+        if ("ADMIN_USER".equals(moduleKey)) {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LibraryView.fxml"));
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/UserManageView.fxml"));
                 Node root = loader.load();
-                LibraryController controller = loader.getController();
+                UserManageController controller = loader.getController();
                 controller.initData(currentUser);
                 return root;
             } catch (IOException e) {
@@ -306,21 +320,16 @@ public class MainController {
             }
         }
 
-        if ("SHOP".equals(moduleKey)) {
-            ShopPanel shopPanel = new ShopPanel();
-            shopPanel.initData(currentUser, this);
-            return shopPanel;
-        }
         if ("ORDER_HISTORY".equals(moduleKey)) {
             OrderHistoryPanel historyPanel = new OrderHistoryPanel();
             historyPanel.initData(currentUser);
-            return historyPanel;
+            return wrapScrollable(historyPanel);
         }
 
         if ("ORDER_MANAGE".equals(moduleKey)) {
             OrderManagementPanel managePanel = new OrderManagementPanel();
             managePanel.initData(currentUser);
-            return managePanel;
+            return wrapScrollable(managePanel);
         }
 
         if ("NOTICE".equals(moduleKey)) {
@@ -350,6 +359,16 @@ public class MainController {
         return card;
     }
 
+    /**
+     * 将模块面板包装为可滚动的 ScrollPane，并应用偏好设置中的滚轮速度。
+     */
+    private Node wrapScrollable(VBox panel) {
+        ScrollPane scrollPane = new ScrollPane(panel);
+        scrollPane.setFitToWidth(true);
+        scrollPane.getStyleClass().add("profile-scroll-pane");
+        ScrollSpeedUtil.applyCustomScrollSpeed(scrollPane);
+        return scrollPane;
+    }
     /**
      * 处理登出操作并返回登录页
      */

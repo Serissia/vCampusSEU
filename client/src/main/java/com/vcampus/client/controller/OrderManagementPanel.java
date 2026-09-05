@@ -218,7 +218,7 @@ public class OrderManagementPanel extends VBox {
         orderTable = new TableView<>();
         orderTable.getStyleClass().add("lib-table");
         orderTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        VBox.setVgrow(orderTable, Priority.ALWAYS);
+        // 在 ScrollPane 内保持固定高度、表格内部滚动        orderTable.setPrefHeight(440.0);
         setupTable();
 
         tableCard.getChildren().addAll(tableTitleRow, orderTable);

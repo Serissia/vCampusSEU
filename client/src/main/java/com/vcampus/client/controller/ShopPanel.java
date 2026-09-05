@@ -1,6 +1,7 @@
 package com.vcampus.client.controller;
 
 import com.vcampus.client.net.SocketClient;
+import com.vcampus.client.util.ScrollSpeedUtil;
 import com.vcampus.client.util.SvgIcons;
 import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
@@ -8,6 +9,7 @@ import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.GoodsVO;
 import com.vcampus.common.vo.CartVO;
 import com.vcampus.common.vo.OrderVO;
+import com.vcampus.common.vo.ResourceFileVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
 import javafx.application.Platform;
@@ -28,20 +30,28 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.DialogPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.scene.paint.Paint;
+import javafx.stage.FileChooser;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.file.Files;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -106,12 +116,33 @@ public class ShopPanel extends VBox {
     private Button buyBtn;
     private Button cartBtn;
 
+    /** 主页面（商品浏览）与购物车二级页 */
+    private VBox mainPage;
+    private VBox cartPage;
+    /** 购物车二级页控件 */
+    private VBox cartListBox;
+    private Label cartTotalLabel;
+    private Button cartCheckoutBtn;
+
     /** 商品卡片容器（FlowPane） */
     private FlowPane cardFlowPane;
     /** 卡片区域的外部 ScrollPane */
     private ScrollPane cardScrollPane;
     /** 手动追踪的当前选中商品 */
     private GoodsVO selectedGoods;
+
+    /** 商品图片内存缓存（服务端文件名 -> 已下载图片） */
+    private final Map<String, Image> imageCache = new ConcurrentHashMap<>();
+    /** 商品图片占位图（暂无图片），懒加载缓存 */
+    private Image placeholderImage;
+    /** 商品编辑弹窗中本次待上传的新图片（null 表示未选择新图） */
+    private ResourceFileVO pendingImage;
+    /** 商品编辑弹窗中用户是否选择“清除图片” */
+    private boolean imageCleared;
+
+    /** 商品卡片图片区域尺寸 */
+    private static final double IMAGE_W = 172.0;
+    private static final double IMAGE_H = 120.0;
 
     public ShopPanel() {
         buildUi();
@@ -144,14 +175,26 @@ public class ShopPanel extends VBox {
             }
         }
 
-        setSpacing(16.0);
         setPadding(new Insets(4.0));
         getStyleClass().add("shop-container");
         VBox.setVgrow(this, Priority.ALWAYS);
 
         bottomBar = new VBox(12.0);
 
-        getChildren().addAll(buildTopCard(), buildCardsCard(), bottomBar);
+        // 主页面：顶部信息卡 + 商品卡片区 + 底部操作栏
+        mainPage = new VBox(16.0);
+        mainPage.getChildren().addAll(buildTopCard(), buildCardsCard(), bottomBar);
+
+        // 二级页：购物车整页（默认隐藏，点击“购物车”进入）
+        cartPage = buildCartPage();
+        cartPage.setVisible(false);
+        cartPage.setManaged(false);
+
+        StackPane pageHost = new StackPane();
+        pageHost.getChildren().addAll(mainPage, cartPage);
+        VBox.setVgrow(pageHost, Priority.ALWAYS);
+
+        getChildren().add(pageHost);
     }
 
     /**
@@ -234,7 +277,7 @@ public class ShopPanel extends VBox {
         cartBtn = new Button("购物车 (0)");
         cartBtn.getStyleClass().add("btn-recharge-preset");
         cartBtn.setGraphic(createCartIconView());
-        cartBtn.setOnAction(e -> openCartDialog());
+        cartBtn.setOnAction(e -> openCartPage());
 
         headerRow.getChildren().addAll(titleBox, spacer, cartBtn, balanceBox);
 
@@ -293,6 +336,8 @@ public class ShopPanel extends VBox {
         cardScrollPane.setFitToWidth(true);
         cardScrollPane.setFitToHeight(false);
         VBox.setVgrow(cardScrollPane, Priority.ALWAYS);
+        // 应用偏好设置中的滚轮速度
+        ScrollSpeedUtil.applyCustomScrollSpeed(cardScrollPane);
 
         card.getChildren().addAll(header, cardScrollPane);
         return card;
@@ -314,6 +359,14 @@ public class ShopPanel extends VBox {
         card.setPrefWidth(200.0);
         card.setMinWidth(180.0);
         card.setMaxWidth(220.0);
+
+        // 商品图片（无图时显示“暂无图片”占位图）
+        StackPane imageBox = new StackPane();
+        imageBox.setPrefSize(IMAGE_W, IMAGE_H);
+        imageBox.setMinSize(IMAGE_W, IMAGE_H);
+        imageBox.setMaxSize(IMAGE_W, IMAGE_H);
+        imageBox.getStyleClass().add("shop-card-image-box");
+        imageBox.getChildren().add(createGoodsImageView(goods));
 
         // 顶部：商品编号 + 状态徽标
         HBox topRow = new HBox(6.0);
@@ -364,7 +417,7 @@ public class ShopPanel extends VBox {
 
         bottomRow.getChildren().addAll(priceLabel, priceSpacer, stockLabel);
 
-        card.getChildren().addAll(topRow, nameLabel, descLabel, bottomRow);
+        card.getChildren().addAll(imageBox, topRow, nameLabel, descLabel, bottomRow);
 
         // 每个商品卡片底部：加入购物车按钮（单击直接加 1 件，无弹窗）
         card.getChildren().add(buildCardAddButton(goods));
@@ -380,6 +433,92 @@ public class ShopPanel extends VBox {
         // 鼠标悬停效果通过 CSS 处理（.shop-card:hover）
 
         return card;
+    }
+
+    /**
+     * 卡片图片视图：有商品图则异步下载展示，否则显示“暂无图片”占位图。
+     */
+    private ImageView createGoodsImageView(GoodsVO goods) {
+        ImageView view = new ImageView(getPlaceholderImage());
+        view.setFitWidth(IMAGE_W);
+        view.setFitHeight(IMAGE_H);
+        view.setPreserveRatio(true);
+        view.setSmooth(true);
+        view.getStyleClass().add("shop-card-image");
+
+        String name = goods.getImage();
+        if (name != null && !name.isEmpty()) {
+            Image cached = imageCache.get(name);
+            if (cached != null) {
+                view.setImage(cached);
+            } else {
+                requestGoodsImage(name, view);
+            }
+        }
+        return view;
+    }
+
+    /**
+     * 异步下载商品图片，成功后写入缓存并刷新目标 ImageView。
+     */
+    private void requestGoodsImage(String name, ImageView target) {
+        THREAD_POOL.execute(() -> {
+            try {
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.GOODS_IMAGE_DOWNLOAD, null, name);
+                Message response = socketClient.send(request);
+                if (response == null || response.getCode() != ResponseCode.SUCCESS
+                        || !(response.getData() instanceof ResourceFileVO)) {
+                    return; // 保持占位图
+                }
+                byte[] data = ((ResourceFileVO) response.getData()).getData();
+                if (data == null || data.length == 0) {
+                    return;
+                }
+                Image img = new Image(new ByteArrayInputStream(data));
+                if (img.isError() || img.getWidth() <= 0) {
+                    return; // 解码失败保持占位图
+                }
+                imageCache.put(name, img);
+                Platform.runLater(() -> {
+                    if (target != null) {
+                        target.setImage(img);
+                    }
+                });
+            } catch (Exception ignored) {
+                // 下载失败时静默保持占位图，不打扰用户
+            }
+        });
+    }
+
+    /**
+     * 懒加载“暂无图片”占位图。
+     */
+    private Image getPlaceholderImage() {
+        if (placeholderImage == null) {
+            try (InputStream is = getClass().getResourceAsStream("/images/goods-no-image.png")) {
+                placeholderImage = is != null ? new Image(is) : new WritableImage(1, 1);
+            } catch (Exception e) {
+                placeholderImage = new WritableImage(1, 1);
+            }
+        }
+        return placeholderImage;
+    }
+
+    /**
+     * 尽力而为地删除服务端商品图片（不阻塞、不打扰用户）。
+     */
+    private void deleteImageQuietly(String imageName) {
+        if (imageName == null || imageName.trim().isEmpty()) {
+            return;
+        }
+        THREAD_POOL.execute(() -> {
+            try {
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.GOODS_IMAGE_DELETE, null, imageName.trim());
+                socketClient.send(request);
+            } catch (Exception ignored) {
+                // 删除失败不影响主流程
+            }
+        });
     }
 
     /**
@@ -771,8 +910,10 @@ public class ShopPanel extends VBox {
      */
     private void handleAddGoods() {
         GoodsVO draft = new GoodsVO();
+        pendingImage = null;
+        imageCleared = false;
         if (showGoodsDialog("新增商品", draft, true)) {
-            submitGoods(MessageType.GOODS_ADD, draft, "新增商品成功");
+            submitGoodsWithImage(MessageType.GOODS_ADD, draft, "新增商品成功", null);
         }
     }
 
@@ -790,8 +931,12 @@ public class ShopPanel extends VBox {
         draft.setPrice(selectedGoods.getPrice());
         draft.setStock(selectedGoods.getStock());
         draft.setDescription(selectedGoods.getDescription());
+        draft.setImage(selectedGoods.getImage());
+        String originalImage = selectedGoods.getImage();
+        pendingImage = null;
+        imageCleared = false;
         if (showGoodsDialog("修改商品", draft, false)) {
-            submitGoods(MessageType.GOODS_UPDATE, draft, "修改商品成功");
+            submitGoodsWithImage(MessageType.GOODS_UPDATE, draft, "修改商品成功", originalImage);
         }
     }
 
@@ -809,7 +954,7 @@ public class ShopPanel extends VBox {
         confirm.setContentText("确定要删除商品 [" + selectedGoods.getGoodsName() + "] 吗？");
         Optional<ButtonType> result = confirm.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            submitGoods(MessageType.GOODS_DELETE, selectedGoods, "删除商品成功");
+            submitGoods(MessageType.GOODS_DELETE, selectedGoods, "删除商品成功", selectedGoods.getImage());
         }
     }
 
@@ -875,6 +1020,91 @@ public class ShopPanel extends VBox {
         grid.add(stockField, 1, 3);
         grid.add(new Label("描述"), 0, 4);
         grid.add(descField, 1, 4);
+
+        // ===== 商品图片选择 =====
+        ImageView imagePreview = new ImageView();
+        imagePreview.setFitWidth(120.0);
+        imagePreview.setFitHeight(80.0);
+        imagePreview.setPreserveRatio(true);
+        imagePreview.setSmooth(true);
+        imagePreview.getStyleClass().add("shop-dialog-image-preview");
+
+        Label imageStatus = new Label();
+        imageStatus.getStyleClass().add("shop-cart-meta");
+        Button chooseImageBtn = new Button("选择图片…");
+        chooseImageBtn.getStyleClass().add("btn-recharge-preset");
+        Button clearImageBtn = new Button("清除");
+        clearImageBtn.getStyleClass().add("lib-btn-danger");
+
+        final String existingImage = goods.getImage();
+        Runnable syncImagePreview = () -> {
+            if (pendingImage != null && pendingImage.getData() != null) {
+                imagePreview.setImage(new Image(new ByteArrayInputStream(pendingImage.getData())));
+                imageStatus.setText("已选择：" + pendingImage.getFileName());
+                clearImageBtn.setDisable(false);
+            } else if (imageCleared) {
+                imagePreview.setImage(getPlaceholderImage());
+                imageStatus.setText("未上传（将显示“暂无图片”）");
+                clearImageBtn.setDisable(true);
+            } else if (existingImage != null && !existingImage.isEmpty() && imageCache.containsKey(existingImage)) {
+                imagePreview.setImage(imageCache.get(existingImage));
+                imageStatus.setText("当前图片：" + existingImage);
+                clearImageBtn.setDisable(false);
+            } else if (existingImage != null && !existingImage.isEmpty()) {
+                imagePreview.setImage(getPlaceholderImage());
+                imageStatus.setText("当前图片：" + existingImage + "（如需更换请重新选择）");
+                clearImageBtn.setDisable(false);
+            } else {
+                imagePreview.setImage(getPlaceholderImage());
+                imageStatus.setText("未上传（将显示“暂无图片”）");
+                clearImageBtn.setDisable(true);
+            }
+        };
+        syncImagePreview.run();
+
+        chooseImageBtn.setOnAction(e -> {
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("选择商品图片");
+            chooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("图片文件", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"),
+                    new FileChooser.ExtensionFilter("所有文件", "*.*"));
+            File file = chooser.showOpenDialog(null);
+            if (file == null) {
+                return;
+            }
+            try {
+                byte[] data = Files.readAllBytes(file.toPath());
+                if (data == null || data.length == 0) {
+                    showAlert("提示", "图片文件为空，请重新选择", Alert.AlertType.WARNING);
+                    return;
+                }
+                pendingImage = new ResourceFileVO();
+                pendingImage.setFileName(file.getName());
+                pendingImage.setData(data);
+                imageCleared = false;
+                syncImagePreview.run();
+            } catch (Exception ex) {
+                showAlert("错误", "读取图片失败：" + ex.getMessage(), Alert.AlertType.ERROR);
+            }
+        });
+
+        clearImageBtn.setOnAction(e -> {
+            pendingImage = null;
+            imageCleared = true;
+            syncImagePreview.run();
+        });
+
+        HBox imageControls = new HBox(8.0);
+        imageControls.setAlignment(Pos.CENTER_LEFT);
+        imageControls.getChildren().addAll(chooseImageBtn, clearImageBtn);
+
+        VBox imageCell = new VBox(6.0);
+        imageCell.setAlignment(Pos.CENTER_LEFT);
+        imageCell.getChildren().addAll(imagePreview, imageControls, imageStatus);
+
+        grid.add(new Label("商品图片"), 0, 5);
+        grid.add(imageCell, 1, 5);
+
         dialog.getDialogPane().setContent(grid);
 
         dialog.setResultConverter(dialogButton -> {
@@ -924,6 +1154,15 @@ public class ShopPanel extends VBox {
      * 异步提交商品管理请求（新增 / 修改 / 删除 / 强制下架）。
      */
     private void submitGoods(MessageType type, GoodsVO goods, String successMsg) {
+        submitGoods(type, goods, successMsg, null);
+    }
+
+    /**
+     * 异步提交商品管理请求，删除商品成功后可顺带清理服务端商品图片。
+     *
+     * @param cleanupImage 删除商品时需一并清理的商品图片文件名（可为 null）
+     */
+    private void submitGoods(MessageType type, GoodsVO goods, String successMsg, String cleanupImage) {
         THREAD_POOL.execute(() -> {
             try {
                 Object payload = (type == MessageType.GOODS_DELETE || type == MessageType.GOODS_OFF_SHELF)
@@ -932,6 +1171,11 @@ public class ShopPanel extends VBox {
                 Message response = socketClient.send(request);
                 Platform.runLater(() -> {
                     if (response != null && response.getCode() == ResponseCode.SUCCESS) {
+                        // 删除商品/替换图片成功后，清理被替换下来的服务端旧图（尽力而为）
+                        if ((type == MessageType.GOODS_DELETE || type == MessageType.GOODS_UPDATE)
+                                && cleanupImage != null && !cleanupImage.isEmpty()) {
+                            deleteImageQuietly(cleanupImage);
+                        }
                         showAlert("操作成功", successMsg, Alert.AlertType.INFORMATION);
                         refreshGoods(searchField.getText() == null ? "" : searchField.getText().trim());
                     } else if (response != null && response.getCode() == ResponseCode.UNAUTHORIZED) {
@@ -946,6 +1190,45 @@ public class ShopPanel extends VBox {
                 Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
             }
         });
+    }
+
+    /**
+     * 提交商品（新增/修改）前，若用户在弹窗中选择了新图片则先上传，再携带图片名提交；
+     * 修改时若替换/清除图片，则顺带删除服务端旧图。
+     *
+     * @param originalImage 修改前已有的图片文件名（新增场景传 null）
+     */
+    private void submitGoodsWithImage(MessageType type, GoodsVO goods, String successMsg, String originalImage) {
+        boolean isEdit = type == MessageType.GOODS_UPDATE;
+        if (pendingImage != null && pendingImage.getData() != null) {
+            THREAD_POOL.execute(() -> {
+                try {
+                    Message upload = new Message(currentUser.getAccountNumber(), MessageType.GOODS_IMAGE_UPLOAD, null, pendingImage);
+                    Message upResponse = socketClient.send(upload);
+                    Platform.runLater(() -> {
+                        if (upResponse != null && upResponse.getCode() == ResponseCode.SUCCESS
+                                && upResponse.getData() instanceof String) {
+                            String newName = (String) upResponse.getData();
+                            goods.setImage(newName);
+                            // 替换旧图时，待更新成功后由 submitGoods 内部删除服务端旧图
+                            submitGoods(type, goods, successMsg, isEdit ? originalImage : null);
+                        } else {
+                            showAlert("上传失败", "商品图片上传失败，请稍后重试", Alert.AlertType.ERROR);
+                        }
+                    });
+                } catch (Exception e) {
+                    Platform.runLater(() -> showAlert("网络错误", "商品图片上传失败: " + e.getMessage(), Alert.AlertType.ERROR));
+                }
+            });
+            return;
+        }
+        if (isEdit && imageCleared) {
+            // 清除图片：置空，待更新成功后删除服务端旧图
+            goods.setImage("");
+            submitGoods(type, goods, successMsg, originalImage);
+            return;
+        }
+        submitGoods(type, goods, successMsg);
     }
 
     /**
@@ -1048,9 +1331,116 @@ public class ShopPanel extends VBox {
     }
 
     /**
-     * 打开购物车弹窗：先拉取购物车数据再展示。
+     * 打开购物车二级页：隐藏商品浏览页并加载购物车内容。
      */
-    private void openCartDialog() {
+    private void openCartPage() {
+        showCartPage();
+        reloadCartPage();
+    }
+
+    /**
+     * 切换到购物车二级页。
+     */
+    private void showCartPage() {
+        if (mainPage != null) {
+            mainPage.setVisible(false);
+            mainPage.setManaged(false);
+        }
+        if (cartPage != null) {
+            cartPage.setVisible(true);
+            cartPage.setManaged(true);
+        }
+    }
+
+    /**
+     * 返回商品浏览主页面。
+     */
+    private void showMainPage() {
+        if (cartPage != null) {
+            cartPage.setVisible(false);
+            cartPage.setManaged(false);
+        }
+        if (mainPage != null) {
+            mainPage.setVisible(true);
+            mainPage.setManaged(true);
+        }
+    }
+
+    /**
+     * 构建购物车二级页布局（返回按钮 + 列表 + 合计/结算）。
+     */
+    private VBox buildCartPage() {
+        VBox page = new VBox(16.0);
+        page.getStyleClass().add("shop-container");
+
+        // 顶栏：返回按钮 + 标题
+        VBox header = new VBox(0.0);
+        header.getStyleClass().add("profile-card");
+        HBox headerRow = new HBox(12.0);
+        headerRow.setAlignment(Pos.CENTER_LEFT);
+
+        Button backBtn = new Button("← 返回");
+        backBtn.getStyleClass().add("btn-recharge-preset");
+        backBtn.setOnAction(e -> {
+            showMainPage();
+            refreshCartBadge();
+        });
+
+        VBox titleBox = new VBox(4.0);
+        Label title = new Label("我的购物车");
+        title.getStyleClass().add("lib-title");
+        Label subtitle = new Label("可调整数量、移除或清空，点击“去结算”一次性结账");
+        subtitle.getStyleClass().add("lib-subtitle");
+        titleBox.getChildren().addAll(title, subtitle);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        headerRow.getChildren().addAll(backBtn, titleBox, spacer);
+        header.getChildren().add(headerRow);
+
+        // 条目列表（可滚动）
+        VBox listCard = new VBox(10.0);
+        listCard.getStyleClass().add("profile-card");
+        VBox.setVgrow(listCard, Priority.ALWAYS);
+
+        cartListBox = new VBox(10.0);
+        ScrollPane listScroll = new ScrollPane(cartListBox);
+        listScroll.setFitToWidth(true);
+        listScroll.setFitToHeight(false);
+        listScroll.getStyleClass().add("profile-scroll-pane");
+        ScrollSpeedUtil.applyCustomScrollSpeed(listScroll);
+        VBox.setVgrow(listScroll, Priority.ALWAYS);
+        listCard.getChildren().add(listScroll);
+
+        // 底部：合计 + 清空 + 去结算
+        VBox footer = new VBox(10.0);
+        footer.getStyleClass().add("profile-card");
+        cartTotalLabel = new Label("合计：¥ 0.00");
+        cartTotalLabel.getStyleClass().add("shop-cart-total");
+
+        HBox footerRow = new HBox(12.0);
+        footerRow.setAlignment(Pos.CENTER_RIGHT);
+
+        Button clearBtn = new Button("清空购物车");
+        clearBtn.getStyleClass().add("lib-btn-danger");
+        clearBtn.setOnAction(e -> clearCartPage());
+
+        cartCheckoutBtn = new Button("去结算");
+        cartCheckoutBtn.getStyleClass().add("shop-btn-buy");
+        cartCheckoutBtn.setOnAction(e -> checkoutCartPage());
+
+        footerRow.getChildren().addAll(clearBtn, cartCheckoutBtn);
+        footer.getChildren().addAll(cartTotalLabel, footerRow);
+
+        page.getChildren().addAll(header, listCard, footer);
+        return page;
+    }
+
+    /**
+     * 异步拉取购物车并渲染二级页。
+     */
+    private void reloadCartPage() {
         THREAD_POOL.execute(() -> {
             try {
                 Message request = new Message(currentUser.getAccountNumber(), MessageType.CART_QUERY, null, null);
@@ -1060,9 +1450,9 @@ public class ShopPanel extends VBox {
                             && response.getData() instanceof List) {
                         @SuppressWarnings("unchecked")
                         List<CartVO> items = (List<CartVO>) response.getData();
-                        showCartDialog(items);
+                        renderCartPage(items);
                     } else {
-                        showAlert("提示", "无法读取购物车", Alert.AlertType.ERROR);
+                        showAlert("读取失败", cartErrorText(response), Alert.AlertType.ERROR);
                     }
                 });
             } catch (Exception e) {
@@ -1072,70 +1462,30 @@ public class ShopPanel extends VBox {
     }
 
     /**
-     * 构建并显示购物车弹窗。
+     * 渲染购物车二级页条目与合计。
      */
-    private void showCartDialog(List<CartVO> items) {
-        Dialog<Void> dialog = new Dialog<>();
-        dialog.setTitle("我的购物车");
-        dialog.setHeaderText(null);
-        dialog.getDialogPane().getStylesheets().addAll(getStylesheets());
-        dialog.getDialogPane().setPrefWidth(560.0);
-        dialog.getDialogPane().getButtonTypes().add(new ButtonType("关闭", ButtonBar.ButtonData.CANCEL_CLOSE));
-
-        VBox root = new VBox(12.0);
-        root.setPadding(new Insets(16.0));
-        root.getStyleClass().add("cart-dialog-root");
-
-        VBox listBox = new VBox(10.0);
-        Label totalLabel = new Label("合计：¥ 0.00");
-        totalLabel.getStyleClass().add("shop-cart-total");
-
-        HBox footer = new HBox(12.0);
-        footer.setAlignment(Pos.CENTER_RIGHT);
-
-        Button clearBtn = new Button("清空购物车");
-        clearBtn.getStyleClass().add("lib-btn-danger");
-        Button checkoutBtn = new Button("去结算");
-        checkoutBtn.getStyleClass().add("shop-btn-buy");
-
-        footer.getChildren().addAll(clearBtn, checkoutBtn);
-        root.getChildren().addAll(listBox, totalLabel, footer);
-        dialog.getDialogPane().setContent(root);
-
-        clearBtn.setOnAction(e -> confirmClearCart(dialog, listBox, totalLabel, checkoutBtn));
-        checkoutBtn.setOnAction(e -> doCartCheckout(dialog, listBox, totalLabel, checkoutBtn));
-
-        renderCartItems(dialog, listBox, totalLabel, checkoutBtn, items);
-        dialog.showAndWait();
-    }
-
-    /**
-     * 渲染购物车条目列表并刷新合计。
-     */
-    private void renderCartItems(Dialog<Void> dialog, VBox listBox, Label totalLabel,
-                                 Button checkoutBtn, List<CartVO> items) {
-        listBox.getChildren().clear();
+    private void renderCartPage(List<CartVO> items) {
+        cartListBox.getChildren().clear();
         if (items == null || items.isEmpty()) {
             Label empty = new Label("购物车还是空的，去挑几件商品吧～");
             empty.getStyleClass().add("shop-cart-empty");
-            listBox.getChildren().add(empty);
-            totalLabel.setText("合计：¥ 0.00");
-            checkoutBtn.setDisable(true);
+            cartListBox.getChildren().add(empty);
+            cartTotalLabel.setText("合计：¥ 0.00");
+            cartCheckoutBtn.setDisable(true);
             return;
         }
-        checkoutBtn.setDisable(false);
+        cartCheckoutBtn.setDisable(false);
         BigDecimal total = BigDecimal.ZERO;
         for (CartVO item : items) {
-            total = total.add(renderCartRow(dialog, listBox, totalLabel, checkoutBtn, item));
+            total = total.add(renderCartPageRow(item));
         }
-        totalLabel.setText("合计：¥ " + total.setScale(2, RoundingMode.HALF_UP).toPlainString());
+        cartTotalLabel.setText("合计：¥ " + total.setScale(2, RoundingMode.HALF_UP).toPlainString());
     }
 
     /**
      * 渲染单行购物车条目，返回该行小计金额。
      */
-    private BigDecimal renderCartRow(Dialog<Void> dialog, VBox listBox, Label totalLabel,
-                                     Button checkoutBtn, CartVO item) {
+    private BigDecimal renderCartPageRow(CartVO item) {
         HBox row = new HBox(10.0);
         row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("shop-cart-row");
@@ -1175,19 +1525,18 @@ public class ShopPanel extends VBox {
         removeBtn.getStyleClass().add("lib-btn-danger");
 
         row.getChildren().addAll(info, minusBtn, countLabel, plusBtn, subtotalLabel, removeBtn);
-        listBox.getChildren().add(row);
+        cartListBox.getChildren().add(row);
 
-        minusBtn.setOnAction(e -> updateCartQty(dialog, item, item.getCount() - 1, listBox, totalLabel, checkoutBtn));
-        plusBtn.setOnAction(e -> updateCartQty(dialog, item, item.getCount() + 1, listBox, totalLabel, checkoutBtn));
-        removeBtn.setOnAction(e -> removeCartItem(dialog, item, listBox, totalLabel, checkoutBtn));
+        minusBtn.setOnAction(e -> changeCartQty(item, item.getCount() - 1));
+        plusBtn.setOnAction(e -> changeCartQty(item, item.getCount() + 1));
+        removeBtn.setOnAction(e -> removeCartRow(item));
         return subtotal;
     }
 
     /**
-     * 修改购物车条目数量后刷新弹窗。
+     * 修改购物车条目数量后刷新二级页。
      */
-    private void updateCartQty(Dialog<Void> dialog, CartVO item, int count,
-                               VBox listBox, Label totalLabel, Button checkoutBtn) {
+    private void changeCartQty(CartVO item, int count) {
         int safeCount = Math.max(1, Math.min(99, count));
         CartVO update = new CartVO();
         update.setGoodsId(item.getGoodsId());
@@ -1201,7 +1550,7 @@ public class ShopPanel extends VBox {
                         showAlert("更新失败", cartErrorText(response), Alert.AlertType.ERROR);
                     }
                     refreshCartBadge();
-                    reloadCartDialog(dialog, listBox, totalLabel, checkoutBtn);
+                    reloadCartPage();
                 });
             } catch (Exception e) {
                 Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
@@ -1210,10 +1559,9 @@ public class ShopPanel extends VBox {
     }
 
     /**
-     * 移除购物车条目后刷新弹窗。
+     * 移除购物车条目后刷新二级页。
      */
-    private void removeCartItem(Dialog<Void> dialog, CartVO item,
-                                VBox listBox, Label totalLabel, Button checkoutBtn) {
+    private void removeCartRow(CartVO item) {
         THREAD_POOL.execute(() -> {
             try {
                 Message request = new Message(currentUser.getAccountNumber(), MessageType.CART_REMOVE, null, item.getGoodsId());
@@ -1223,29 +1571,7 @@ public class ShopPanel extends VBox {
                         showAlert("移除失败", cartErrorText(response), Alert.AlertType.ERROR);
                     }
                     refreshCartBadge();
-                    reloadCartDialog(dialog, listBox, totalLabel, checkoutBtn);
-                });
-            } catch (Exception e) {
-                Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
-            }
-        });
-    }
-
-    /**
-     * 重新拉取购物车数据并渲染当前弹窗。
-     */
-    private void reloadCartDialog(Dialog<Void> dialog, VBox listBox, Label totalLabel, Button checkoutBtn) {
-        THREAD_POOL.execute(() -> {
-            try {
-                Message request = new Message(currentUser.getAccountNumber(), MessageType.CART_QUERY, null, null);
-                Message response = socketClient.send(request);
-                Platform.runLater(() -> {
-                    if (response != null && response.getCode() == ResponseCode.SUCCESS
-                            && response.getData() instanceof List) {
-                        @SuppressWarnings("unchecked")
-                        List<CartVO> items = (List<CartVO>) response.getData();
-                        renderCartItems(dialog, listBox, totalLabel, checkoutBtn, items);
-                    }
+                    reloadCartPage();
                 });
             } catch (Exception e) {
                 Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
@@ -1256,7 +1582,7 @@ public class ShopPanel extends VBox {
     /**
      * 确认并清空购物车。
      */
-    private void confirmClearCart(Dialog<Void> dialog, VBox listBox, Label totalLabel, Button checkoutBtn) {
+    private void clearCartPage() {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("清空购物车");
         confirm.setHeaderText(null);
@@ -1269,7 +1595,7 @@ public class ShopPanel extends VBox {
                     socketClient.send(request);
                     Platform.runLater(() -> {
                         refreshCartBadge();
-                        reloadCartDialog(dialog, listBox, totalLabel, checkoutBtn);
+                        reloadCartPage();
                     });
                 } catch (Exception e) {
                     Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
@@ -1279,16 +1605,15 @@ public class ShopPanel extends VBox {
     }
 
     /**
-     * 购物车结算：成功后关闭弹窗并刷新商品、余额与角标。
+     * 购物车结算：成功后自动返回主页面并刷新商品、余额与角标。
      */
-    private void doCartCheckout(Dialog<Void> dialog, VBox listBox, Label totalLabel, Button checkoutBtn) {
+    private void checkoutCartPage() {
         THREAD_POOL.execute(() -> {
             try {
                 Message request = new Message(currentUser.getAccountNumber(), MessageType.ORDER_CHECKOUT, null, null);
                 Message response = socketClient.send(request);
                 Platform.runLater(() -> {
                     if (response != null && response.getCode() == ResponseCode.SUCCESS) {
-                        dialog.close();
                         int orderCount = 0;
                         int itemCount = 0;
                         BigDecimal total = BigDecimal.ZERO;
@@ -1303,6 +1628,7 @@ public class ShopPanel extends VBox {
                                 }
                             }
                         }
+                        showMainPage();
                         showAlert("结算成功",
                                 "共结算 " + orderCount + " 种商品（" + itemCount + " 件），"
                                         + "实付 ¥ " + total.setScale(2, RoundingMode.HALF_UP).toPlainString() + "。",
@@ -1312,7 +1638,7 @@ public class ShopPanel extends VBox {
                         refreshCartBadge();
                     } else {
                         showAlert("结算失败", cartErrorText(response), Alert.AlertType.ERROR);
-                        reloadCartDialog(dialog, listBox, totalLabel, checkoutBtn);
+                        reloadCartPage();
                     }
                 });
             } catch (Exception e) {

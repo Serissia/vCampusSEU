@@ -20,6 +20,13 @@ public enum MessageType implements Serializable {
     UPDATE_USER_INFO,
     CHANGE_PASSWORD,
 
+    /** 用户管理（系统管理员） */
+    USER_REGISTER,
+    USER_LIST,
+    USER_UPDATE,
+    USER_DELETE,
+    USER_RESET_PASSWORD,
+
     /** 教务课程管理 */
     COURSE_QUERY,
     COURSE_ADD,
@@ -34,6 +41,7 @@ public enum MessageType implements Serializable {
     COURSE_PENDING_LIST,
     COURSE_SCHEDULE,
     COURSE_WEEK_SCHEDULE,
+    COURSE_LOCATION_SCHEDULE,
 
     /** 教务选课流转 */
     COURSE_SELECT,
@@ -45,6 +53,9 @@ public enum MessageType implements Serializable {
     GRADE_QUERY,
     GRADE_QUERY_BY_COURSE,
     GRADE_STATISTICS,
+    COURSE_REVIEW_SUBMIT,
+    COURSE_REVIEW_LIST,
+    COURSE_REVIEW_DELETE,
 
     /** 图书馆图书检索与采编 */
     BOOK_QUERY,
@@ -76,6 +87,11 @@ public enum MessageType implements Serializable {
 
     /** 商品强制下架（仅管理员） */
     GOODS_OFF_SHELF,
+
+    /** 校园超市商品图片上传、下载与删除 */
+    GOODS_IMAGE_UPLOAD,
+    GOODS_IMAGE_DOWNLOAD,
+    GOODS_IMAGE_DELETE,
 
     /** 校园超市订单创建 */
     ORDER_CREATE,
