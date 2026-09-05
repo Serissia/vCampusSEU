@@ -182,7 +182,7 @@ public class OrderHistoryPanel extends VBox {
     /**
      * 异步加载当前用户的订单（服务端已按时间倒序）。
      */
-    private void refreshOrders() {
+    public void refreshOrders() {
         THREAD_POOL.execute(() -> {
             try {
                 Message request = new Message(currentUser.getAccountNumber(), MessageType.ORDER_QUERY, null, null);

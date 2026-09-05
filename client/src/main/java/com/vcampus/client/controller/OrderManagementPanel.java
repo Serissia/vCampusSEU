@@ -273,7 +273,7 @@ public class OrderManagementPanel extends VBox {
     /**
      * 异步加载全部订单与统计。
      */
-    private void refreshAll() {
+    public void refreshAll() {
         THREAD_POOL.execute(() -> {
             try {
                 Message listReq = new Message(currentUser.getAccountNumber(), MessageType.ORDER_LIST_ALL, null, null);
