@@ -1,0 +1,55 @@
+/* ===================== 公告栏专属样式 ===================== */
+
+.notice-badge {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+    -fx-background-color: -fx-primary-light;
+    -fx-background-radius: 4px;
+    -fx-padding: 3px 8px;
+}
+
+.notice-badge.syncing {
+    -fx-text-fill: #E6A23C;
+    -fx-background-color: rgba(230, 162, 60, 0.12);
+}
+
+.notice-filter-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-muted;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.notice-tip-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-disabled;
+}
+
+.notice-date-picker {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-font-size: 13px;
+    -fx-padding: 2px 4px;
+}
+
+.notice-date-picker .text-field {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-main;
+    -fx-font-size: 13px;
+}
+
+.notice-date-picker:focused {
+    -fx-background-color: -fx-bg-surface;
+    -fx-border-color: -fx-primary;
+}
+
+.notice-category-tag {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+    -fx-background-color: -fx-primary-light;
+    -fx-background-radius: 4px;
+    -fx-padding: 2px 6px;
+}

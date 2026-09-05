@@ -119,5 +119,12 @@ public enum MessageType implements Serializable {
     ORDER_LIST_ALL,
 
     /** 订单统计（管理员/卖家） */
-    ORDER_STATISTICS
+    ORDER_STATISTICS,
+
+    /** 教务公告检索 */
+    NOTICE_QUERY,
+    /** 手动触发教务公告同步抓取 */
+    NOTICE_TRIGGER_SYNC,
+    /** 查询教务公告同步状态与上次更新时间 */
+    NOTICE_GET_STATUS
 }

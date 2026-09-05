@@ -4,15 +4,16 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import com.vcampus.client.util.CryptoUtil;
 
 
 /**
@@ -81,8 +82,12 @@ public class AppConfigManager {
         boolean parseFailed = false;
 
         if (configFile.exists() && configFile.isFile()) {
-            try (FileReader reader = new FileReader(configFile, StandardCharsets.UTF_8)) {
-                this.currentConfig = GSON.fromJson(reader, AppConfig.class);
+            try {
+                String rawContent = Files.readString(configFile.toPath(), StandardCharsets.UTF_8).trim();
+                String jsonContent = CryptoUtil.isEncrypted(rawContent)
+                        ? CryptoUtil.decrypt(rawContent)
+                        : rawContent;
+                this.currentConfig = GSON.fromJson(jsonContent, AppConfig.class);
                 if (this.currentConfig != null) {
                     return;
                 }
@@ -125,13 +130,22 @@ public class AppConfigManager {
      */
     public synchronized boolean saveConfig() {
         File configFile = ConfigPathUtil.getConfigFile(this.currentCardNum);
-        try (FileWriter writer = new FileWriter(configFile, StandardCharsets.UTF_8)) {
+        try {
             // 核心约束：当未勾选记住密码时，清除密码并置空
             if (!currentConfig.isRememberPassword()) {
                 currentConfig.setPassword("");
             }
 
-            GSON.toJson(getConfig(), writer);
+            String jsonContent = GSON.toJson(getConfig());
+            String encryptedContent = CryptoUtil.encrypt(jsonContent);
+
+            Files.writeString(
+                    configFile.toPath(),
+                    encryptedContent,
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING
+            );
             return true;
         } catch (IOException e) {
             System.err.println("[AppConfigManager] 写入配置文件失败: " + e.getMessage());
@@ -152,8 +166,12 @@ public class AppConfigManager {
             if (files != null) {
                 Arrays.sort(files, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
                 for (File file : files) {
-                    try (FileReader reader = new FileReader(file, StandardCharsets.UTF_8)) {
-                        AppConfig cfg = GSON.fromJson(reader, AppConfig.class);
+                    try {
+                        String rawContent = Files.readString(file.toPath(), StandardCharsets.UTF_8).trim();
+                        String jsonContent = CryptoUtil.isEncrypted(rawContent)
+                                ? CryptoUtil.decrypt(rawContent)
+                                : rawContent;
+                        AppConfig cfg = GSON.fromJson(jsonContent, AppConfig.class);
                         if (cfg != null && cfg.getCardNum() != null && !cfg.getCardNum().trim().isEmpty()) {
                             list.add(cfg);
                         }
