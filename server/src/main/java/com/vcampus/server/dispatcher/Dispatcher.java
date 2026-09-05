@@ -896,7 +896,10 @@ public class Dispatcher {
                 days = 7;
             }
         }
-        ResponseCode code = noticeService.triggerSync(days);
+
+        // 组装调用来源描述：包含操作人一卡通号/UID
+        String source = "用户手动触发 (UID: " + request.getUid() + ")";
+        ResponseCode code = noticeService.triggerSync(days, source);
         response.setCode(code);
         response.setData(noticeService.getStatus());
     }
