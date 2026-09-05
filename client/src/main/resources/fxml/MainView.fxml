@@ -77,7 +77,7 @@
                     </VBox>
                 </ScrollPane>
                 <VBox alignment="CENTER" prefHeight="48.0" styleClass="sidebar-footer">
-                    <Label text="vCampusSEU v1.2" styleClass="version-label" />
+                    <Label text="vCampusSEU v1.3" styleClass="version-label" />
                 </VBox>
             </VBox>
         </left>

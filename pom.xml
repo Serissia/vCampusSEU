@@ -6,8 +6,7 @@
 
     <groupId>com.vcampus</groupId>
     <artifactId>vCampusSEU</artifactId>
-    <!--  下次更新请使用 mvn versions:set -DnewVersion=1.2 -DprocessAllModules=true  -->
-    <version>1.2</version>
+    <version>1.3</version>
     <packaging>pom</packaging>
     <modules>
         <module>common</module>
