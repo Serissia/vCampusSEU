@@ -119,6 +119,7 @@ CREATE TABLE `tbl_book` (
     `publisher` VARCHAR(64) DEFAULT NULL COMMENT '出版社',
     `location` VARCHAR(64) DEFAULT NULL COMMENT '存放位置/书架',
     `resource_file` VARCHAR(255) DEFAULT NULL COMMENT '电子资源文件名（服务器本地存储索引），为空表示未录入',
+    `type` VARCHAR(16) NOT NULL DEFAULT 'PHYSICAL' COMMENT '图书类型: PHYSICAL 实体书 / EBOOK 纯电子书',
     `total_num` INT NOT NULL DEFAULT 5 COMMENT '馆藏总数',
     `current_num` INT NOT NULL DEFAULT 5 COMMENT '当前可借余量',
     PRIMARY KEY (`isbn`)
@@ -138,6 +139,23 @@ CREATE TABLE `tbl_borrow_record` (
     CONSTRAINT `fk_br_student` FOREIGN KEY (`student_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT `fk_br_book` FOREIGN KEY (`isbn`) REFERENCES `tbl_book`(`isbn`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='借阅记录表';
+
+-- 6.1 图书馆纯电子书投稿表 (tbl_ebook_submission)
+CREATE TABLE `tbl_ebook_submission` (
+    `id` INT AUTO_INCREMENT NOT NULL COMMENT '投稿ID',
+    `uploader_uid` VARCHAR(32) NOT NULL COMMENT '上传人学号/工号',
+    `title` VARCHAR(128) NOT NULL COMMENT '书名',
+    `author` VARCHAR(64) NOT NULL COMMENT '作者',
+    `publisher` VARCHAR(64) NOT NULL COMMENT '出版社',
+    `description` VARCHAR(512) DEFAULT NULL COMMENT '简介',
+    `resource_file` VARCHAR(255) NOT NULL COMMENT '电子资源文件名',
+    `status` VARCHAR(16) NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING / APPROVED / REJECTED',
+    `reviewer` VARCHAR(32) DEFAULT NULL COMMENT '审核人',
+    `review_comment` VARCHAR(255) DEFAULT NULL COMMENT '审核意见',
+    `created_time` VARCHAR(32) NOT NULL COMMENT '提交时间',
+    PRIMARY KEY (`id`),
+    CONSTRAINT `fk_ebk_uploader` FOREIGN KEY (`uploader_uid`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='图书馆纯电子书投稿表';
 
 -- 7. 商店商品表 (tbl_goods)
 CREATE TABLE `tbl_goods` (

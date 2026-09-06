@@ -86,6 +86,8 @@ public class LibraryController {
     private TableView<BorrowRecordVO> borrowTable;
     @FXML
     private VBox myBorrowSection;
+    @FXML
+    private VBox ebookSection;
 
     private UserVO currentUser;
     private final SocketClient socketClient = new SocketClient();
@@ -130,6 +132,10 @@ public class LibraryController {
         if (myBorrowSection != null) {
             myBorrowSection.setVisible(isRegularUser);
             myBorrowSection.setManaged(isRegularUser);
+        }
+        if (ebookSection != null) {
+            ebookSection.setVisible(isRegularUser);
+            ebookSection.setManaged(isRegularUser);
         }
         if (libSubtitleText != null) {
             libSubtitleText.setText(isRegularUser
@@ -442,7 +448,8 @@ public class LibraryController {
         cards.getChildren().addAll(
                 createHubCard("办理借阅", "为读者办理图书借出", "borrow-in", this::showBorrowProcess),
                 createHubCard("办理归还", "为读者办理图书归还", "borrow-out", this::showReturnProcess),
-                createHubCard("图书管理", "维护馆藏图书与电子资源", "library-manage", this::showLibraryManage));
+                createHubCard("图书管理", "维护馆藏图书与电子资源", "library-manage", this::showLibraryManage),
+                createHubCard("资源审核", "审核读者上传的电子资源", "receipt", this::showEbookReview));
 
         container.getChildren().addAll(header, cards);
         return container;
@@ -483,6 +490,28 @@ public class LibraryController {
         loadSubView("/fxml/LibraryManageView.fxml");
     }
 
+    private void showEbookUpload() {
+        loadSubView("/fxml/EbookUploadView.fxml");
+    }
+
+    private void showEbookMyList() {
+        loadSubView("/fxml/EbookMyListView.fxml");
+    }
+
+    private void showEbookReview() {
+        loadSubView("/fxml/EbookReviewView.fxml");
+    }
+
+    @FXML
+    private void handleUploadEbook() {
+        showEbookUpload();
+    }
+
+    @FXML
+    private void handleMyEbooks() {
+        showEbookMyList();
+    }
+
     /**
      * 加载管理员子视图并注入返回回调，随后导航进入。
      */
@@ -497,6 +526,12 @@ public class LibraryController {
                 ((ReturnProcessController) controller).initData(currentUser, this::navigateBack);
             } else if (controller instanceof LibraryManageController) {
                 ((LibraryManageController) controller).initData(currentUser, this::navigateBack);
+            } else if (controller instanceof EbookUploadController) {
+                ((EbookUploadController) controller).initData(currentUser, this::navigateBack);
+            } else if (controller instanceof EbookMyListController) {
+                ((EbookMyListController) controller).initData(currentUser, this::navigateBack);
+            } else if (controller instanceof EbookReviewController) {
+                ((EbookReviewController) controller).initData(currentUser, this::navigateBack, this::showPdfReader);
             }
             navigateTo(root);
         } catch (IOException e) {

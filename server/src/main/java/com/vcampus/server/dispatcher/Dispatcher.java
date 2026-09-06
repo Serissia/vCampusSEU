@@ -7,9 +7,11 @@ import com.vcampus.common.vo.BookVO;
 import com.vcampus.common.vo.CartVO;
 import com.vcampus.common.vo.CourseVO;
 import com.vcampus.common.vo.CourseReviewVO;
+import com.vcampus.common.vo.EbookSubmissionVO;
 import com.vcampus.common.vo.GoodsVO;
 import com.vcampus.common.vo.GradeVO;
 import com.vcampus.common.vo.OrderVO;
+import com.vcampus.common.vo.PdfPageRequestVO;
 import com.vcampus.common.vo.ResourceFileVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
@@ -17,17 +19,20 @@ import com.vcampus.common.vo.NoticeQueryVO;
 import com.vcampus.server.service.BookService;
 import com.vcampus.server.service.BorrowService;
 import com.vcampus.server.service.CourseSelectionService;
+import com.vcampus.server.service.EbookSubmissionService;
 import com.vcampus.server.service.CourseService;
 import com.vcampus.server.service.GradeService;
 import com.vcampus.server.service.ICartService;
 import com.vcampus.server.service.IGoodsService;
 import com.vcampus.server.service.IOrderService;
+import com.vcampus.server.service.PdfRenderService;
 import com.vcampus.server.service.ResourceService;
 import com.vcampus.server.service.UserService;
 import com.vcampus.server.service.NoticeService;
 import com.vcampus.server.service.impl.BookServiceImpl;
 import com.vcampus.server.service.impl.BorrowServiceImpl;
 import com.vcampus.server.service.impl.CourseSelectionServiceImpl;
+import com.vcampus.server.service.impl.EbookSubmissionServiceImpl;
 import com.vcampus.server.service.impl.CourseReviewServiceImpl;
 import com.vcampus.server.service.impl.CourseServiceImpl;
 import com.vcampus.server.service.impl.GradeServiceImpl;
@@ -56,6 +61,8 @@ public class Dispatcher {
     private final BookService bookService = new BookServiceImpl();
     private final BorrowService borrowService = new BorrowServiceImpl();
     private final ResourceService resourceService = new ResourceService();
+    private final PdfRenderService pdfRenderService = new PdfRenderService();
+    private final EbookSubmissionService ebookSubmissionService = new EbookSubmissionServiceImpl();
     private final IGoodsService goodsService = new GoodsServiceImpl();
     private final IOrderService orderService = new OrderServiceImpl();
     private final ICartService cartService = new CartServiceImpl();
@@ -308,6 +315,24 @@ public class Dispatcher {
                 case BOOK_RESOURCE_DELETE:
                     handleResourceDelete(request, response);
                     break;
+                case BOOK_RESOURCE_PAGE_COUNT:
+                    handleResourcePageCount(request, response);
+                    break;
+                case BOOK_RESOURCE_RENDER_PAGE:
+                    handleResourceRenderPage(request, response);
+                    break;
+                case EBK_SUBMIT:
+                    handleEbookSubmit(request, response);
+                    break;
+                case EBK_MY_LIST:
+                    handleEbookMyList(request, response);
+                    break;
+                case EBK_PENDING_LIST:
+                    handleEbookPendingList(request, response);
+                    break;
+                case EBK_REVIEW:
+                    handleEbookReview(request, response);
+                    break;
                 case NOTICE_QUERY:
                     handleNoticeQuery(request, response);
                     break;
@@ -367,11 +392,17 @@ public class Dispatcher {
             case BOOK_RESOURCE_UPLOAD:
             case BOOK_RESOURCE_DOWNLOAD:
             case BOOK_RESOURCE_DELETE:
+            case BOOK_RESOURCE_PAGE_COUNT:
+            case BOOK_RESOURCE_RENDER_PAGE:
             case USER_REGISTER:
             case USER_LIST:
             case USER_UPDATE:
             case USER_DELETE:
             case USER_RESET_PASSWORD:
+            case EBK_SUBMIT:
+            case EBK_MY_LIST:
+            case EBK_PENDING_LIST:
+            case EBK_REVIEW:
             case ORDER_LIST_ALL:
             case ORDER_STATISTICS:
                 return true;
@@ -440,9 +471,13 @@ public class Dispatcher {
             case BOOK_ADD:
             case BOOK_UPDATE:
             case BOOK_DELETE:
-            case BOOK_RESOURCE_UPLOAD:
             case BOOK_RESOURCE_DELETE:
                 return role == UserRole.ADMIN || role == UserRole.LIBRARIAN;
+            case BOOK_RESOURCE_UPLOAD:
+                return role == UserRole.ADMIN
+                        || role == UserRole.LIBRARIAN
+                        || role == UserRole.STUDENT
+                        || role == UserRole.TEACHER;
             case BOOK_BORROW:
             case BOOK_RETURN:
                 return role == UserRole.ADMIN || role == UserRole.LIBRARIAN;
@@ -453,6 +488,8 @@ public class Dispatcher {
             case BORROW_BY_STUDENT:
                 return role == UserRole.ADMIN || role == UserRole.LIBRARIAN;
             case BOOK_RESOURCE_DOWNLOAD:
+            case BOOK_RESOURCE_PAGE_COUNT:
+            case BOOK_RESOURCE_RENDER_PAGE:
                 return role == UserRole.ADMIN
                         || role == UserRole.LIBRARIAN
                         || role == UserRole.STUDENT
@@ -463,6 +500,12 @@ public class Dispatcher {
             case USER_DELETE:
             case USER_RESET_PASSWORD:
                 return role == UserRole.ADMIN;
+            case EBK_SUBMIT:
+            case EBK_MY_LIST:
+                return role == UserRole.STUDENT || role == UserRole.TEACHER;
+            case EBK_PENDING_LIST:
+            case EBK_REVIEW:
+                return role == UserRole.ADMIN || role == UserRole.LIBRARIAN;
             case ORDER_LIST_ALL:
             case ORDER_STATISTICS:
                 return role == UserRole.ADMIN || role == UserRole.SELLER;
@@ -581,6 +624,93 @@ public class Dispatcher {
         String[] payload = (String[]) data;
         boolean ok = userService.resetPassword(payload[0], payload[1]);
         response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+    }
+
+    /**
+     * 读者提交纯电子书投稿。
+     */
+    private void handleEbookSubmit(Message request, Message response) {
+        Object data = request.getData();
+        if (!(data instanceof EbookSubmissionVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("投稿参数不合法");
+            return;
+        }
+        EbookSubmissionVO submission = (EbookSubmissionVO) data;
+        submission.setUploaderUid(request.getUid());
+        boolean ok = ebookSubmissionService.submit(submission);
+        response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+    }
+
+    /**
+     * 查询当前用户的投稿记录。
+     */
+    private void handleEbookMyList(Message request, Message response) {
+        response.setData(ebookSubmissionService.listByUploader(request.getUid()));
+        response.setCode(ResponseCode.SUCCESS);
+    }
+
+    /**
+     * 查询待审核投稿。
+     */
+    private void handleEbookPendingList(Message request, Message response) {
+        response.setData(ebookSubmissionService.listPending());
+        response.setCode(ResponseCode.SUCCESS);
+    }
+
+    /**
+     * 审核投稿：通过则上架为纯电子书，驳回则删除资源文件。
+     */
+    private void handleEbookReview(Message request, Message response) {
+        Object data = request.getData();
+        if (!(data instanceof String[]) || ((String[]) data).length < 2) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("审核参数不合法");
+            return;
+        }
+        String[] payload = (String[]) data;
+        int id;
+        try {
+            id = Integer.parseInt(payload[0]);
+        } catch (NumberFormatException e) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("投稿 ID 不合法");
+            return;
+        }
+        boolean approve = "APPROVE".equals(payload[1]);
+        String comment = payload.length >= 3 ? payload[2] : null;
+
+        EbookSubmissionVO submission = ebookSubmissionService.findById(id);
+        if (submission == null || !"PENDING".equals(submission.getStatus())) {
+            response.setCode(ResponseCode.FAIL);
+            response.setData("投稿不存在或已审核");
+            return;
+        }
+
+        if (approve) {
+            BookVO book = new BookVO();
+            book.setIsbn("EB-" + submission.getId());
+            book.setTitle(submission.getTitle());
+            book.setAuthor(submission.getAuthor());
+            book.setPublisher(submission.getPublisher());
+            book.setLocation(null);
+            book.setResourceFile(submission.getResourceFile());
+            book.setType("EBOOK");
+            book.setTotalNum(0);
+            book.setCurrentNum(0);
+            boolean added = bookService.addBook(book);
+            if (!added) {
+                response.setCode(ResponseCode.FAIL);
+                response.setData("上架电子书失败");
+                return;
+            }
+            ebookSubmissionService.updateStatus(id, "APPROVED", request.getUid(), comment);
+            response.setCode(ResponseCode.SUCCESS);
+        } else {
+            resourceService.delete(submission.getResourceFile());
+            ebookSubmissionService.updateStatus(id, "REJECTED", request.getUid(), comment);
+            response.setCode(ResponseCode.SUCCESS);
+        }
     }
 
     /**
@@ -731,6 +861,53 @@ public class Dispatcher {
         }
         boolean ok = resourceService.delete(name.trim());
         response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+    }
+
+    /**
+     * 处理电子资源页数查询：返回总页数。
+     */
+    private void handleResourcePageCount(Message request, Message response) {
+        String name = request.getData() == null ? "" : String.valueOf(request.getData());
+        if (name.isEmpty() || "null".equals(name)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("资源标识为空");
+            return;
+        }
+        try {
+            response.setData(pdfRenderService.getPageCount(name.trim()));
+            response.setCode(ResponseCode.SUCCESS);
+        } catch (Exception e) {
+            response.setCode(ResponseCode.FAIL);
+            response.setData("读取电子资源失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 处理电子资源单页渲染：负载为 PdfPageRequestVO，返回 PNG 图片字节。
+     */
+    private void handleResourceRenderPage(Message request, Message response) {
+        if (!(request.getData() instanceof PdfPageRequestVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("渲染参数不合法");
+            return;
+        }
+        PdfPageRequestVO req = (PdfPageRequestVO) request.getData();
+        if (req.getResourceName() == null || req.getResourceName().trim().isEmpty()) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("资源标识为空");
+            return;
+        }
+        try {
+            byte[] data = pdfRenderService.renderPage(req.getResourceName().trim(), req.getPageIndex(), req.getWidth());
+            ResourceFileVO file = new ResourceFileVO();
+            file.setFileName(req.getResourceName().trim());
+            file.setData(data);
+            response.setCode(ResponseCode.SUCCESS);
+            response.setData(file);
+        } catch (Exception e) {
+            response.setCode(ResponseCode.FAIL);
+            response.setData("渲染电子资源失败: " + e.getMessage());
+        }
     }
 
     /**

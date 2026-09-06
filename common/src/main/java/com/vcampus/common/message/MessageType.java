@@ -77,6 +77,16 @@ public enum MessageType implements Serializable {
     BOOK_RESOURCE_DOWNLOAD,
     BOOK_RESOURCE_DELETE,
 
+    /** 图书电子资源在线分页渲染（服务端渲染，客户端仅拉取单页图片） */
+    BOOK_RESOURCE_PAGE_COUNT,
+    BOOK_RESOURCE_RENDER_PAGE,
+
+    /** 图书馆纯电子书投稿与审核 */
+    EBK_SUBMIT,
+    EBK_MY_LIST,
+    EBK_PENDING_LIST,
+    EBK_REVIEW,
+
     /** 校园超市商品检索 */
     GOODS_QUERY,
 

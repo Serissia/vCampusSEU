@@ -15,6 +15,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableColumn;
@@ -84,6 +85,8 @@ public class LibraryManageController {
     @FXML
     private TextField totalNumField;
     @FXML
+    private ComboBox<String> typeComboBox;
+    @FXML
     private Label resourceStatusLabel;
     @FXML
     private Label msgLabel;
@@ -120,6 +123,7 @@ public class LibraryManageController {
         backButton.setGraphic(SvgIcons.createIcon("arrow-left", 13, "back-icon"));
         backButton.setGraphicTextGap(6.0);
         setupTable();
+        typeComboBox.getItems().setAll("实体书", "纯电子书");
         resetForm();
     }
 
@@ -229,22 +233,33 @@ public class LibraryManageController {
         String isbn = isbnField.getText() == null ? "" : isbnField.getText().trim();
         String title = titleField.getText() == null ? "" : titleField.getText().trim();
         String author = authorField.getText() == null ? "" : authorField.getText().trim();
+        boolean isEbook = "纯电子书".equals(typeComboBox.getValue());
 
-        if (isbn.isEmpty() || title.isEmpty() || author.isEmpty()) {
-            showMsg("ISBN、书名、作者均为必填项", false);
+        if (title.isEmpty() || author.isEmpty()) {
+            showMsg("书名、作者均为必填项", false);
+            return;
+        }
+        if (!isEbook && isbn.isEmpty()) {
+            showMsg("实体书必须填写 ISBN", false);
             return;
         }
 
-        int totalNum;
-        try {
-            totalNum = Integer.parseInt(totalNumField.getText() == null ? "" : totalNumField.getText().trim());
-            if (totalNum <= 0) {
+        int totalNum = 0;
+        if (!isEbook) {
+            try {
+                totalNum = Integer.parseInt(totalNumField.getText() == null ? "" : totalNumField.getText().trim());
+                if (totalNum <= 0) {
+                    showMsg("馆藏总数必须为正整数", false);
+                    return;
+                }
+            } catch (NumberFormatException e) {
                 showMsg("馆藏总数必须为正整数", false);
                 return;
             }
-        } catch (NumberFormatException e) {
-            showMsg("馆藏总数必须为正整数", false);
-            return;
+        }
+
+        if (isEbook && isbn.isEmpty()) {
+            isbn = "EB-" + System.currentTimeMillis();
         }
 
         BookVO book = new BookVO();
@@ -253,6 +268,7 @@ public class LibraryManageController {
         book.setAuthor(author);
         book.setPublisher(publisherField.getText() == null ? "" : publisherField.getText().trim());
         book.setLocation(locationField.getText() == null ? "" : locationField.getText().trim());
+        book.setType(isEbook ? "EBOOK" : "PHYSICAL");
         book.setTotalNum(totalNum);
 
         boolean isAdd = editingBook == null;
@@ -261,7 +277,7 @@ public class LibraryManageController {
             // 编辑时余量不在此处修改，保持原有可借余量
             book.setCurrentNum(editingBook.getCurrentNum());
         } else {
-            book.setCurrentNum(totalNum);
+            book.setCurrentNum(isEbook ? 0 : totalNum);
         }
 
         byte[] pendingData = pendingResourceData;
@@ -427,6 +443,7 @@ public class LibraryManageController {
         publisherField.setText(book.getPublisher());
         locationField.setText(book.getLocation());
         totalNumField.setText(String.valueOf(book.getTotalNum()));
+        typeComboBox.setValue("EBOOK".equals(book.getType()) ? "纯电子书" : "实体书");
 
         uploadedResourceName = book.getResourceFile();
         originalResourceName = book.getResourceFile();
@@ -447,6 +464,7 @@ public class LibraryManageController {
         publisherField.clear();
         locationField.clear();
         totalNumField.clear();
+        typeComboBox.setValue("实体书");
         uploadedResourceName = null;
         pendingResourceData = null;
         pendingResourceFileName = null;

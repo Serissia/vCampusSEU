@@ -37,6 +37,15 @@
                 <Button text="检索" onAction="#handleSearch" styleClass="btn-primary-action" />
             </HBox>
 
+            <!-- 电子资源投稿（学生/教师可见） -->
+            <VBox fx:id="ebookSection" spacing="12.0" styleClass="profile-card" managed="false" visible="false">
+                <Label text="电子资源投稿" styleClass="lib-section-title" />
+                <HBox spacing="10.0">
+                    <Button text="上传电子资源" onAction="#handleUploadEbook" styleClass="btn-primary-action" />
+                    <Button text="我的上传" onAction="#handleMyEbooks" styleClass="btn-recharge-preset" />
+                </HBox>
+            </VBox>
+
             <!-- 馆藏书目 -->
             <VBox spacing="12.0" styleClass="profile-card">
                 <Label text="馆藏书目" styleClass="lib-section-title" />
