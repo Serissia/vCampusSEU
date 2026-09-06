@@ -25,6 +25,8 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.DialogPane;
@@ -115,10 +117,15 @@ public class ShopPanel extends VBox {
     private Spinner<Integer> quantitySpinner;
     private Button buyBtn;
     private Button cartBtn;
+    /** 顶部「订单中心」入口按钮 */
+    private Button orderBtn;
 
-    /** 主页面（商品浏览）与购物车二级页 */
+    /** 主页面（商品浏览）、购物车二级页、订单中心二级页 */
     private VBox mainPage;
     private VBox cartPage;
+    private VBox orderPage;
+    /** 三级页面宿主（main / cart / order 互斥显示） */
+    private StackPane pageHost;
     /** 购物车二级页控件 */
     private VBox cartListBox;
     private Label cartTotalLabel;
@@ -158,6 +165,8 @@ public class ShopPanel extends VBox {
         this.currentUser = user;
         this.mainController = mainController;
         applyRoleMode();
+        // 订单中心二级页依赖 currentUser 与角色，必须在 applyRoleMode 之后构建
+        buildOrderPageIntoHost();
         refreshGoods("");
         refreshBalance();
         refreshCartBadge();
@@ -185,16 +194,30 @@ public class ShopPanel extends VBox {
         mainPage = new VBox(16.0);
         mainPage.getChildren().addAll(buildTopCard(), buildCardsCard(), bottomBar);
 
-        // 二级页：购物车整页（默认隐藏，点击“购物车”进入）
+        // 二级页：购物车整页（默认隐藏，点击"购物车"进入）
         cartPage = buildCartPage();
         cartPage.setVisible(false);
         cartPage.setManaged(false);
 
-        StackPane pageHost = new StackPane();
+        // 订单中心二级页由 initData 中构建（依赖 currentUser / 角色）
+        pageHost = new StackPane();
         pageHost.getChildren().addAll(mainPage, cartPage);
         VBox.setVgrow(pageHost, Priority.ALWAYS);
 
         getChildren().add(pageHost);
+    }
+
+    /**
+     * 在 currentUser 与角色已就绪后构建订单中心二级页并挂载到宿主区。
+     */
+    private void buildOrderPageIntoHost() {
+        if (pageHost == null) {
+            return;
+        }
+        this.orderPage = buildOrderPage();
+        orderPage.setVisible(false);
+        orderPage.setManaged(false);
+        pageHost.getChildren().add(orderPage);
     }
 
     /**
@@ -279,7 +302,12 @@ public class ShopPanel extends VBox {
         cartBtn.setGraphic(createCartIconView());
         cartBtn.setOnAction(e -> openCartPage());
 
-        headerRow.getChildren().addAll(titleBox, spacer, cartBtn, balanceBox);
+        orderBtn = new Button("订单中心");
+        orderBtn.getStyleClass().add("btn-recharge-preset");
+        orderBtn.setGraphic(SvgIcons.createIcon("receipt", 14.0, "shop-order-icon"));
+        orderBtn.setOnAction(e -> openOrderPage());
+
+        headerRow.getChildren().addAll(titleBox, spacer, orderBtn, cartBtn, balanceBox);
 
         rechargeRow = new HBox(10.0);
         rechargeRow.setAlignment(Pos.CENTER_LEFT);
@@ -1339,13 +1367,17 @@ public class ShopPanel extends VBox {
     }
 
     /**
+     * 打开订单中心二级页：根据当前角色展示"历史订单"或"历史订单 + 订单管理"。
+     */
+    private void openOrderPage() {
+        showOrderPage();
+    }
+
+    /**
      * 切换到购物车二级页。
      */
     private void showCartPage() {
-        if (mainPage != null) {
-            mainPage.setVisible(false);
-            mainPage.setManaged(false);
-        }
+        hideSecondaryPages();
         if (cartPage != null) {
             cartPage.setVisible(true);
             cartPage.setManaged(true);
@@ -1353,16 +1385,42 @@ public class ShopPanel extends VBox {
     }
 
     /**
+     * 切换到订单中心二级页。
+     */
+    private void showOrderPage() {
+        hideSecondaryPages();
+        if (orderPage != null) {
+            orderPage.setVisible(true);
+            orderPage.setManaged(true);
+        }
+    }
+
+    /**
      * 返回商品浏览主页面。
      */
     private void showMainPage() {
+        hideSecondaryPages();
+        if (mainPage != null) {
+            mainPage.setVisible(true);
+            mainPage.setManaged(true);
+        }
+    }
+
+    /**
+     * 隐藏所有二级页面，仅保留商品浏览主页面可见（用于在切换前重置状态）。
+     */
+    private void hideSecondaryPages() {
         if (cartPage != null) {
             cartPage.setVisible(false);
             cartPage.setManaged(false);
         }
+        if (orderPage != null) {
+            orderPage.setVisible(false);
+            orderPage.setManaged(false);
+        }
         if (mainPage != null) {
-            mainPage.setVisible(true);
-            mainPage.setManaged(true);
+            mainPage.setVisible(false);
+            mainPage.setManaged(false);
         }
     }
 
@@ -1435,6 +1493,91 @@ public class ShopPanel extends VBox {
 
         page.getChildren().addAll(header, listCard, footer);
         return page;
+    }
+
+    /**
+     * 构建订单中心二级页：返回按钮 + TabPane（历史订单 / 订单管理，仅管理员/卖家可见）。
+     */
+    private VBox buildOrderPage() {
+        VBox page = new VBox(16.0);
+        page.getStyleClass().add("shop-container");
+
+        // 顶栏：返回按钮 + 标题
+        VBox header = new VBox(0.0);
+        header.getStyleClass().add("profile-card");
+        HBox headerRow = new HBox(12.0);
+        headerRow.setAlignment(Pos.CENTER_LEFT);
+
+        Button backBtn = new Button("← 返回");
+        backBtn.getStyleClass().add("btn-recharge-preset");
+        backBtn.setOnAction(e -> showMainPage());
+
+        VBox titleBox = new VBox(4.0);
+        Label title = new Label("订单中心");
+        title.getStyleClass().add("lib-title");
+        Label subtitle = new Label(adminMode
+                ? "查看个人消费记录、管理全校订单与销售统计"
+                : "查看你在校园超市的消费记录（最新在前）");
+        subtitle.getStyleClass().add("lib-subtitle");
+        titleBox.getChildren().addAll(title, subtitle);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        headerRow.getChildren().addAll(backBtn, titleBox, spacer);
+        header.getChildren().add(headerRow);
+
+        // 主体：TabPane（历史订单必显示；订单管理仅管理员/卖家可见）
+        TabPane tabPane = new TabPane();
+        tabPane.getStyleClass().add("shop-order-tab-pane");
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        VBox.setVgrow(tabPane, Priority.ALWAYS);
+
+        // 历史订单 Tab
+        OrderHistoryPanel historyPanel = new OrderHistoryPanel();
+        historyPanel.initData(currentUser);
+        Tab historyTab = new Tab("历史订单", wrapOrderTab(historyPanel));
+        historyTab.getStyleClass().add("shop-order-tab");
+        tabPane.getTabs().add(historyTab);
+
+        // 订单管理 Tab（仅 ADMIN / SELLER）
+        if (managerMode) {
+            OrderManagementPanel managePanel = new OrderManagementPanel();
+            managePanel.initData(currentUser);
+            Tab manageTab = new Tab("订单管理", wrapOrderTab(managePanel));
+            manageTab.getStyleClass().add("shop-order-tab");
+            tabPane.getTabs().add(manageTab);
+        }
+
+        // 切换 Tab 时主动刷新对应子页数据，避免停留过久显示陈旧数据
+        tabPane.getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
+            if (newTab == null || newTab.getContent() == null) {
+                return;
+            }
+            Node content = newTab.getContent();
+            if (content instanceof ScrollPane) {
+                Node inner = ((ScrollPane) content).getContent();
+                if (inner instanceof OrderHistoryPanel) {
+                    ((OrderHistoryPanel) inner).refreshOrders();
+                } else if (inner instanceof OrderManagementPanel) {
+                    ((OrderManagementPanel) inner).refreshAll();
+                }
+            }
+        });
+
+        page.getChildren().addAll(header, tabPane);
+        return page;
+    }
+
+    /**
+     * 将订单子面板包装为 ScrollPane 并应用滚轮速度。
+     */
+    private ScrollPane wrapOrderTab(VBox panel) {
+        ScrollPane scrollPane = new ScrollPane(panel);
+        scrollPane.setFitToWidth(true);
+        scrollPane.getStyleClass().add("profile-scroll-pane");
+        ScrollSpeedUtil.applyCustomScrollSpeed(scrollPane);
+        return scrollPane;
     }
 
     /**

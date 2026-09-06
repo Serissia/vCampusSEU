@@ -92,7 +92,9 @@ public class MainController {
         if (user != null) {
             AppConfigManager.getInstance().switchUser(user.getAccountNumber());
         }
-        academicController.setUid(user.getAccountNumber());
+        if (user != null) {
+            academicController.setUid(user.getAccountNumber());
+        }
         renderHeaderInfo();
         buildRoleBasedNavigation();
 
@@ -136,7 +138,7 @@ public class MainController {
         updateBalance(currentUser.getBalance());
 
         // 加载校徽 Logo
-        try (InputStream in = getClass().getResourceAsStream("/images/logo.svg")) {
+        try (InputStream in = getClass().getResourceAsStream("/images/logo_large.png")) {
             if (in != null) {
                 headerLogoView.setImage(new Image(in));
             }
@@ -166,7 +168,7 @@ public class MainController {
                 menus.add(new MenuItem("我的成绩", "chart-bar", "ACADEMIC_GRADE"));
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
-                menus.add(new MenuItem("我的订单", "receipt", "ORDER_HISTORY"));
+                menus.add(new MenuItem("校园公告", "bullhorn", "NOTICE"));
                 break;
             case TEACHER:
                 menus.add(new MenuItem("课程管理", "calendar-alt", "ACADEMIC_TEACHER"));
@@ -189,14 +191,12 @@ public class MainController {
                 break;
             case SELLER:
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
-                menus.add(new MenuItem("订单管理", "receipt", "ORDER_MANAGE"));
                 break;
             case ADMIN:
                 menus.add(new MenuItem("全校课表", "calendar-alt", "ACADEMIC_MANAGE"));
                 menus.add(new MenuItem("调课管理", "calendar-alt", "ACADEMIC_ADJUST"));
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
-                menus.add(new MenuItem("订单管理", "receipt", "ORDER_MANAGE"));
                 menus.add(new MenuItem("用户权限", "user-shield", "ADMIN_USER"));
                 break;
             default:
@@ -240,8 +240,10 @@ public class MainController {
             activeBtn.getStyleClass().add("active");
         }
 
-        contentArea.getChildren().clear();
-        contentArea.getChildren().add(createModuleNode(moduleKey));
+        if (contentArea != null) {
+            contentArea.getChildren().clear();
+            contentArea.getChildren().add(createModuleNode(moduleKey));
+        }
     }
 
     /**
@@ -315,17 +317,18 @@ public class MainController {
             }
         }
 
-        if ("ORDER_HISTORY".equals(moduleKey)) {
-            OrderHistoryPanel historyPanel = new OrderHistoryPanel();
-            historyPanel.initData(currentUser);
-            return wrapScrollable(historyPanel);
+        if ("NOTICE".equals(moduleKey)) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/NoticeView.fxml"));
+                Node node = loader.load();
+                NoticeViewController controller = loader.getController();
+                controller.initData(currentUser);
+                return node;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
-        if ("ORDER_MANAGE".equals(moduleKey)) {
-            OrderManagementPanel managePanel = new OrderManagementPanel();
-            managePanel.initData(currentUser);
-            return wrapScrollable(managePanel);
-        }
         // 其他尚未接入的模块仍保留占位卡片
         VBox card = new VBox(16.0);
         card.setAlignment(Pos.CENTER);
