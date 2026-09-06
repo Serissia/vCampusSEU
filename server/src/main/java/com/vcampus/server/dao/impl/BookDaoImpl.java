@@ -18,7 +18,7 @@ import java.util.List;
  */
 public class BookDaoImpl implements BookDao {
 
-    private static final String COLUMNS = "isbn, title, author, publisher, location, resource_file, total_num, current_num";
+    private static final String COLUMNS = "isbn, title, author, publisher, location, resource_file, type, total_num, current_num";
 
     /**
      * 按 ISBN、书名或作者进行模糊查询，关键字为空时返回全部馆藏。
@@ -65,8 +65,8 @@ public class BookDaoImpl implements BookDao {
      */
     @Override
     public boolean insertBook(BookVO book) throws SQLException {
-        String sql = "INSERT INTO tbl_book(isbn, title, author, publisher, location, resource_file, total_num, current_num) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO tbl_book(isbn, title, author, publisher, location, resource_file, type, total_num, current_num) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, book.getIsbn());
@@ -75,8 +75,9 @@ public class BookDaoImpl implements BookDao {
             ps.setString(4, book.getPublisher());
             ps.setString(5, book.getLocation());
             ps.setString(6, book.getResourceFile());
-            ps.setInt(7, book.getTotalNum());
-            ps.setInt(8, book.getCurrentNum());
+            ps.setString(7, book.getType());
+            ps.setInt(8, book.getTotalNum());
+            ps.setInt(9, book.getCurrentNum());
             return ps.executeUpdate() > 0;
         }
     }
@@ -86,7 +87,7 @@ public class BookDaoImpl implements BookDao {
      */
     @Override
     public boolean updateBook(BookVO book) throws SQLException {
-        String sql = "UPDATE tbl_book SET title=?, author=?, publisher=?, location=?, resource_file=?, total_num=? "
+        String sql = "UPDATE tbl_book SET title=?, author=?, publisher=?, location=?, resource_file=?, type=?, total_num=? "
                 + "WHERE isbn=?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -95,8 +96,9 @@ public class BookDaoImpl implements BookDao {
             ps.setString(3, book.getPublisher());
             ps.setString(4, book.getLocation());
             ps.setString(5, book.getResourceFile());
-            ps.setInt(6, book.getTotalNum());
-            ps.setString(7, book.getIsbn());
+            ps.setString(6, book.getType());
+            ps.setInt(7, book.getTotalNum());
+            ps.setString(8, book.getIsbn());
             return ps.executeUpdate() > 0;
         }
     }
@@ -151,6 +153,7 @@ public class BookDaoImpl implements BookDao {
         book.setPublisher(rs.getString("publisher"));
         book.setLocation(rs.getString("location"));
         book.setResourceFile(rs.getString("resource_file"));
+        book.setType(rs.getString("type"));
         book.setTotalNum(rs.getInt("total_num"));
         book.setCurrentNum(rs.getInt("current_num"));
         return book;

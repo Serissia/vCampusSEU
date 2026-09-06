@@ -23,6 +23,8 @@ public class BookVO implements Serializable {
     private String location;
     /** 电子资源文件名（服务器端存储索引，为空表示未录入） */
     private String resourceFile;
+    /** 图书类型：PHYSICAL 实体书 / EBOOK 纯电子书 */
+    private String type;
     /** 馆藏总数 */
     private int totalNum;
     /** 当前可借余量 */
@@ -77,6 +79,14 @@ public class BookVO implements Serializable {
 
     public void setResourceFile(String resourceFile) {
         this.resourceFile = resourceFile;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
     public int getTotalNum() {

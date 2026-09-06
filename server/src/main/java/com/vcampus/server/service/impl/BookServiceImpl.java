@@ -41,12 +41,15 @@ public class BookServiceImpl implements BookService {
             if (book == null || book.getIsbn() == null || book.getIsbn().trim().length() == 0) {
                 return false;
             }
-            // 新增图书时未指定余量，默认与馆藏总数一致
-            if (book.getTotalNum() <= 0) {
-                book.setTotalNum(1);
-            }
-            if (book.getCurrentNum() <= 0) {
-                book.setCurrentNum(book.getTotalNum());
+            // 纯电子书无实体副本，保留 total_num/current_num = 0
+            if (!"EBOOK".equals(book.getType())) {
+                // 新增实体书时未指定余量，默认与馆藏总数一致
+                if (book.getTotalNum() <= 0) {
+                    book.setTotalNum(1);
+                }
+                if (book.getCurrentNum() <= 0) {
+                    book.setCurrentNum(book.getTotalNum());
+                }
             }
             return bookDao.insertBook(book);
         } catch (SQLException e) {
