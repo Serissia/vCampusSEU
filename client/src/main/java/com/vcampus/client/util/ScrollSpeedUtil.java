@@ -39,7 +39,7 @@ public final class ScrollSpeedUtil {
      * 为指定的 ScrollPane 绑定动态滚轮加速监听。
      *
      * <p>滚轮落在内嵌可滚动控件（表格/列表/嵌套滚动面板等）上时，按偏好倍率驱动该控件自身滚动；
-     * 否则驱动外层滚动面板，保证任意一层滚动速度都与偏好设置一致。</p>
+     * 内嵌控件滚到边界后才轮到外层滚动面板，形成「内层优先、到边转交」的滚动链。</p>
      *
      * @param scrollPane 目标滚动面板
      */
@@ -56,19 +56,17 @@ public final class ScrollSpeedUtil {
             if (deltaY == 0) {
                 return;
             }
+            boolean down = deltaY < 0;
 
             Node target = event.getTarget() instanceof Node ? (Node) event.getTarget() : null;
             Node inner = findInnermostScrollable(target, scrollPane);
-            double deltaPixels = -deltaY * SPEED_MULTIPLIER.get();
 
-            // 滚动链：内层控件先滚，滚到边界后剩余滚动量转交给外层滚动面板
-            double remaining = deltaPixels;
-            if (inner != null) {
-                remaining = scrollVerticallyBy(inner, remaining);
-            }
-            remaining = scrollVerticallyBy(scrollPane, remaining);
-
-            if (Math.abs(remaining - deltaPixels) > 0.5) {
+            // 内层在该方向还能继续滚 → 只滚内层；否则（到边界或无内层）滚外层
+            if (inner != null && canScrollInDirection(inner, down)) {
+                scrollNode(inner, down, deltaY);
+                event.consume();
+            } else if (canScrollInDirection(scrollPane, down)) {
+                scrollNode(scrollPane, down, deltaY);
                 event.consume();
             }
         });
@@ -115,40 +113,83 @@ public final class ScrollSpeedUtil {
     }
 
     /**
-     * 按像素增量纵向滚动指定节点（ScrollPane 或内部带滚动条的控件）。
+     * 判断某个节点在指定方向上是否还能继续滚动（未到达该方向边界）。
      *
-     * @param node        待滚动节点
-     * @param deltaPixels 滚动像素增量（正值向下、负值向上）
-     * @return 因到达边界而未能滚动的剩余像素量（用于向上层传递形成滚动链）
+     * @param node 待检测节点
+     * @param down true 表示向下、false 表示向上
+     * @return 还能滚动返回 true
      */
-    private static double scrollVerticallyBy(Node node, double deltaPixels) {
+    private static boolean canScrollInDirection(Node node, boolean down) {
         if (node instanceof ScrollPane) {
             ScrollPane pane = (ScrollPane) node;
             Node content = pane.getContent();
             if (content == null) {
-                return deltaPixels;
+                return false;
             }
             double scrollable = content.getBoundsInLocal().getHeight() - pane.getViewportBounds().getHeight();
             if (scrollable <= 0) {
-                return deltaPixels;
+                return false;
             }
-            double currentPx = pane.getVvalue() * scrollable;
-            double targetPx = Math.max(0.0, Math.min(scrollable, currentPx + deltaPixels));
-            double applied = targetPx - currentPx;
-            pane.setVvalue(targetPx / scrollable);
-            return deltaPixels - applied;
+            double v = pane.getVvalue();
+            return down ? v < 0.999 : v > 0.001;
         }
 
-        // TableView/ListView/TreeView/TreeTableView/TextArea 等内部用 ScrollBar 承载纵向滚动
         ScrollBar bar = findVerticalScrollBar(node);
         if (bar == null) {
-            return deltaPixels;
+            return false;
         }
-        double current = bar.getValue();
-        double target = Math.max(bar.getMin(), Math.min(bar.getMax(), current + deltaPixels));
-        double applied = target - current;
-        bar.setValue(target);
-        return deltaPixels - applied;
+        return down ? bar.getValue() < bar.getMax() - 0.001 : bar.getValue() > bar.getMin() + 0.001;
+    }
+
+    /**
+     * 按偏好倍率滚动指定节点。
+     *
+     * <p>ScrollPane 走归一化 vvalue，TextArea 走 scrollTop（像素），
+     * 表格/列表等 VirtualFlow 控件用 increment/decrement 逐行滚动，避免单位换算导致跳变。</p>
+     *
+     * @param node   待滚动节点
+     * @param down   true 表示向下、false 表示向上
+     * @param deltaY 本次滚轮事件的纵向增量
+     */
+    private static void scrollNode(Node node, boolean down, double deltaY) {
+        double multiplier = SPEED_MULTIPLIER.get();
+
+        if (node instanceof ScrollPane) {
+            ScrollPane pane = (ScrollPane) node;
+            Node content = pane.getContent();
+            if (content == null) {
+                return;
+            }
+            double scrollable = content.getBoundsInLocal().getHeight() - pane.getViewportBounds().getHeight();
+            if (scrollable <= 0) {
+                return;
+            }
+            double deltaPixels = -deltaY * multiplier;
+            double deltaV = deltaPixels / scrollable;
+            pane.setVvalue(Math.max(0.0, Math.min(1.0, pane.getVvalue() + deltaV)));
+            return;
+        }
+
+        if (node instanceof TextArea) {
+            TextArea area = (TextArea) node;
+            double deltaPixels = -deltaY * multiplier;
+            area.setScrollTop(Math.max(0.0, area.getScrollTop() + deltaPixels));
+            return;
+        }
+
+        ScrollBar bar = findVerticalScrollBar(node);
+        if (bar == null) {
+            return;
+        }
+        // 一个标准滚轮刻度 ≈ 40px，按 24px/行 换算行数并随倍率放大，上限 20 行/次防止异常跳变
+        int rows = (int) Math.max(1, Math.min(20, Math.round(Math.abs(deltaY) * multiplier / 24.0)));
+        for (int i = 0; i < rows; i++) {
+            if (down) {
+                bar.increment();
+            } else {
+                bar.decrement();
+            }
+        }
     }
 
     /**
