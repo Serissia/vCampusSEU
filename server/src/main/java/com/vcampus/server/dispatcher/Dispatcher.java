@@ -11,6 +11,7 @@ import com.vcampus.common.vo.EbookSubmissionVO;
 import com.vcampus.common.vo.GoodsVO;
 import com.vcampus.common.vo.GradeVO;
 import com.vcampus.common.vo.OrderVO;
+import com.vcampus.common.vo.PdfPageRequestVO;
 import com.vcampus.common.vo.ResourceFileVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
@@ -23,6 +24,7 @@ import com.vcampus.server.service.GradeService;
 import com.vcampus.server.service.ICartService;
 import com.vcampus.server.service.IGoodsService;
 import com.vcampus.server.service.IOrderService;
+import com.vcampus.server.service.PdfRenderService;
 import com.vcampus.server.service.ResourceService;
 import com.vcampus.server.service.UserService;
 import com.vcampus.server.service.impl.BookServiceImpl;
@@ -56,6 +58,7 @@ public class Dispatcher {
     private final BookService bookService = new BookServiceImpl();
     private final BorrowService borrowService = new BorrowServiceImpl();
     private final ResourceService resourceService = new ResourceService();
+    private final PdfRenderService pdfRenderService = new PdfRenderService();
     private final EbookSubmissionService ebookSubmissionService = new EbookSubmissionServiceImpl();
     private final IGoodsService goodsService = new GoodsServiceImpl();
     private final IOrderService orderService = new OrderServiceImpl();
@@ -308,6 +311,12 @@ public class Dispatcher {
                 case BOOK_RESOURCE_DELETE:
                     handleResourceDelete(request, response);
                     break;
+                case BOOK_RESOURCE_PAGE_COUNT:
+                    handleResourcePageCount(request, response);
+                    break;
+                case BOOK_RESOURCE_RENDER_PAGE:
+                    handleResourceRenderPage(request, response);
+                    break;
                 case EBK_SUBMIT:
                     handleEbookSubmit(request, response);
                     break;
@@ -370,6 +379,8 @@ public class Dispatcher {
             case BOOK_RESOURCE_UPLOAD:
             case BOOK_RESOURCE_DOWNLOAD:
             case BOOK_RESOURCE_DELETE:
+            case BOOK_RESOURCE_PAGE_COUNT:
+            case BOOK_RESOURCE_RENDER_PAGE:
             case USER_REGISTER:
             case USER_LIST:
             case USER_UPDATE:
@@ -464,6 +475,8 @@ public class Dispatcher {
             case BORROW_BY_STUDENT:
                 return role == UserRole.ADMIN || role == UserRole.LIBRARIAN;
             case BOOK_RESOURCE_DOWNLOAD:
+            case BOOK_RESOURCE_PAGE_COUNT:
+            case BOOK_RESOURCE_RENDER_PAGE:
                 return role == UserRole.ADMIN
                         || role == UserRole.LIBRARIAN
                         || role == UserRole.STUDENT
@@ -836,6 +849,53 @@ public class Dispatcher {
         }
         boolean ok = resourceService.delete(name.trim());
         response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
+    }
+
+    /**
+     * 处理电子资源页数查询：返回总页数。
+     */
+    private void handleResourcePageCount(Message request, Message response) {
+        String name = request.getData() == null ? "" : String.valueOf(request.getData());
+        if (name.isEmpty() || "null".equals(name)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("资源标识为空");
+            return;
+        }
+        try {
+            response.setData(pdfRenderService.getPageCount(name.trim()));
+            response.setCode(ResponseCode.SUCCESS);
+        } catch (Exception e) {
+            response.setCode(ResponseCode.FAIL);
+            response.setData("读取电子资源失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 处理电子资源单页渲染：负载为 PdfPageRequestVO，返回 PNG 图片字节。
+     */
+    private void handleResourceRenderPage(Message request, Message response) {
+        if (!(request.getData() instanceof PdfPageRequestVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("渲染参数不合法");
+            return;
+        }
+        PdfPageRequestVO req = (PdfPageRequestVO) request.getData();
+        if (req.getResourceName() == null || req.getResourceName().trim().isEmpty()) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("资源标识为空");
+            return;
+        }
+        try {
+            byte[] data = pdfRenderService.renderPage(req.getResourceName().trim(), req.getPageIndex(), req.getWidth());
+            ResourceFileVO file = new ResourceFileVO();
+            file.setFileName(req.getResourceName().trim());
+            file.setData(data);
+            response.setCode(ResponseCode.SUCCESS);
+            response.setData(file);
+        } catch (Exception e) {
+            response.setCode(ResponseCode.FAIL);
+            response.setData("渲染电子资源失败: " + e.getMessage());
+        }
     }
 
     /**
