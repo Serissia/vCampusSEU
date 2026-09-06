@@ -4,8 +4,14 @@ import com.vcampus.client.config.AppConfig;
 import com.vcampus.client.config.AppConfigManager;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.event.EventTarget;
 import javafx.scene.Node;
+import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TreeTableView;
+import javafx.scene.control.TreeView;
 import javafx.scene.input.ScrollEvent;
 
 /**
@@ -38,6 +44,12 @@ public final class ScrollSpeedUtil {
         }
 
         scrollPane.addEventFilter(ScrollEvent.SCROLL, event -> {
+            // 滚轮落在内嵌可滚动控件（表格/列表/嵌套滚动面板等）上时，交由该控件自身处理，
+            // 避免外层滚动面板在捕获阶段抢占滚动导致内层表格无法滚动。
+            if (isInsideScrollableControl(event.getTarget(), scrollPane)) {
+                return;
+            }
+
             double deltaY = event.getDeltaY();
             if (deltaY == 0) {
                 return;
@@ -62,5 +74,28 @@ public final class ScrollSpeedUtil {
                 event.consume(); // 拦截默认迟钝的原生滚动逻辑
             }
         });
+    }
+
+    /**
+     * 判断滚轮事件目标是否落在内嵌的可滚动控件内部（含其祖先链，直至外层滚动面板为止）。
+     *
+     * @param target 滚轮事件目标
+     * @param owner  当前应用加速的外层 ScrollPane
+     * @return 若目标位于内嵌可滚动控件内部则返回 true
+     */
+    private static boolean isInsideScrollableControl(EventTarget target, ScrollPane owner) {
+        Node current = target instanceof Node ? (Node) target : null;
+        while (current != null && current != owner) {
+            if (current instanceof TableView
+                    || current instanceof TreeTableView
+                    || current instanceof ListView
+                    || current instanceof TreeView
+                    || current instanceof TextArea
+                    || current instanceof ScrollPane) {
+                return true;
+            }
+            current = current.getParent();
+        }
+        return false;
     }
 }
