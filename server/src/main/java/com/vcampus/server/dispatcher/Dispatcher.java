@@ -108,6 +108,9 @@ public class Dispatcher {
                 case USER_LIST:
                     handleUserList(request, response);
                     break;
+                case STUDENT_LIST:
+                    handleStudentList(request, response);
+                    break;
                 case USER_UPDATE:
                     handleUserUpdate(request, response);
                     break;
@@ -180,6 +183,10 @@ public class Dispatcher {
                     break;
                 case COURSE_TIMETABLE:
                     response.setData(selectionService.listMyCourses(request.getUid()));
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case COURSE_STUDENT_LIST:
+                    response.setData(selectionService.listStudentsByCourse(String.valueOf(request.getData())));
                     response.setCode(ResponseCode.SUCCESS);
                     break;
                 case GRADE_SUBMIT:
@@ -390,6 +397,7 @@ public class Dispatcher {
             case COURSE_SELECT:
             case COURSE_DROP:
             case COURSE_TIMETABLE:
+            case COURSE_STUDENT_LIST:
             case GRADE_SUBMIT:
             case GRADE_QUERY:
             case GRADE_QUERY_BY_COURSE:
@@ -413,6 +421,7 @@ public class Dispatcher {
             case BOOK_RESOURCE_RENDER_PAGE:
             case USER_REGISTER:
             case USER_LIST:
+            case STUDENT_LIST:
             case USER_UPDATE:
             case USER_DELETE:
             case USER_RESET_PASSWORD:
@@ -461,6 +470,10 @@ public class Dispatcher {
             case COURSE_DROP:
             case COURSE_TIMETABLE:
                 return role == UserRole.STUDENT;
+            case COURSE_STUDENT_LIST:
+                return role == UserRole.ADMIN
+                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
+                        || role == UserRole.TEACHER;
             case GRADE_SUBMIT:
                 return role == UserRole.ADMIN
                         || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
@@ -517,6 +530,10 @@ public class Dispatcher {
             case USER_DELETE:
             case USER_RESET_PASSWORD:
                 return role == UserRole.ADMIN;
+            case STUDENT_LIST:
+                return role == UserRole.ADMIN
+                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
+                        || role == UserRole.TEACHER;
             case EBK_SUBMIT:
             case EBK_MY_LIST:
                 return role == UserRole.STUDENT || role == UserRole.TEACHER;
@@ -585,6 +602,20 @@ public class Dispatcher {
      */
     private void handleUserList(Message request, Message response) {
         response.setData(userService.listAllUsers());
+        response.setCode(ResponseCode.SUCCESS);
+    }
+
+    /**
+     * 返回所有学生账号（学号与姓名），供教师、教务老师登记/统计使用。
+     */
+    private void handleStudentList(Message request, Message response) {
+        List<UserVO> students = new ArrayList<UserVO>();
+        for (UserVO user : userService.listAllUsers()) {
+            if (user.getRole() == UserRole.STUDENT) {
+                students.add(user);
+            }
+        }
+        response.setData(students);
         response.setCode(ResponseCode.SUCCESS);
     }
 
