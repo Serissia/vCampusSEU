@@ -8,6 +8,8 @@ import com.vcampus.common.vo.CourseVO;
 import com.vcampus.common.vo.CourseReviewVO;
 import com.vcampus.common.vo.GradeStatisticsVO;
 import com.vcampus.common.vo.GradeVO;
+import com.vcampus.common.vo.UserRole;
+import com.vcampus.common.vo.UserVO;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -267,6 +269,40 @@ public class AcademicController {
     public ResponseCode deleteReview(String courseCode) {
         Message request = new Message(uid, MessageType.COURSE_REVIEW_DELETE, null, courseCode);
         return send(request).getCode();
+    }
+
+    /**
+     * 获取系统内所有学生账号。
+     */
+    public List<UserVO> listStudents() {
+        Message request = new Message(uid, MessageType.STUDENT_LIST, null, null);
+        Message response = send(request);
+        List<UserVO> students = new ArrayList<UserVO>();
+        if (response.getCode() == ResponseCode.SUCCESS && response.getData() instanceof List) {
+            for (Object item : (List<?>) response.getData()) {
+                if (item instanceof UserVO) {
+                    students.add((UserVO) item);
+                }
+            }
+        }
+        return students;
+    }
+
+    /**
+     * 查询某课程下的选课学生名单。
+     */
+    public List<UserVO> listStudentsByCourse(String courseCode) {
+        Message request = new Message(uid, MessageType.COURSE_STUDENT_LIST, null, courseCode);
+        Message response = send(request);
+        List<UserVO> students = new ArrayList<UserVO>();
+        if (response.getCode() == ResponseCode.SUCCESS && response.getData() instanceof List) {
+            for (Object item : (List<?>) response.getData()) {
+                if (item instanceof UserVO) {
+                    students.add((UserVO) item);
+                }
+            }
+        }
+        return students;
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.vcampus.server.dao.impl;
 
+import com.vcampus.common.vo.OrderVO;
 import com.vcampus.common.vo.SecondHandVO;
 import com.vcampus.server.dao.ISecondHandDao;
 import com.vcampus.server.util.DBUtil;
@@ -37,6 +38,38 @@ public class SecondHandDaoImpl implements ISecondHandDao {
     }
 
     @Override
+    public List<SecondHandVO> listPending() throws SQLException {
+        String sql = "SELECT " + COLUMNS + " FROM tbl_second_hand "
+                + "WHERE status = 'PENDING' ORDER BY id DESC";
+        List<SecondHandVO> result = new ArrayList<SecondHandVO>();
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                result.add(mapRow(rs));
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public List<SecondHandVO> listBySeller(String sellerId) throws SQLException {
+        String sql = "SELECT " + COLUMNS + " FROM tbl_second_hand "
+                + "WHERE seller_id = ? ORDER BY id DESC";
+        List<SecondHandVO> result = new ArrayList<SecondHandVO>();
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, sellerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(mapRow(rs));
+                }
+            }
+        }
+        return result;
+    }
+
+    @Override
     public SecondHandVO findByIdForUpdate(Connection conn, int id) throws SQLException {
         String sql = "SELECT " + COLUMNS + " FROM tbl_second_hand WHERE id = ? FOR UPDATE";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -58,7 +91,7 @@ public class SecondHandDaoImpl implements ISecondHandDao {
             ps.setString(3, vo.getTitle());
             ps.setString(4, vo.getDescription());
             ps.setBigDecimal(5, vo.getPrice());
-            ps.setString(6, vo.getStatus() == null ? "ON_SALE" : vo.getStatus());
+            ps.setString(6, vo.getStatus() == null ? "PENDING" : vo.getStatus());
             ps.setString(7, vo.getCreatedTime());
             return ps.executeUpdate() > 0;
         }
@@ -74,6 +107,17 @@ public class SecondHandDaoImpl implements ISecondHandDao {
     }
 
     @Override
+    public boolean review(int id, String targetStatus) throws SQLException {
+        String sql = "UPDATE tbl_second_hand SET status = ? WHERE id = ? AND status = 'PENDING'";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, targetStatus);
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
     public boolean offShelf(String sellerId, int id) throws SQLException {
         String sql = "UPDATE tbl_second_hand SET status = 'SOLD' "
                 + "WHERE id = ? AND seller_id = ? AND status = 'ON_SALE'";
@@ -81,6 +125,22 @@ public class SecondHandDaoImpl implements ISecondHandDao {
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             ps.setString(2, sellerId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean insertOrder(Connection conn, OrderVO order) throws SQLException {
+        String sql = "INSERT INTO tbl_second_hand_order(order_id, buyer_id, seller_id, item_id, title, price, order_time) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, order.getOrderId());
+            ps.setString(2, order.getStudentId());
+            ps.setString(3, order.getSellerId());
+            ps.setInt(4, Integer.parseInt(order.getGoodsId()));
+            ps.setString(5, order.getGoodsName());
+            ps.setBigDecimal(6, order.getTotalPrice());
+            ps.setString(7, order.getOrderTime());
             return ps.executeUpdate() > 0;
         }
     }

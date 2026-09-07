@@ -2,6 +2,7 @@ package com.vcampus.server.service;
 
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.CourseVO;
+import com.vcampus.common.vo.UserVO;
 
 import java.util.List;
 
@@ -26,4 +27,9 @@ public interface CourseSelectionService {
      * 查询学生已选课程。
      */
     List<CourseVO> listMyCourses(String studentId);
+
+    /**
+     * 查询某课程下的选课学生名单。
+     */
+    List<UserVO> listStudentsByCourse(String courseCode);
 }

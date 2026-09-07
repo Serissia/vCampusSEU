@@ -3,6 +3,7 @@ package com.vcampus.server.service.impl;
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.CourseSelectionVO;
 import com.vcampus.common.vo.CourseVO;
+import com.vcampus.common.vo.UserVO;
 import com.vcampus.server.dao.CourseDao;
 import com.vcampus.server.dao.CourseSelectionDao;
 import com.vcampus.server.dao.impl.CourseDaoImpl;
@@ -89,6 +90,15 @@ public class CourseSelectionServiceImpl implements CourseSelectionService {
             return selectionDao.listByStudent(studentId);
         } catch (SQLException e) {
             throw new RuntimeException("查询已选课程失败", e);
+        }
+    }
+
+    @Override
+    public List<UserVO> listStudentsByCourse(String courseCode) {
+        try {
+            return selectionDao.listStudentsByCourse(courseCode);
+        } catch (SQLException e) {
+            throw new RuntimeException("查询课程学生名单失败", e);
         }
     }
 }

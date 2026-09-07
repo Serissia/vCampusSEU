@@ -24,7 +24,7 @@ public class SecondHandVO implements Serializable {
     private String description;
     /** 定价 */
     private BigDecimal price;
-    /** 状态: ON_SALE 在售, SOLD 已售/下架 */
+    /** 状态: PENDING 待审核, ON_SALE 在售, SOLD 已售/下架, REJECTED 审核拒绝 */
     private String status;
     /** 发布时间 (yyyy-MM-dd HH:mm:ss) */
     private String createdTime;

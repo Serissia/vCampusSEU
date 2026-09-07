@@ -108,6 +108,9 @@ public class Dispatcher {
                 case USER_LIST:
                     handleUserList(request, response);
                     break;
+                case STUDENT_LIST:
+                    handleStudentList(request, response);
+                    break;
                 case USER_UPDATE:
                     handleUserUpdate(request, response);
                     break;
@@ -180,6 +183,10 @@ public class Dispatcher {
                     break;
                 case COURSE_TIMETABLE:
                     response.setData(selectionService.listMyCourses(request.getUid()));
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case COURSE_STUDENT_LIST:
+                    response.setData(selectionService.listStudentsByCourse(String.valueOf(request.getData())));
                     response.setCode(ResponseCode.SUCCESS);
                     break;
                 case GRADE_SUBMIT:
@@ -323,6 +330,17 @@ public class Dispatcher {
                 case SECOND_HAND_BUY:
                     handleSecondHandBuy(request, response);
                     break;
+                case SECOND_HAND_MY_LIST:
+                    response.setData(secondHandService.listMine(request.getUid()));
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case SECOND_HAND_PENDING_LIST:
+                    response.setData(secondHandService.listPending());
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case SECOND_HAND_REVIEW:
+                    handleSecondHandReview(request, response);
+                    break;
                 case BOOK_RESOURCE_UPLOAD:
                     handleResourceUpload(request, response);
                     break;
@@ -390,6 +408,7 @@ public class Dispatcher {
             case COURSE_SELECT:
             case COURSE_DROP:
             case COURSE_TIMETABLE:
+            case COURSE_STUDENT_LIST:
             case GRADE_SUBMIT:
             case GRADE_QUERY:
             case GRADE_QUERY_BY_COURSE:
@@ -413,6 +432,7 @@ public class Dispatcher {
             case BOOK_RESOURCE_RENDER_PAGE:
             case USER_REGISTER:
             case USER_LIST:
+            case STUDENT_LIST:
             case USER_UPDATE:
             case USER_DELETE:
             case USER_RESET_PASSWORD:
@@ -422,6 +442,8 @@ public class Dispatcher {
             case EBK_REVIEW:
             case ORDER_LIST_ALL:
             case ORDER_STATISTICS:
+            case SECOND_HAND_PENDING_LIST:
+            case SECOND_HAND_REVIEW:
                 return true;
             default:
                 return false;
@@ -461,6 +483,10 @@ public class Dispatcher {
             case COURSE_DROP:
             case COURSE_TIMETABLE:
                 return role == UserRole.STUDENT;
+            case COURSE_STUDENT_LIST:
+                return role == UserRole.ADMIN
+                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
+                        || role == UserRole.TEACHER;
             case GRADE_SUBMIT:
                 return role == UserRole.ADMIN
                         || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
@@ -517,6 +543,10 @@ public class Dispatcher {
             case USER_DELETE:
             case USER_RESET_PASSWORD:
                 return role == UserRole.ADMIN;
+            case STUDENT_LIST:
+                return role == UserRole.ADMIN
+                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
+                        || role == UserRole.TEACHER;
             case EBK_SUBMIT:
             case EBK_MY_LIST:
                 return role == UserRole.STUDENT || role == UserRole.TEACHER;
@@ -526,6 +556,9 @@ public class Dispatcher {
             case ORDER_LIST_ALL:
             case ORDER_STATISTICS:
                 return role == UserRole.ADMIN || role == UserRole.SELLER;
+            case SECOND_HAND_PENDING_LIST:
+            case SECOND_HAND_REVIEW:
+                return role == UserRole.ADMIN;
             default:
                 return false;
         }
@@ -585,6 +618,20 @@ public class Dispatcher {
      */
     private void handleUserList(Message request, Message response) {
         response.setData(userService.listAllUsers());
+        response.setCode(ResponseCode.SUCCESS);
+    }
+
+    /**
+     * 返回所有学生账号（学号与姓名），供教师、教务老师登记/统计使用。
+     */
+    private void handleStudentList(Message request, Message response) {
+        List<UserVO> students = new ArrayList<UserVO>();
+        for (UserVO user : userService.listAllUsers()) {
+            if (user.getRole() == UserRole.STUDENT) {
+                students.add(user);
+            }
+        }
+        response.setData(students);
         response.setCode(ResponseCode.SUCCESS);
     }
 
@@ -1393,6 +1440,36 @@ public class Dispatcher {
                 msg = "购买失败，请稍后重试";
             }
             response.setData(msg);
+        }
+    }
+
+    /**
+     * 处理管理员审核二手商品：负载为 SecondHandVO（id 为商品 ID，status 为审核结果
+     * APPROVE 通过 / REJECT 拒绝）。
+     */
+    private void handleSecondHandReview(Message request, Message response) {
+        if (!isAdmin(request)) {
+            response.setCode(ResponseCode.UNAUTHORIZED);
+            response.setData("无权执行该操作：仅管理员可审核二手商品");
+            return;
+        }
+        if (!(request.getData() instanceof SecondHandVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("审核参数不合法");
+            return;
+        }
+        SecondHandVO vo = (SecondHandVO) request.getData();
+        Integer id = vo.getId();
+        boolean approve = "APPROVE".equalsIgnoreCase(vo.getStatus());
+        if (id == null) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("商品编号不合法");
+            return;
+        }
+        ResponseCode code = secondHandService.review(request.getUid(), id, approve);
+        response.setCode(code);
+        if (code != ResponseCode.SUCCESS) {
+            response.setData("审核失败，商品可能不存在或已被处理");
         }
     }
 
