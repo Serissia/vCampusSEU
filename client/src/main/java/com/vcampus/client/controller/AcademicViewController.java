@@ -10,12 +10,15 @@ import com.vcampus.common.vo.GradeVO;
 import com.vcampus.common.vo.ScoreComponentVO;
 import com.vcampus.common.vo.UserVO;
 import javafx.application.Platform;
+import javafx.animation.PauseTransition;
+import javafx.animation.TranslateTransition;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Group;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.SVGPath;
@@ -53,6 +56,7 @@ import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
 import javafx.util.StringConverter;
+import javafx.util.Duration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -74,6 +78,13 @@ import java.time.Year;
 public class AcademicViewController {
 
     private static final String STAR_PATH = "m476 283.2c-23.3 54-36.2 82.5-37.5 83.3-1.1 0.7-4.9 1.6-8.5 2-3.6 0.3-8.1 0.8-10 1-1.9 0.2-10.3 1.1-18.5 2-8.3 0.8-17 1.7-19.5 2-2.5 0.2-15.8 1.6-29.5 3-13.8 1.4-26.8 2.7-29 3-2.2 0.2-17.5 1.8-34 3.5-16.5 1.7-30.1 3.2-30.2 3.3-0.2 0.1 30.3 28.3 67.7 62.7 45.2 41.5 68.2 63.3 68.6 65 0.4 1.6-7 32.3-20.6 85.5-11.6 45.6-21.3 83.8-21.6 84.8-0.2 0.9-0.1 1.7 0.4 1.7 0.4-0.1 35.6-21.2 78.2-47 47.4-28.7 78.5-46.9 80-46.9 1.5 0 32.6 18.2 80 46.9 42.6 25.8 77.8 46.9 78.3 47 0.4 0 0.5-0.8 0.3-1.7-0.3-1-10-39.2-21.6-84.8-13.6-53.2-21-83.9-20.6-85.5 0.4-1.7 23.4-23.5 68.6-65 37.4-34.4 67.9-62.6 67.7-62.7-0.1-0.1-13.7-1.6-30.2-3.3-16.5-1.7-31.8-3.3-34-3.5-2.2-0.3-15.2-1.6-29-3-13.7-1.4-27-2.8-29.5-3-2.5-0.3-11.2-1.2-19.5-2-8.2-0.9-16.6-1.8-18.5-2-1.9-0.2-6.4-0.7-10-1-3.6-0.4-7.4-1.3-8.5-2-1.3-0.8-13.9-29.1-37.2-83.4-19.4-45.1-35.6-82.1-36-82.1-0.5 0-16.8 37-36.3 82.2z";
+    private static final String CHECK_ICON_PATH = "M610.73 577.67C619.35 569.69 632.8 570.21 640.78 578.82C648.76 587.44 648.25 600.9 639.63 608.88L537.44 703.42C529.38 710.88 516.95 710.98 508.77 703.65L445.53 646.94C436.78 639.1 436.05 625.63 443.89 616.88C451.73 608.14 465.17 607.41 473.92 615.25L522.76 659.03L610.73 577.67Z";
+    private static final String WARN_BAR_PATH = "M526.712 594.661L531.673 497.738C532.369 484.137 521.529 472.727 507.91 472.727C494.291 472.727 483.45 484.138 484.148 497.739L489.116 594.662C489.629 604.67 497.893 612.521 507.914 612.521C517.935 612.521 526.2 604.669 526.712 594.661Z";
+    private static final String WARN_DOT_PATH = "M532.267 654.158C532.267 639.666 522.379 629.033 507.392 629.033C492.744 629.033 482.18 639.666 482.18 654.158C482.18 667.689 491.382 678.957 507.055 678.957C522.379 678.957 532.267 668.323 532.267 654.158Z";
+    private static final String DOC_PATH = "M279.551 301.778C279.551 276.072 300.39 255.233 326.097 255.233H698.182C723.888 255.233 744.727 276.072 744.727 301.778V722.832C744.727 748.538 723.888 769.378 698.182 769.378H326.097C300.39 769.378 279.551 748.538 279.551 722.832V301.778Z";
+    private static final String DOC_CLIP_PATH = "M370.368 275.756V255.233H412.277V275.756C412.28 289.891 423.731 301.347 437.868 301.347H590.663C604.8 301.347 616.273 289.891 616.277 275.756V255.233H658.163V275.756C658.16 313.027 627.935 343.233 590.663 343.233H437.868C400.595 343.233 370.371 313.027 370.368 275.756Z";
+    private static final String DOC_LINE1_PATH = "M597.836 442.382C609.401 442.385 618.768 451.771 618.768 463.337C618.768 474.903 609.401 484.288 597.836 484.291H426.45C414.882 484.291 405.495 474.904 405.495 463.337C405.495 451.769 414.882 442.382 426.45 442.382H597.836Z";
+    private static final String DOC_LINE2_PATH = "M499.904 569.593C511.469 569.596 520.836 578.982 520.836 590.548C520.836 602.114 511.469 611.499 499.904 611.502H426.45C414.882 611.502 405.495 602.115 405.495 590.548C405.495 578.98 414.882 569.593 426.45 569.593H499.904Z";
 
     private static final ExecutorService THREAD_POOL = new ThreadPoolExecutor(
             2,
@@ -125,6 +136,7 @@ public class AcademicViewController {
     private CourseVO rosterCourse;
     private List<UserVO> rosterStudents = new ArrayList<>();
     private List<GradeVO> rosterGrades = new ArrayList<>();
+    private VBox toastContainer;
 
     @FXML
     private void initialize() {
@@ -503,14 +515,14 @@ public class AcademicViewController {
         Button actionBtn;
         if (selected) {
             actionBtn = button("退课", "lib-btn-danger");
-            actionBtn.setOnAction(e -> runAction("退课",
+            actionBtn.setOnAction(e -> runActionWithToast("退课",
                     () -> academicController.dropCourse(course.getCourseCode()),
                     this::loadStudentCourses));
         } else {
             actionBtn = button(full ? "已满" : "选课", "btn-primary-action");
             actionBtn.setDisable(full || conflict);
             if (!full && !conflict) {
-                actionBtn.setOnAction(e -> runAction("选课",
+                actionBtn.setOnAction(e -> runActionWithToast("选课",
                         () -> academicController.selectCourse(course.getCourseCode()),
                         this::loadStudentCourses));
             }
@@ -2107,7 +2119,11 @@ public class AcademicViewController {
             try {
                 ResponseCode code = actionSupplier.get();
                 Platform.runLater(() -> {
-                    showResult(action, code);
+                    if (code == ResponseCode.SUCCESS) {
+                        showToast(action + "成功", true);
+                    } else {
+                        showToast(action + "失败", false);
+                    }
                     if (code == ResponseCode.SUCCESS && onSuccess != null) {
                         onSuccess.run();
                     }
@@ -2116,6 +2132,140 @@ public class AcademicViewController {
                 Platform.runLater(() -> showError(action + "失败：" + e.getMessage()));
             }
         });
+    }
+
+    /**
+     * 执行操作并以顶部滑入横幅提示结果（成功绿色 / 失败红色）。
+     */
+    private void runActionWithToast(String action, Supplier<ResponseCode> actionSupplier,
+                                    Runnable onSuccess) {
+        THREAD_POOL.execute(() -> {
+            try {
+                ResponseCode code = actionSupplier.get();
+                Platform.runLater(() -> {
+                    if (code == ResponseCode.SUCCESS) {
+                        showToast(action + "成功", true);
+                    } else {
+                        showToast(action + "失败", false);
+                    }
+                    if (code == ResponseCode.SUCCESS && onSuccess != null) {
+                        onSuccess.run();
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> showToast(action + "失败", false));
+            }
+        });
+    }
+
+    /**
+     * 在内容区顶部滑入通知横幅，停留后滑回并移除。
+     */
+    private void showToast(String message, boolean success) {
+        showToastBanner(message, success ? 0 : 1);
+    }
+
+    /**
+     * 黄色说明提示横幅。
+     */
+    private void showInfoToast(String message) {
+        showToastBanner(message, 2);
+    }
+
+    /**
+     * 通用滑入横幅：0 成功 / 1 失败 / 2 说明。
+     */
+    private void showToastBanner(String message, int type) {
+        Node parent = rootScrollPane.getParent();
+        if (!(parent instanceof StackPane)) {
+            showInfo(message);
+            return;
+        }
+        StackPane overlay = (StackPane) parent;
+        if (toastContainer == null || toastContainer.getParent() != overlay) {
+            toastContainer = new VBox(8);
+            toastContainer.setAlignment(Pos.TOP_CENTER);
+            toastContainer.setFillWidth(false);
+            StackPane.setAlignment(toastContainer, Pos.TOP_CENTER);
+            toastContainer.setMouseTransparent(true);
+            overlay.getChildren().add(toastContainer);
+        }
+
+        Label text = new Label(message);
+        text.getStyleClass().add("toast-banner-text");
+        Node icon = createToastIconByType(type);
+        StackPane banner = new StackPane(text, icon);
+        StackPane.setAlignment(text, Pos.CENTER);
+        StackPane.setAlignment(icon, Pos.CENTER_LEFT);
+        banner.setPadding(new Insets(6, 12, 6, 12));
+        banner.setMinWidth(240);
+        banner.setMaxWidth(Double.MAX_VALUE);
+        banner.getStyleClass().add("toast-banner");
+        banner.getStyleClass().add(type == 0 ? "success" : type == 1 ? "error" : "info");
+        banner.setMouseTransparent(true);
+        banner.setTranslateY(-60);
+
+        toastContainer.getChildren().add(banner);
+        TranslateTransition in = new TranslateTransition(Duration.millis(400), banner);
+        in.setToY(0);
+        in.setOnFinished(e -> {
+            PauseTransition pause = new PauseTransition(Duration.millis(1800));
+            pause.setOnFinished(ev -> {
+                TranslateTransition out = new TranslateTransition(Duration.millis(400), banner);
+                out.setToY(-60);
+                out.setOnFinished(fin -> toastContainer.getChildren().remove(banner));
+                out.play();
+            });
+            pause.play();
+        });
+        in.play();
+    }
+
+    /**
+     * 创建通知图标：成功为对勾，失败为感叹号。
+     */
+    private Node createToastIconByType(int type) {
+        double scale = 36.0 / 1040.0;
+        StackPane wrapper = new StackPane();
+        wrapper.setMinSize(36, 36);
+        wrapper.setPrefSize(36, 36);
+        wrapper.setMaxSize(36, 36);
+        if (type == 0) {
+            SVGPath check = new SVGPath();
+            check.setContent(CHECK_ICON_PATH);
+            check.setScaleX(scale);
+            check.setScaleY(scale);
+            check.setFill(Color.web("#40C892"));
+            wrapper.getChildren().add(check);
+        } else if (type == 1) {
+            Label bang = new Label("!");
+            bang.setAlignment(Pos.CENTER);
+            bang.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #FB673B;");
+            wrapper.getChildren().add(bang);
+        } else {
+            SVGPath doc = new SVGPath();
+            doc.setContent(DOC_PATH);
+            doc.setScaleX(scale);
+            doc.setScaleY(scale);
+            doc.setFill(Color.WHITE);
+            SVGPath clip = new SVGPath();
+            clip.setContent(DOC_CLIP_PATH);
+            clip.setScaleX(scale);
+            clip.setScaleY(scale);
+            clip.setFill(Color.web("#FFBD35"));
+            SVGPath line1 = new SVGPath();
+            line1.setContent(DOC_LINE1_PATH);
+            line1.setScaleX(scale);
+            line1.setScaleY(scale);
+            line1.setFill(Color.web("#FFBD35"));
+            SVGPath line2 = new SVGPath();
+            line2.setContent(DOC_LINE2_PATH);
+            line2.setScaleX(scale);
+            line2.setScaleY(scale);
+            line2.setFill(Color.web("#FFBD35"));
+            wrapper.getChildren().addAll(doc, clip, line1, line2);
+        }
+        return wrapper;
     }
 
     private CourseVO selectedCourse() {
@@ -2495,7 +2645,7 @@ public class AcademicViewController {
     }
 
     private void showInfo(String message) {
-        showAlert("教务系统", message, Alert.AlertType.INFORMATION);
+        showInfoToast(message);
     }
 
     private boolean confirm(String title, String content) {
@@ -2508,7 +2658,7 @@ public class AcademicViewController {
     }
 
     private void showError(String message) {
-        showAlert("教务系统", message, Alert.AlertType.ERROR);
+        showToast(message, false);
     }
 
     private void showAlert(String title, String content, Alert.AlertType type) {
