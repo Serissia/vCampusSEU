@@ -39,7 +39,7 @@
                     <Insets left="24.0" right="24.0" />
                 </padding>
                 <HBox alignment="CENTER_LEFT" spacing="12.0">
-                    <ImageView fx:id="headerLogoView" fitHeight="32.0" fitWidth="32.0" preserveRatio="true" />
+                    <ImageView fx:id="headerLogoView" fitHeight="48.0" fitWidth="168.0" preserveRatio="true" />
                     <Label text="vCampus 智慧校园" styleClass="header-title" />
                 </HBox>
 

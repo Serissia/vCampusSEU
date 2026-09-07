@@ -138,12 +138,20 @@ public class MainController {
         updateBalance(currentUser.getBalance());
 
         // 加载校徽 Logo
-        try (InputStream in = getClass().getResourceAsStream("/images/logo_large.png")) {
-            if (in != null) {
-                headerLogoView.setImage(new Image(in));
+        try {
+            var resource = getClass().getResource("/images/logo_large.png");
+            if (resource == null) {
+                System.err.println("[MainView] 未找到资源: /images/logo_large.png");
+            } else {
+                Image logoImg = new Image(resource.toExternalForm());
+                if (logoImg.isError()) {
+                    System.err.println("[MainView] 图片加载失败: " + logoImg.getException());
+                } else {
+                    headerLogoView.setImage(logoImg);
+                }
             }
-        } catch (Exception ignored) {
-            // 保留默认占位
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -366,13 +374,14 @@ public class MainController {
             Stage stage = (Stage) contentArea.getScene().getWindow();
             Scene scene = new Scene(root, 920, 580);
             stage.setTitle("东南大学智慧校园 - vCampusSEU");
-            stage.setScene(scene);
             stage.setMaximized(false);
             stage.setResizable(false);
-            stage.setMinWidth(920);
-            stage.setMinHeight(580);
-            stage.setWidth(920);
-            stage.setHeight(580);
+
+            stage.setMinWidth(0);
+            stage.setMinHeight(0);
+
+            stage.setScene(scene);
+            stage.sizeToScene();
             stage.centerOnScreen();
         } catch (IOException e) {
             e.printStackTrace();

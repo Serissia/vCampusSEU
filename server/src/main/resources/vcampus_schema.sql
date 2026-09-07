@@ -196,6 +196,21 @@ CREATE TABLE `tbl_cart` (
     CONSTRAINT `fk_cart_goods` FOREIGN KEY (`goods_id`) REFERENCES `tbl_goods`(`goods_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='超市购物车表';
 
+-- 9.1 校园二手市场商品表 (tbl_second_hand)
+CREATE TABLE `tbl_second_hand` (
+    `id` INT AUTO_INCREMENT NOT NULL COMMENT '商品ID',
+    `seller_id` VARCHAR(32) NOT NULL COMMENT '卖家一卡通号',
+    `seller_name` VARCHAR(32) NOT NULL COMMENT '卖家姓名快照',
+    `title` VARCHAR(64) NOT NULL COMMENT '商品标题',
+    `description` VARCHAR(255) DEFAULT NULL COMMENT '商品描述',
+    `price` DECIMAL(10, 2) NOT NULL COMMENT '定价',
+    `status` VARCHAR(16) NOT NULL DEFAULT 'ON_SALE' COMMENT '状态: ON_SALE 在售, SOLD 已售/已下架',
+    `created_time` VARCHAR(32) NOT NULL COMMENT '发布时间 (yyyy-MM-dd HH:mm:ss)',
+    PRIMARY KEY (`id`),
+    KEY `idx_sh_status` (`status`),
+    CONSTRAINT `fk_sh_seller` FOREIGN KEY (`seller_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='校园二手市场商品表';
+
 -- 10. 教务处公告表 (tbl_notice)
 CREATE TABLE `tbl_notice` (
     `id` INT AUTO_INCREMENT NOT NULL COMMENT '公告自增ID',
@@ -236,7 +251,7 @@ INSERT INTO `tbl_user` (`uid`, `password`, `role`, `name`, `balance`, `status`) 
 
 INSERT INTO `tbl_student` (`uid`, `gender`, `department`, `major`, `class_name`, `phone`) VALUES
 ('213000001', '男', '计算机科学与工程学院', '软件工程', '2101班', '13800000000'),
-('213000002', '男', '计算机科学与工程学院', '软件工程', '2101班', '13900000000');
+('213000002', '女', '计算机科学与工程学院', '软件工程', '2102班', '13900000000');
 
 INSERT INTO `tbl_course` (`course_id`, `course_name`, `display_code`, `course_nature`, `teacher_id`, `teacher_name`, `credits`, `open_semester`, `status`, `max_capacity`, `current_num`, `time_slot`, `classroom`, `start_week`, `end_week`) VALUES
 ('CS101', 'Java程序设计', 'CS101', '必修', '100001', '李教授', 3.0, '2026-2027-1', 'ACTIVE', 50, 0, '周一 第1-2节', '九龙湖计算机楼101', 1, 4),
@@ -259,3 +274,6 @@ INSERT INTO `tbl_goods` (`goods_id`, `goods_name`, `price`, `stock`, `descriptio
 ('G001', '东大纪念笔记本', 15.00, 100, '精装校徽文创笔记本'),
 ('G002', '晨光中性笔(黑)', 2.50, 200, '0.5mm 顺滑签字笔'),
 ('G003', '校园咖啡兑换券', 12.00, 50, '校内咖啡厅通用券');
+INSERT INTO `tbl_second_hand` (`seller_id`, `seller_name`, `title`, `description`, `price`, `status`, `created_time`) VALUES
+('213000002', '李四', '计算机组成原理（任国林版）二手书', '笔记齐全九成新，考试重点已标注', 999.00, 'ON_SALE', '2026-09-01 10:00:00'),
+('213000002', '李四', '99新置物架', '宿舍用三层小置物架，99新', 20.00, 'ON_SALE', '2026-09-01 11:00:00');

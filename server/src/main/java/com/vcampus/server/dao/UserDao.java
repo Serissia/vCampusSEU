@@ -62,6 +62,11 @@ public interface UserDao {
     boolean deductBalance(Connection conn, String uid, BigDecimal amount) throws SQLException;
 
     /**
+     * 在同一事务内原子增加一卡通余额（二手交易收款用）。
+     */
+    boolean creditBalance(Connection conn, String uid, BigDecimal amount) throws SQLException;
+
+    /**
      * 注册新用户。
      */
     boolean createUser(UserVO user) throws SQLException;
