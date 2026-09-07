@@ -121,6 +121,7 @@ public class AcademicViewController {
     private List<CourseVO> myCourses = new ArrayList<>();
     private boolean onlyMy;
     private boolean teacherSelectionListenerAdded;
+    private boolean academicManageSelectionListenerAdded;
     private CourseVO rosterCourse;
     private List<UserVO> rosterStudents = new ArrayList<>();
     private List<GradeVO> rosterGrades = new ArrayList<>();
@@ -1278,7 +1279,9 @@ public class AcademicViewController {
                     }
                 }
 
-                String fileName = sanitizeFileName(course.getCourseName()) + "-学生名单.xlsx";
+                String teacherName = sanitizeFileName(course.getTeacherName());
+                String courseName = sanitizeFileName(course.getCourseName());
+                String fileName = teacherName + "-" + courseName + "-学生名单.xlsx";
                 String downloadDir = System.getenv("USERPROFILE") + "\\Downloads";
                 File out = new File(downloadDir, fileName);
                 try (FileOutputStream fos = new FileOutputStream(out)) {
@@ -1493,6 +1496,16 @@ public class AcademicViewController {
                     () -> fetchCourses(() -> academicController.listAllCourses()));
         });
 
+        Button rosterBtn = button("学生名单", "btn-primary-action");
+        rosterBtn.setOnAction(e -> {
+            CourseVO course = selectedCourse();
+            if (course == null) {
+                showInfo("请先选择课程");
+                return;
+            }
+            showCourseRoster(course);
+        });
+
         Button addSlotBtn = button("添加时间段", "btn-recharge-preset");
         addSlotBtn.setOnAction(e -> {
             CourseVO course = selectedCourse();
@@ -1540,28 +1553,33 @@ public class AcademicViewController {
                     () -> fetchCourses(() -> academicController.listAllCourses()));
         });
 
-        dataTable.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> {
-            CourseVO course = selectedCourse();
-            scheduleRows.getChildren().clear();
-            if (course == null) {
-                selectedCourseLabel.setText("尚未选择课程");
-                locationField.setText("");
-                return;
-            }
-            selectedCourseLabel.setText(course.getDisplayCode() + " - " + course.getCourseName());
-            locationField.setText(course.getLocation() == null ? "" : course.getLocation());
-            int maxWeek = buildWeekOptions(course.getSemester()).size();
-            List<CourseTimeSlotVO> slots = course.getTimeSlots();
-            if (slots == null || slots.isEmpty()) {
-                scheduleRows.getChildren().add(
-                        new ScheduleRow(null, maxWeek, course.getLocation()).getNode());
-            } else {
-                for (CourseTimeSlotVO slot : slots) {
-                    scheduleRows.getChildren().add(
-                            new ScheduleRow(slot, maxWeek, course.getLocation()).getNode());
+        if (!academicManageSelectionListenerAdded) {
+            dataTable.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> {
+                CourseVO course = selectedCourse();
+                scheduleRows.getChildren().clear();
+                headerControls.getChildren().remove(rosterBtn);
+                if (course == null) {
+                    selectedCourseLabel.setText("尚未选择课程");
+                    locationField.setText("");
+                    return;
                 }
-            }
-        });
+                headerControls.getChildren().add(rosterBtn);
+                selectedCourseLabel.setText(course.getDisplayCode() + " - " + course.getCourseName());
+                locationField.setText(course.getLocation() == null ? "" : course.getLocation());
+                int maxWeek = buildWeekOptions(course.getSemester()).size();
+                List<CourseTimeSlotVO> slots = course.getTimeSlots();
+                if (slots == null || slots.isEmpty()) {
+                    scheduleRows.getChildren().add(
+                            new ScheduleRow(null, maxWeek, course.getLocation()).getNode());
+                } else {
+                    for (CourseTimeSlotVO slot : slots) {
+                        scheduleRows.getChildren().add(
+                                new ScheduleRow(slot, maxWeek, course.getLocation()).getNode());
+                    }
+                }
+            });
+            academicManageSelectionListenerAdded = true;
+        }
 
         headerControls.getChildren().addAll(
                 teacherField, queryYearBox, querySemesterBox, allBtn, teacherBtn, semesterBtn, deleteBtn);
