@@ -138,12 +138,20 @@ public class MainController {
         updateBalance(currentUser.getBalance());
 
         // 加载校徽 Logo
-        try (InputStream in = getClass().getResourceAsStream("/images/logo_large.png")) {
-            if (in != null) {
-                headerLogoView.setImage(new Image(in));
+        try {
+            var resource = getClass().getResource("/images/logo_large.png");
+            if (resource == null) {
+                System.err.println("[MainView] 未找到资源: /images/logo_large.png");
+            } else {
+                Image logoImg = new Image(resource.toExternalForm());
+                if (logoImg.isError()) {
+                    System.err.println("[MainView] 图片加载失败: " + logoImg.getException());
+                } else {
+                    headerLogoView.setImage(logoImg);
+                }
             }
-        } catch (Exception ignored) {
-            // 保留默认占位
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

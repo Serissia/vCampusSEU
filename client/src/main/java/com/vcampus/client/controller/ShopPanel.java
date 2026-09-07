@@ -253,19 +253,19 @@ public class ShopPanel extends VBox {
      * 加载失败时回退到内建矢量购物车图标。
      */
     private Node createCartIconView() {
-        try (InputStream is = getClass().getResourceAsStream("/images/cart.png")) {
-            if (is != null) {
-                ImageView view = new ImageView(new Image(is));
-                view.setFitWidth(20.0);
-                view.setFitHeight(20.0);
-                view.setPreserveRatio(true);
-                view.setSmooth(true);
-                view.getStyleClass().add("shop-cart-icon-img");
-                return view;
-            }
-        } catch (Exception ignored) {
-            // 资源缺失或解码失败时回退矢量图标
-        }
+//        try (InputStream is = getClass().getResourceAsStream("/images/cart.png")) {
+//            if (is != null) {
+//                ImageView view = new ImageView(new Image(is));
+//                view.setFitWidth(20.0);
+//                view.setFitHeight(20.0);
+//                view.setPreserveRatio(true);
+//                view.setSmooth(true);
+//                view.getStyleClass().add("shop-cart-icon-img");
+//                return view;
+//            }
+//        } catch (Exception ignored) {
+//            // 资源缺失或解码失败时回退矢量图标
+//        }
         return SvgIcons.createIcon("cart-shopping", 14.0, "shop-cart-icon");
     }
 
