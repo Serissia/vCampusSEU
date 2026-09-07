@@ -3,6 +3,7 @@ package com.vcampus.client.controller;
 import com.vcampus.client.config.AppConfig;
 import com.vcampus.client.config.AppConfigManager;
 import com.vcampus.client.net.SocketClient;
+import com.vcampus.client.util.ThemeManager;
 import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
@@ -380,6 +381,8 @@ public class LoginController {
             Scene mainScene = new Scene(root, 1100, 720);
             stage.setTitle("vCampus - 智慧校园综合服务平台");
             stage.setScene(mainScene);
+            // 在首次绘制前同步应用用户主题，避免先渲染默认主题再切换导致的启动闪屏
+            ThemeManager.applyTheme(mainScene);
             stage.setResizable(true);
             stage.setMinWidth(1024);
             stage.setMinHeight(680);
