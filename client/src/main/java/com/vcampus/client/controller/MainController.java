@@ -373,15 +373,15 @@ public class MainController {
 
             Stage stage = (Stage) contentArea.getScene().getWindow();
             Scene scene = new Scene(root, 920, 580);
-            stage.setTitle("东南大学智慧校园 - vCampusSEU");
+            stage.hide();
+            stage.setTitle("统一身份认证 - vCampusSEU");
             stage.setMaximized(false);
             stage.setResizable(false);
-
             stage.setMinWidth(0);
             stage.setMinHeight(0);
-
             stage.setScene(scene);
             stage.sizeToScene();
+            stage.show();
             stage.centerOnScreen();
         } catch (IOException e) {
             e.printStackTrace();
