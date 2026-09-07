@@ -330,6 +330,17 @@ public class Dispatcher {
                 case SECOND_HAND_BUY:
                     handleSecondHandBuy(request, response);
                     break;
+                case SECOND_HAND_MY_LIST:
+                    response.setData(secondHandService.listMine(request.getUid()));
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case SECOND_HAND_PENDING_LIST:
+                    response.setData(secondHandService.listPending());
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case SECOND_HAND_REVIEW:
+                    handleSecondHandReview(request, response);
+                    break;
                 case BOOK_RESOURCE_UPLOAD:
                     handleResourceUpload(request, response);
                     break;
@@ -431,6 +442,8 @@ public class Dispatcher {
             case EBK_REVIEW:
             case ORDER_LIST_ALL:
             case ORDER_STATISTICS:
+            case SECOND_HAND_PENDING_LIST:
+            case SECOND_HAND_REVIEW:
                 return true;
             default:
                 return false;
@@ -543,6 +556,9 @@ public class Dispatcher {
             case ORDER_LIST_ALL:
             case ORDER_STATISTICS:
                 return role == UserRole.ADMIN || role == UserRole.SELLER;
+            case SECOND_HAND_PENDING_LIST:
+            case SECOND_HAND_REVIEW:
+                return role == UserRole.ADMIN;
             default:
                 return false;
         }
@@ -1424,6 +1440,36 @@ public class Dispatcher {
                 msg = "购买失败，请稍后重试";
             }
             response.setData(msg);
+        }
+    }
+
+    /**
+     * 处理管理员审核二手商品：负载为 SecondHandVO（id 为商品 ID，status 为审核结果
+     * APPROVE 通过 / REJECT 拒绝）。
+     */
+    private void handleSecondHandReview(Message request, Message response) {
+        if (!isAdmin(request)) {
+            response.setCode(ResponseCode.UNAUTHORIZED);
+            response.setData("无权执行该操作：仅管理员可审核二手商品");
+            return;
+        }
+        if (!(request.getData() instanceof SecondHandVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("审核参数不合法");
+            return;
+        }
+        SecondHandVO vo = (SecondHandVO) request.getData();
+        Integer id = vo.getId();
+        boolean approve = "APPROVE".equalsIgnoreCase(vo.getStatus());
+        if (id == null) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("商品编号不合法");
+            return;
+        }
+        ResponseCode code = secondHandService.review(request.getUid(), id, approve);
+        response.setCode(code);
+        if (code != ResponseCode.SUCCESS) {
+            response.setData("审核失败，商品可能不存在或已被处理");
         }
     }
 

@@ -18,9 +18,24 @@ public interface ISecondHandService {
     List<SecondHandVO> listOnSale();
 
     /**
-     * 学生发布二手商品。
+     * 查询全部待审核商品（管理员）。
+     */
+    List<SecondHandVO> listPending();
+
+    /**
+     * 查询某卖家发布的全部商品（含各审核/交易状态）。
+     */
+    List<SecondHandVO> listMine(String uid);
+
+    /**
+     * 学生发布二手商品（状态进入待审核）。
      */
     ResponseCode publish(String uid, SecondHandVO vo);
+
+    /**
+     * 管理员审核二手商品：通过则上架，拒绝则标记 REJECTED。
+     */
+    ResponseCode review(String uid, Integer id, boolean approve);
 
     /**
      * 卖家下架自己发布的商品。
@@ -28,7 +43,7 @@ public interface ISecondHandService {
     ResponseCode offShelf(String uid, Integer id);
 
     /**
-     * 购买二手商品：买家扣款、卖家收款、商品标记已售，全程单事务。
+     * 购买二手商品：买家扣款、卖家收款、商品标记已售、写入交易订单，全程单事务。
      */
     ResponseCode buy(String uid, Integer id);
 }

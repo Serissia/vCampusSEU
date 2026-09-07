@@ -234,6 +234,10 @@ public class OrderManagementPanel extends VBox {
         orderIdCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getOrderId()));
         orderIdCol.setPrefWidth(180);
 
+        TableColumn<OrderVO, String> typeCol = new TableColumn<>("类型");
+        typeCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(orderTypeLabel(cd.getValue().getOrderType())));
+        typeCol.setPrefWidth(70);
+
         TableColumn<OrderVO, String> userCol = new TableColumn<>("用户 ID");
         userCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getStudentId()));
         userCol.setPrefWidth(90);
@@ -254,7 +258,7 @@ public class OrderManagementPanel extends VBox {
         timeCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getOrderTime()));
         timeCol.setPrefWidth(170);
 
-        orderTable.getColumns().addAll(orderIdCol, userCol, goodsNameCol, countCol, priceCol, timeCol);
+        orderTable.getColumns().addAll(orderIdCol, typeCol, userCol, goodsNameCol, countCol, priceCol, timeCol);
         for (TableColumn<OrderVO, ?> col : orderTable.getColumns()) {
             col.setMinWidth(60.0);
         }
@@ -366,12 +370,16 @@ public class OrderManagementPanel extends VBox {
         grid.setVgap(12.0);
         grid.setPadding(new Insets(20.0));
         addDetailRow(grid, 0, "订单号", order.getOrderId());
-        addDetailRow(grid, 1, "用户 ID", order.getStudentId());
-        addDetailRow(grid, 2, "商品编码", order.getGoodsId());
-        addDetailRow(grid, 3, "商品名称", order.getGoodsName());
-        addDetailRow(grid, 4, "数量", String.valueOf(order.getCount()));
-        addDetailRow(grid, 5, "总价", formatPrice(order.getTotalPrice()));
-        addDetailRow(grid, 6, "下单时间", order.getOrderTime());
+        addDetailRow(grid, 1, "类型", orderTypeLabel(order.getOrderType()));
+        addDetailRow(grid, 2, "用户 ID", order.getStudentId());
+        addDetailRow(grid, 3, "商品编码", order.getGoodsId());
+        addDetailRow(grid, 4, "商品名称", order.getGoodsName());
+        addDetailRow(grid, 5, "数量", String.valueOf(order.getCount()));
+        addDetailRow(grid, 6, "总价", formatPrice(order.getTotalPrice()));
+        addDetailRow(grid, 7, "下单时间", order.getOrderTime());
+        if ("SECOND_HAND".equals(order.getOrderType())) {
+            addDetailRow(grid, 8, "卖家 ID", order.getSellerId());
+        }
 
         dialog.getDialogPane().setContent(grid);
         dialog.showAndWait();
@@ -391,6 +399,13 @@ public class OrderManagementPanel extends VBox {
             return "¥ 0.00";
         }
         return "¥ " + price.setScale(2, RoundingMode.HALF_UP).toPlainString();
+    }
+
+    /**
+     * 订单类型中文标签。
+     */
+    private String orderTypeLabel(String type) {
+        return "SECOND_HAND".equals(type) ? "二手" : "超市";
     }
 
     /**

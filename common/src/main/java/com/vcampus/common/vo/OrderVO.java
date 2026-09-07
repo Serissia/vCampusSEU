@@ -26,6 +26,10 @@ public class OrderVO implements Serializable {
     private BigDecimal totalPrice;
     /** 下单时间 (yyyy-MM-dd HH:mm:ss) */
     private String orderTime;
+    /** 订单类型: SUPERMARKET 超市消费, SECOND_HAND 二手交易 */
+    private String orderType;
+    /** 卖家一卡通号（二手交易才有，超市订单为空） */
+    private String sellerId;
 
     public OrderVO() {
     }
@@ -84,5 +88,21 @@ public class OrderVO implements Serializable {
 
     public void setOrderTime(String orderTime) {
         this.orderTime = orderTime;
+    }
+
+    public String getOrderType() {
+        return orderType;
+    }
+
+    public void setOrderType(String orderType) {
+        this.orderType = orderType;
+    }
+
+    public String getSellerId() {
+        return sellerId;
+    }
+
+    public void setSellerId(String sellerId) {
+        this.sellerId = sellerId;
     }
 }
