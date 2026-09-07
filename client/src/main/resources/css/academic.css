@@ -148,7 +148,7 @@
 }
 
 .timetable-block-name {
-    -fx-font-size: 14px;
+    -fx-font-size: 24px;
     -fx-font-weight: bold;
     -fx-text-fill: -fx-text-main;
 }
@@ -229,4 +229,39 @@
 .review-time {
     -fx-font-size: 11px;
     -fx-text-fill: -fx-text-disabled;
+}
+
+/* 顶部滑入通知横幅 */
+.toast-banner {
+    -fx-background-radius: 6px;
+    -fx-background-color: -fx-bg-surface;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1px;
+    -fx-padding: 6px 14px 6px 48px;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+    -fx-effect: dropshadow(gaussian, rgba(31, 35, 41, 0.15), 12, 0, 0, 3);
+}
+
+.toast-banner-text {
+    -fx-text-fill: inherit;
+}
+
+.toast-banner.success {
+    -fx-border-color: #2E8B57;
+    -fx-text-fill: #2E8B57;
+    -fx-background-color: #EAF6EF;
+}
+
+.toast-banner.error {
+    -fx-border-color: -fx-danger;
+    -fx-text-fill: -fx-danger;
+    -fx-background-color: #FDECEC;
+}
+
+.toast-banner.info {
+    -fx-border-color: #FFBD35;
+    -fx-text-fill: #B58500;
+    -fx-background-color: #FFF6E0;
 }
