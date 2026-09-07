@@ -23,6 +23,7 @@ public enum MessageType implements Serializable {
     /** 用户管理（系统管理员） */
     USER_REGISTER,
     USER_LIST,
+    STUDENT_LIST,
     USER_UPDATE,
     USER_DELETE,
     USER_RESET_PASSWORD,
@@ -47,6 +48,7 @@ public enum MessageType implements Serializable {
     COURSE_SELECT,
     COURSE_DROP,
     COURSE_TIMETABLE,
+    COURSE_STUDENT_LIST,
 
     /** 成绩管理 */
     GRADE_SUBMIT,

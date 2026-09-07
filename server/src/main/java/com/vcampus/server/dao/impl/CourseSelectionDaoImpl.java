@@ -2,6 +2,7 @@ package com.vcampus.server.dao.impl;
 
 import com.vcampus.common.vo.CourseSelectionVO;
 import com.vcampus.common.vo.CourseVO;
+import com.vcampus.common.vo.UserVO;
 import com.vcampus.server.dao.CourseSelectionDao;
 import com.vcampus.server.util.DBUtil;
 
@@ -179,6 +180,27 @@ public class CourseSelectionDaoImpl implements CourseSelectionDao {
                     course.setEndWeek(rs.getInt("end_week"));
                     course.setStatus(rs.getString("status"));
                     result.add(course);
+                }
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public List<UserVO> listStudentsByCourse(String courseCode) throws SQLException {
+        String sql = "SELECT u.uid, u.name FROM tbl_course_select cs "
+                + "JOIN tbl_user u ON u.uid = cs.student_id "
+                + "WHERE cs.course_id = ? ORDER BY u.uid";
+        List<UserVO> result = new ArrayList<UserVO>();
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, courseCode);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    UserVO user = new UserVO();
+                    user.setUid(rs.getString("uid"));
+                    user.setName(rs.getString("name"));
+                    result.add(user);
                 }
             }
         }

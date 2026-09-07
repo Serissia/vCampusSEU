@@ -2,6 +2,7 @@ package com.vcampus.server.dao;
 
 import com.vcampus.common.vo.CourseSelectionVO;
 import com.vcampus.common.vo.CourseVO;
+import com.vcampus.common.vo.UserVO;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -42,4 +43,9 @@ public interface CourseSelectionDao {
      * 查询学生已选课程列表。
      */
     List<CourseVO> listByStudent(String studentId) throws SQLException;
+
+    /**
+     * 查询某课程下的选课学生名单。
+     */
+    List<UserVO> listStudentsByCourse(String courseCode) throws SQLException;
 }

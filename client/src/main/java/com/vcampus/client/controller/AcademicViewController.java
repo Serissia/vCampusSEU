@@ -23,7 +23,12 @@ import javafx.scene.SnapshotParameters;
 import javafx.scene.image.WritableImage;
 import javafx.embed.swing.SwingFXUtils;
 import javax.imageio.ImageIO;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -47,6 +52,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
+import javafx.util.StringConverter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -114,6 +120,10 @@ public class AcademicViewController {
     private List<CourseVO> allCourses = new ArrayList<>();
     private List<CourseVO> myCourses = new ArrayList<>();
     private boolean onlyMy;
+    private boolean teacherSelectionListenerAdded;
+    private CourseVO rosterCourse;
+    private List<UserVO> rosterStudents = new ArrayList<>();
+    private List<GradeVO> rosterGrades = new ArrayList<>();
 
     @FXML
     private void initialize() {
@@ -1150,7 +1160,27 @@ public class AcademicViewController {
                     () -> fetchCourses(() -> academicController.queryByTeacher(currentUser.getUid())));
         });
 
+        Button rosterBtn = button("学生名单", "btn-primary-action");
+        rosterBtn.setOnAction(e -> {
+            CourseVO course = selectedCourse();
+            if (course == null) {
+                showInfo("请先选择课程");
+                return;
+            }
+            showCourseRoster(course);
+        });
+
         headerControls.getChildren().addAll(queryBtn, disableBtn);
+        if (!teacherSelectionListenerAdded) {
+            dataTable.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> {
+                CourseVO selected = selectedCourse();
+                headerControls.getChildren().remove(rosterBtn);
+                if (selected != null) {
+                    headerControls.getChildren().add(rosterBtn);
+                }
+            });
+            teacherSelectionListenerAdded = true;
+        }
         formCard.setVisible(true);
         formCard.setManaged(true);
 
@@ -1169,6 +1199,180 @@ public class AcademicViewController {
     }
 
     /**
+     * 展示课程学生名单与成绩组成的二级页面。
+     */
+    private void showCourseRoster(CourseVO course) {
+        formContent.getChildren().clear();
+        Label title = new Label(course.getCourseName() + " - 学生名单");
+        title.getStyleClass().add("lib-title");
+        Button backBtn = button("返回课程管理", "btn-recharge-preset");
+        backBtn.setOnAction(e -> {
+            headerControls.getChildren().clear();
+            formContent.getChildren().clear();
+            dataCard.setVisible(true);
+            dataCard.setManaged(true);
+            configureView();
+        });
+        Button exportBtn = button("导出学生名单", "btn-primary-action");
+        exportBtn.setOnAction(e -> exportStudentRoster(rosterCourse, rosterStudents, rosterGrades));
+        formContent.getChildren().addAll(backBtn, exportBtn, title);
+
+        dataCard.setVisible(false);
+        dataCard.setManaged(false);
+
+        TableView<StudentGradeEntry> rosterTable = new TableView<>();
+        rosterTable.getStyleClass().add("lib-table");
+        rosterTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        formContent.getChildren().add(rosterTable);
+
+        THREAD_POOL.execute(() -> {
+            try {
+                List<UserVO> students = academicController.listStudentsByCourse(course.getCourseCode());
+                List<GradeVO> grades = academicController.queryCourseGrades(course.getCourseCode());
+                Platform.runLater(() -> {
+                    rosterCourse = course;
+                    rosterStudents = students;
+                    rosterGrades = grades;
+                    renderStudentRoster(rosterTable, course, students, grades);
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> showError("加载学生名单失败：" + e.getMessage()));
+            }
+        });
+    }
+
+    /**
+     * 导出学生名单为 Excel，包含出勤（按学期周数）、各组成成绩与最终成绩空列。
+     */
+    private void exportStudentRoster(CourseVO course, List<UserVO> students, List<GradeVO> grades) {
+        try {
+            if (course == null) {
+                showInfo("请先加载学生名单");
+                return;
+            }
+            int weeks = parseSemesterNo(course.getSemester()) == 1 ? 4 : 18;
+            try (Workbook workbook = new XSSFWorkbook()) {
+                Sheet sheet = workbook.createSheet("学生名单");
+                Row header = sheet.createRow(0);
+                int col = 0;
+                header.createCell(col++).setCellValue("一卡通号");
+                header.createCell(col++).setCellValue("学生名字");
+                for (int week = 1; week <= weeks; week++) {
+                    header.createCell(col++).setCellValue("第" + week + "周");
+                }
+                if (course.getScoreComponents() != null) {
+                    for (ScoreComponentVO component : course.getScoreComponents()) {
+                        header.createCell(col++).setCellValue(component.getComponentName());
+                    }
+                }
+                header.createCell(col++).setCellValue("最终成绩");
+
+                for (int r = 0; r < students.size(); r++) {
+                    Row row = sheet.createRow(r + 1);
+                    UserVO student = students.get(r);
+                    row.createCell(0).setCellValue(student.getUid());
+                    row.createCell(1).setCellValue(student.getName());
+                    // 出勤、各组成成绩、最终成绩列默认留空
+                    for (int c = 2; c < col; c++) {
+                        row.createCell(c);
+                    }
+                }
+
+                String fileName = sanitizeFileName(course.getCourseName()) + "-学生名单.xlsx";
+                String downloadDir = System.getenv("USERPROFILE") + "\\Downloads";
+                File out = new File(downloadDir, fileName);
+                try (FileOutputStream fos = new FileOutputStream(out)) {
+                    workbook.write(fos);
+                }
+                showInfo("学生名单已导出到：" + out.getAbsolutePath());
+            }
+        } catch (IOException e) {
+            showError("导出学生名单失败：" + e.getMessage());
+        }
+    }
+
+    private String sanitizeFileName(String name) {
+        if (name == null) {
+            return "课程";
+        }
+        return name.replaceAll("[\\\\/:*?\"<>|]", "_");
+    }
+
+    /**
+     * 将学生与成绩合并后渲染到表格。
+     */
+    private void renderStudentRoster(TableView<StudentGradeEntry> table,
+                                     CourseVO course,
+                                     List<UserVO> students,
+                                     List<GradeVO> grades) {
+        table.getColumns().clear();
+        List<StudentGradeEntry> rows = new ArrayList<>();
+        for (UserVO student : students) {
+            GradeVO grade = null;
+            for (GradeVO item : grades) {
+                if (student.getUid().equals(item.getStudentId())) {
+                    grade = item;
+                    break;
+                }
+            }
+            rows.add(new StudentGradeEntry(student, grade));
+        }
+
+        TableColumn<StudentGradeEntry, String> uidCol = new TableColumn<>("一卡通");
+        uidCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getStudent().getUid()));
+        TableColumn<StudentGradeEntry, String> nameCol = new TableColumn<>("姓名");
+        nameCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getStudent().getName()));
+        table.getColumns().addAll(uidCol, nameCol);
+
+        for (ScoreComponentVO component : course.getScoreComponents()) {
+            TableColumn<StudentGradeEntry, String> col = new TableColumn<>(component.getComponentName());
+            col.setCellValueFactory(data -> {
+                String value = "";
+                GradeVO grade = data.getValue().getGrade();
+                if (grade != null && grade.getComponentScores() != null) {
+                    for (GradeScoreVO score : grade.getComponentScores()) {
+                        if (component.getComponentName().equals(score.getComponentName())) {
+                            value = String.valueOf(score.getScore());
+                            break;
+                        }
+                    }
+                }
+                return new ReadOnlyStringWrapper(value);
+            });
+            table.getColumns().add(col);
+        }
+
+        TableColumn<StudentGradeEntry, String> finalCol = new TableColumn<>("最终得分");
+        finalCol.setCellValueFactory(data -> {
+            GradeVO grade = data.getValue().getGrade();
+            return new ReadOnlyStringWrapper(grade == null ? "" : String.valueOf(grade.getFinalScore()));
+        });
+        table.getColumns().add(finalCol);
+        table.setItems(FXCollections.observableArrayList(rows));
+    }
+
+    /**
+     * 学生成绩名单行模型。
+     */
+    private static class StudentGradeEntry {
+        private final UserVO student;
+        private final GradeVO grade;
+
+        StudentGradeEntry(UserVO student, GradeVO grade) {
+            this.student = student;
+            this.grade = grade;
+        }
+
+        UserVO getStudent() {
+            return student;
+        }
+
+        GradeVO getGrade() {
+            return grade;
+        }
+    }
+
+    /**
      * 教师成绩登记。
      */
     private void configureGradeSubmit() {
@@ -1180,10 +1384,25 @@ public class AcademicViewController {
         Button loadBtn = button("加载我的课程", "btn-primary-action");
         loadBtn.setOnAction(e -> fetchCourses(() -> academicController.queryByTeacher(currentUser.getUid())));
 
-        TextField studentIdField = inputField("学生学号", 160);
+        ComboBox<UserVO> studentBox = new ComboBox<>();
+        studentBox.getStyleClass().add("academic-combo");
+        studentBox.setPrefWidth(220);
+        studentBox.setPromptText("选择学生");
+        studentBox.setConverter(new StringConverter<UserVO>() {
+            @Override
+            public String toString(UserVO user) {
+                return user == null ? "" : user.getUid() + " - " + user.getName();
+            }
+
+            @Override
+            public UserVO fromString(String string) {
+                return null;
+            }
+        });
+        loadStudentOptions(studentBox);
         VBox scoreInputs = new VBox(6);
         Label calcLabel = new Label("实时计算：等待输入");
-        calcLabel.getStyleClass().add("academic-hint");
+        calcLabel.getStyleClass().addAll("lib-msg-label", "success");
         calcLabel.setWrapText(true);
         calcLabel.setMaxWidth(Double.MAX_VALUE);
 
@@ -1191,18 +1410,32 @@ public class AcademicViewController {
                 rebuildScoreInputs(scoreInputs, calcLabel));
 
         Button submitBtn = button("提交成绩", "btn-primary-action");
-        submitBtn.setOnAction(e -> submitGrade(studentIdField, scoreInputs));
+        submitBtn.setOnAction(e -> submitGrade(studentBox, scoreInputs));
 
         headerControls.getChildren().add(loadBtn);
         formCard.setVisible(true);
         formCard.setManaged(true);
         formContent.getChildren().addAll(
-                formRow(labeledField("学生学号", studentIdField)),
+                formRow(labeledField("学生", studentBox)),
                 scoreInputs,
                 calcLabel,
                 submitBtn);
 
         fetchCourses(() -> academicController.queryByTeacher(currentUser.getUid()));
+    }
+
+    /**
+     * 异步加载学生选项到下拉框。
+     */
+    private void loadStudentOptions(ComboBox<UserVO> studentBox) {
+        THREAD_POOL.execute(() -> {
+            try {
+                List<UserVO> students = academicController.listStudents();
+                Platform.runLater(() -> studentBox.setItems(FXCollections.observableArrayList(students)));
+            } catch (Exception e) {
+                Platform.runLater(() -> showError("加载学生列表失败：" + e.getMessage()));
+            }
+        });
     }
 
     /**
@@ -1701,26 +1934,36 @@ public class AcademicViewController {
         }
 
         if (!complete || formula.length() == 0) {
+            calcLabel.getStyleClass().removeAll("error", "success");
+            calcLabel.getStyleClass().add("success");
             calcLabel.setText("实时计算：请完整输入各项成绩（可包含小数）");
             return;
         }
 
         long roundedFinal = Math.round(total);
-        calcLabel.setText("实时计算：" + formula + " = " + roundedFinal);
+        calcLabel.getStyleClass().removeAll("error", "success");
+        if (total > 100) {
+            calcLabel.getStyleClass().add("error");
+            calcLabel.setText("实时计算：" + formula + " = " + roundedFinal
+                    + "（提示：计算分数超过 100，请检查各组成分数）");
+        } else {
+            calcLabel.getStyleClass().add("success");
+            calcLabel.setText("实时计算：" + formula + " = " + roundedFinal);
+        }
     }
 
     /**
      * 提交学生成绩。
      */
-    private void submitGrade(TextField studentIdField, VBox scoreInputs) {
+    private void submitGrade(ComboBox<UserVO> studentBox, VBox scoreInputs) {
         CourseVO course = selectedCourse();
-        if (course == null || studentIdField.getText().trim().isEmpty()) {
-            showInfo("请选择课程并输入学生学号");
+        if (course == null || studentBox.getValue() == null) {
+            showInfo("请选择课程和学生");
             return;
         }
 
         GradeVO grade = new GradeVO();
-        grade.setStudentId(studentIdField.getText().trim());
+        grade.setStudentId(studentBox.getValue().getUid());
         grade.setCourseCode(course.getCourseCode());
         grade.setCourseName(course.getCourseName());
 
