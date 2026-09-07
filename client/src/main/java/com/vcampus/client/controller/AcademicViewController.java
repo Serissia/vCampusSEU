@@ -19,6 +19,12 @@ import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.SVGPath;
+import javafx.scene.SnapshotParameters;
+import javafx.scene.image.WritableImage;
+import javafx.embed.swing.SwingFXUtils;
+import javax.imageio.ImageIO;
+import java.io.File;
+import java.io.IOException;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -303,9 +309,11 @@ public class AcademicViewController {
         }
         courseGrid.getChildren().clear();
         for (CourseVO course : allCourses) {
-            courseGrid.getChildren().add(createCourseCard(course));
+            if (passCourseFilter(course, "", "全部", "全部", "全部")) {
+                courseGrid.getChildren().add(createCourseCard(course));
+            }
         }
-        if (allCourses.isEmpty()) {
+        if (courseGrid.getChildren().isEmpty()) {
             Label empty = new Label("暂无课程");
             empty.getStyleClass().add("lib-subtitle");
             courseGrid.getChildren().add(empty);
@@ -315,6 +323,25 @@ public class AcademicViewController {
     private boolean passCourseFilter(CourseVO course, String keyword,
                                      String natureFilter, String fullFilter,
                                      String conflictFilter) {
+        if (!CourseVO.STATUS_ACTIVE.equals(course.getStatus())) {
+            return false;
+        }
+        List<CourseTimeSlotVO> slots = effectiveSlots(course);
+        if (slots.isEmpty()) {
+            return false;
+        }
+        boolean hasLocation = course.getLocation() != null && !course.getLocation().trim().isEmpty();
+        if (!hasLocation) {
+            for (CourseTimeSlotVO slot : slots) {
+                if (slot.getLocation() != null && !slot.getLocation().trim().isEmpty()) {
+                    hasLocation = true;
+                    break;
+                }
+            }
+        }
+        if (!hasLocation) {
+            return false;
+        }
         if (onlyMy && !isSelected(course)) {
             return false;
         }
@@ -539,7 +566,6 @@ public class AcademicViewController {
         weekSuffix.getStyleClass().add("lib-form-label");
         HBox weekGroup = new HBox(4, weekPrefix, weekBox, weekSuffix);
         weekGroup.setAlignment(Pos.CENTER_LEFT);
-
         headerControls.getChildren().addAll(semesterGroup, weekGroup);
 
         GridPane grid = new GridPane();
@@ -603,6 +629,10 @@ public class AcademicViewController {
 
         dataCard.getChildren().remove(dataTable);
         dataCard.getChildren().add(grid);
+
+        Button exportBtn = button("导出课表", "btn-primary-action");
+        exportBtn.setOnAction(e -> exportTimetable(grid, semesterBox.getValue(), weekBox.getValue()));
+        headerControls.getChildren().add(exportBtn);
 
         loadStudentTimetable(grid, semesterBox, weekBox, courseLoader);
     }
@@ -795,6 +825,38 @@ public class AcademicViewController {
                 "16:40-17:25", "17:30-18:15", "19:00-19:45", "19:50-20:35",
                 "20:40-21:25"
         };
+    }
+
+    /**
+     * 将当前课表节点导出为 PNG，并保存到用户 Download 目录。
+     */
+    private void exportTimetable(GridPane grid, String semester, Integer week) {
+        try {
+            grid.applyCss();
+            grid.layout();
+            double width = Math.max(1, grid.getWidth());
+            double height = Math.max(1, grid.getHeight());
+            WritableImage image = grid.snapshot(new SnapshotParameters(), null);
+            if (image.getWidth() <= 0 || image.getHeight() <= 0) {
+                image = new WritableImage((int) width, (int) height);
+                grid.snapshot(new SnapshotParameters(), image);
+            }
+            String downloadDir = System.getenv("USERPROFILE") + "\\Downloads";
+            String fileName = buildTimetableExportName(semester, week);
+            File out = new File(downloadDir, fileName);
+            ImageIO.write(SwingFXUtils.fromFXImage(image, null), "png", out);
+            showInfo("课表已导出到：" + out.getAbsolutePath());
+        } catch (IOException e) {
+            showError("课表导出失败：" + e.getMessage());
+        }
+    }
+
+    private String buildTimetableExportName(String semester, Integer week) {
+        if (semester == null || semester.trim().isEmpty()) {
+            return "schedule.png";
+        }
+        String value = semester.trim();
+        return "schedule_" + value + "_" + (week == null ? "1" : week) + ".png";
     }
 
     private String nvl(String value) {
