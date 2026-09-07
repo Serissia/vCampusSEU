@@ -226,4 +226,13 @@ public class UserDaoImpl implements UserDao {
             }
         }
     }
+    @Override
+    public boolean creditBalance(Connection conn, String uid, BigDecimal amount) throws SQLException {
+        String sql = "UPDATE tbl_user SET balance = balance + ? WHERE uid = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setBigDecimal(1, amount);
+            pstmt.setString(2, uid);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
 }

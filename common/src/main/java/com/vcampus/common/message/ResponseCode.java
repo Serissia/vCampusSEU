@@ -60,5 +60,7 @@ public enum ResponseCode {
     /** 用户存在未归还图书，无法删除 */
     USER_HAS_ACTIVE_BORROW,
     /** 购物车为空 */
-    CART_EMPTY
+    CART_EMPTY,
+    /** 二手商品已售出或已下架 */
+    SECOND_HAND_SOLD
 }
