@@ -6,6 +6,7 @@ import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.SecondHandVO;
+import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -73,6 +74,8 @@ public class SecondHandPanel extends VBox {
     private Runnable onBack;
     private Button backBtn;
     private FlowPane cardFlowPane;
+    /** 管理员审核入口按钮（仅 ADMIN 可见） */
+    private Button reviewBtn;
 
     public SecondHandPanel() {
         buildUi();
@@ -84,6 +87,12 @@ public class SecondHandPanel extends VBox {
     public void initData(UserVO user, MainController mainController) {
         this.currentUser = user;
         this.mainController = mainController;
+        // 管理员显示审核入口
+        if (reviewBtn != null) {
+            boolean admin = isAdmin();
+            reviewBtn.setVisible(admin);
+            reviewBtn.setManaged(admin);
+        }
         refresh();
     }
 
@@ -142,6 +151,16 @@ public class SecondHandPanel extends VBox {
         balanceValueLabel.getStyleClass().add("shop-balance-value");
         balanceBox.getChildren().addAll(balanceCaption, balanceValueLabel);
 
+        Button myListBtn = new Button("我的发布");
+        myListBtn.getStyleClass().add("btn-recharge-preset");
+        myListBtn.setOnAction(e -> openMyListDialog());
+
+        reviewBtn = new Button("审核");
+        reviewBtn.getStyleClass().add("btn-recharge-preset");
+        reviewBtn.setVisible(false);
+        reviewBtn.setManaged(false);
+        reviewBtn.setOnAction(e -> openReviewDialog());
+
         Button publishBtn = new Button("发布闲置");
         publishBtn.getStyleClass().add("btn-primary-action");
         publishBtn.setGraphic(SvgIconsPlaceholder.plus());
@@ -151,7 +170,7 @@ public class SecondHandPanel extends VBox {
         refreshBtn.getStyleClass().add("btn-recharge-preset");
         refreshBtn.setOnAction(e -> refresh());
 
-        headerRow.getChildren().addAll(backBtn, titleBox, spacer, balanceBox, publishBtn, refreshBtn);
+        headerRow.getChildren().addAll(backBtn, titleBox, spacer, balanceBox, myListBtn, reviewBtn, publishBtn, refreshBtn);
         card.getChildren().add(headerRow);
         return card;
     }
@@ -385,7 +404,7 @@ public class SecondHandPanel extends VBox {
                 Message response = socketClient.send(request);
                 Platform.runLater(() -> {
                     if (response != null && response.getCode() == ResponseCode.SUCCESS) {
-                        showAlert("发布成功", "商品已上架到二手市场", Alert.AlertType.INFORMATION);
+                        showAlert("发布成功", "商品已提交，等待管理员审核通过后上架", Alert.AlertType.INFORMATION);
                         refresh();
                     } else {
                         showAlert("发布失败", errorText(response, "发布失败"), Alert.AlertType.ERROR);
@@ -401,8 +420,12 @@ public class SecondHandPanel extends VBox {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("确认购买");
         confirm.setHeaderText(null);
-        confirm.setContentText("确认购买「" + item.getTitle() + "」？\n将支付 "
+        Label content = new Label("确认购买「" + item.getTitle() + "」？\n将支付 "
                 + formatPrice(item.getPrice()) + "，货款直接转入卖家账户，买下后该商品即下架。");
+        content.setWrapText(true);
+        content.setStyle("-fx-font-size: 13px;");
+        confirm.getDialogPane().setContent(content);
+        confirm.getDialogPane().setPrefWidth(460.0);
         Optional<ButtonType> result = confirm.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
             doBuy(item);
@@ -433,7 +456,11 @@ public class SecondHandPanel extends VBox {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("确认下架");
         confirm.setHeaderText(null);
-        confirm.setContentText("确定下架「" + item.getTitle() + "」吗？");
+        Label content = new Label("确定下架「" + item.getTitle() + "」吗？");
+        content.setWrapText(true);
+        content.setStyle("-fx-font-size: 13px;");
+        confirm.getDialogPane().setContent(content);
+        confirm.getDialogPane().setPrefWidth(400.0);
         Optional<ButtonType> result = confirm.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
             THREAD_POOL.execute(() -> {
@@ -452,6 +479,250 @@ public class SecondHandPanel extends VBox {
                 }
             });
         }
+    }
+
+    /**
+     * 判断当前用户是否为管理员。
+     */
+    private boolean isAdmin() {
+        return currentUser != null && currentUser.getRole() == UserRole.ADMIN;
+    }
+
+    /**
+     * 状态码转中文标签。
+     */
+    private String statusLabel(String status) {
+        if (status == null) {
+            return "未知";
+        }
+        switch (status) {
+            case "PENDING":
+                return "待审核";
+            case "ON_SALE":
+                return "在售";
+            case "SOLD":
+                return "已售/已下架";
+            case "REJECTED":
+                return "审核未通过";
+            default:
+                return status;
+        }
+    }
+
+    /**
+     * 根据状态返回徽标样式类。
+     */
+    private String statusBadgeClass(String status) {
+        switch (status == null ? "" : status) {
+            case "ON_SALE":
+                return "shop-card-badge-on";
+            case "PENDING":
+                return "shop-card-badge-pending";
+            case "REJECTED":
+                return "shop-card-badge-rejected";
+            case "SOLD":
+            default:
+                return "shop-card-badge-off";
+        }
+    }
+
+    /**
+     * 管理员审核入口：弹出待审核商品列表，可逐条通过/拒绝。
+     */
+    private void openReviewDialog() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("审核二手商品");
+        dialog.setHeaderText("待审核的商品，通过后即可上架");
+        dialog.getDialogPane().getStylesheets().addAll(getStylesheets());
+        dialog.getDialogPane().getButtonTypes().add(new ButtonType("关闭", ButtonBar.ButtonData.CANCEL_CLOSE));
+
+        VBox listBox = new VBox(8.0);
+        listBox.setPadding(new Insets(12.0));
+        listBox.setPrefWidth(560.0);
+        Label loading = new Label("加载中…");
+        loading.getStyleClass().add("lib-subtitle");
+        listBox.getChildren().add(loading);
+        dialog.getDialogPane().setContent(listBox);
+        dialog.getDialogPane().setPrefWidth(560.0);
+        dialog.getDialogPane().setMinWidth(560.0);
+
+        THREAD_POOL.execute(() -> {
+            try {
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.SECOND_HAND_PENDING_LIST, null, null);
+                Message response = socketClient.send(request);
+                Platform.runLater(() -> {
+                    listBox.getChildren().clear();
+                    if (response != null && response.getCode() == ResponseCode.SUCCESS
+                            && response.getData() instanceof List) {
+                        @SuppressWarnings("unchecked")
+                        List<SecondHandVO> items = (List<SecondHandVO>) response.getData();
+                        if (items == null || items.isEmpty()) {
+                            Label empty = new Label("暂无待审核商品");
+                            empty.getStyleClass().add("lib-subtitle");
+                            listBox.getChildren().add(empty);
+                        } else {
+                            for (SecondHandVO item : items) {
+                                listBox.getChildren().add(buildReviewRow(item, listBox));
+                            }
+                        }
+                    } else {
+                        listBox.getChildren().add(new Label(errorText(response, "加载失败")));
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    listBox.getChildren().clear();
+                    listBox.getChildren().add(new Label("网络错误: " + e.getMessage()));
+                });
+            }
+        });
+
+        dialog.showAndWait();
+    }
+
+    /**
+     * 构建单条待审核商品行（含通过/拒绝按钮）。
+     */
+    private Node buildReviewRow(SecondHandVO item, VBox listBox) {
+        HBox row = new HBox(10.0);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.getStyleClass().add("profile-card");
+        row.setPadding(new Insets(10.0));
+
+        VBox infoBox = new VBox(3.0);
+        Label title = new Label(item.getTitle() == null ? "" : item.getTitle());
+        title.getStyleClass().add("shop-card-name");
+        title.setWrapText(true);
+        Label meta = new Label("卖家 " + (item.getSellerName() == null ? "" : item.getSellerName())
+                + " · " + formatPrice(item.getPrice())
+                + (item.getDescription() == null || item.getDescription().isEmpty()
+                        ? "" : " · " + item.getDescription()));
+        meta.getStyleClass().add("lib-subtitle");
+        meta.setWrapText(true);
+        infoBox.getChildren().addAll(title, meta);
+        HBox.setHgrow(infoBox, Priority.ALWAYS);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button approveBtn = new Button("通过");
+        approveBtn.getStyleClass().add("btn-primary-action");
+        approveBtn.setOnAction(e -> doReview(item.getId(), true, row, listBox));
+
+        Button rejectBtn = new Button("拒绝");
+        rejectBtn.getStyleClass().add("lib-btn-danger");
+        rejectBtn.setOnAction(e -> doReview(item.getId(), false, row, listBox));
+
+        row.getChildren().addAll(infoBox, spacer, approveBtn, rejectBtn);
+        return row;
+    }
+
+    /**
+     * 提交审核结果（通过/拒绝）。
+     */
+    private void doReview(Integer id, boolean approve, Node row, VBox listBox) {
+        THREAD_POOL.execute(() -> {
+            try {
+                SecondHandVO vo = new SecondHandVO();
+                vo.setId(id);
+                vo.setStatus(approve ? "APPROVE" : "REJECT");
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.SECOND_HAND_REVIEW, null, vo);
+                Message response = socketClient.send(request);
+                Platform.runLater(() -> {
+                    if (response != null && response.getCode() == ResponseCode.SUCCESS) {
+                        listBox.getChildren().remove(row);
+                        if (listBox.getChildren().isEmpty()) {
+                            Label empty = new Label("已处理完毕，暂无待审核商品");
+                            empty.getStyleClass().add("lib-subtitle");
+                            listBox.getChildren().add(empty);
+                        }
+                        refresh();
+                    } else {
+                        showAlert("审核失败", errorText(response, "审核失败，请稍后重试"), Alert.AlertType.ERROR);
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
+            }
+        });
+    }
+
+    /**
+     * 我的发布入口：查看自己发布的商品及审核/交易状态。
+     */
+    private void openMyListDialog() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("我的发布");
+        dialog.setHeaderText("我发布的二手商品及状态");
+        dialog.getDialogPane().getStylesheets().addAll(getStylesheets());
+        dialog.getDialogPane().getButtonTypes().add(new ButtonType("关闭", ButtonBar.ButtonData.CANCEL_CLOSE));
+
+        VBox listBox = new VBox(8.0);
+        listBox.setPadding(new Insets(12.0));
+        Label loading = new Label("加载中…");
+        loading.getStyleClass().add("lib-subtitle");
+        listBox.getChildren().add(loading);
+        dialog.getDialogPane().setContent(listBox);
+
+        THREAD_POOL.execute(() -> {
+            try {
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.SECOND_HAND_MY_LIST, null, null);
+                Message response = socketClient.send(request);
+                Platform.runLater(() -> {
+                    listBox.getChildren().clear();
+                    if (response != null && response.getCode() == ResponseCode.SUCCESS
+                            && response.getData() instanceof List) {
+                        @SuppressWarnings("unchecked")
+                        List<SecondHandVO> items = (List<SecondHandVO>) response.getData();
+                        if (items == null || items.isEmpty()) {
+                            Label empty = new Label("你还没有发布过商品");
+                            empty.getStyleClass().add("lib-subtitle");
+                            listBox.getChildren().add(empty);
+                        } else {
+                            for (SecondHandVO item : items) {
+                                listBox.getChildren().add(buildMyListRow(item));
+                            }
+                        }
+                    } else {
+                        listBox.getChildren().add(new Label(errorText(response, "加载失败")));
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    listBox.getChildren().clear();
+                    listBox.getChildren().add(new Label("网络错误: " + e.getMessage()));
+                });
+            }
+        });
+
+        dialog.showAndWait();
+    }
+
+    /**
+     * 构建单条“我的发布”行（含状态徽标）。
+     */
+    private Node buildMyListRow(SecondHandVO item) {
+        HBox row = new HBox(10.0);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.getStyleClass().add("profile-card");
+        row.setPadding(new Insets(10.0));
+
+        VBox infoBox = new VBox(3.0);
+        Label title = new Label(item.getTitle() == null ? "" : item.getTitle());
+        title.getStyleClass().add("shop-card-name");
+        Label meta = new Label("定价 " + formatPrice(item.getPrice())
+                + " · 发布于 " + (item.getCreatedTime() == null ? "" : item.getCreatedTime()));
+        meta.getStyleClass().add("lib-subtitle");
+        infoBox.getChildren().addAll(title, meta);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label statusBadge = new Label(statusLabel(item.getStatus()));
+        statusBadge.getStyleClass().addAll("shop-card-badge", statusBadgeClass(item.getStatus()));
+
+        row.getChildren().addAll(infoBox, spacer, statusBadge);
+        return row;
     }
 
     private String errorText(Message response, String fallback) {
@@ -484,7 +755,11 @@ public class SecondHandPanel extends VBox {
         Alert alert = new Alert(type);
         alert.setTitle(title);
         alert.setHeaderText(null);
-        alert.setContentText(content);
+        Label body = new Label(content);
+        body.setWrapText(true);
+        body.setStyle("-fx-font-size: 13px;");
+        alert.getDialogPane().setContent(body);
+        alert.getDialogPane().setPrefWidth(420.0);
         alert.showAndWait();
     }
 

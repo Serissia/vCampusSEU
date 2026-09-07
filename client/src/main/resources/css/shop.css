@@ -208,6 +208,16 @@
     -fx-background-color: -fx-bg-nav;
 }
 
+.shop-card-badge-pending {
+    -fx-text-fill: #B7791F;
+    -fx-background-color: #FDF0D8;
+}
+
+.shop-card-badge-rejected {
+    -fx-text-fill: -fx-danger;
+    -fx-background-color: #FDE8E7;
+}
+
 /* ========== 商品上下架状态标签（旧 TableView 残留兼容） ========== */
 .status-on-shelf {
     -fx-text-fill: -fx-primary;
@@ -384,8 +394,8 @@
 }
 /* ===================== 商品卡片“加入购物车”按钮 ===================== */
 .shop-card-add {
-    -fx-background-color: #4A6CF7;
-    -fx-text-fill: #FFFFFF;
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: -fx-bg-surface;
     -fx-background-radius: 6px;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
@@ -396,11 +406,11 @@
 }
 
 .shop-card-add:hover {
-    -fx-background-color: #3B5BDB;
+    -fx-background-color: -fx-primary-hover;
 }
 
 .shop-card-add:pressed {
-    -fx-background-color: #2F4BC4;
+    -fx-background-color: -fx-primary-pressed;
 }
 
 .shop-card-add:disabled {

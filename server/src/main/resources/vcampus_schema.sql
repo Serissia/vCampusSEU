@@ -204,12 +204,28 @@ CREATE TABLE `tbl_second_hand` (
     `title` VARCHAR(64) NOT NULL COMMENT '商品标题',
     `description` VARCHAR(255) DEFAULT NULL COMMENT '商品描述',
     `price` DECIMAL(10, 2) NOT NULL COMMENT '定价',
-    `status` VARCHAR(16) NOT NULL DEFAULT 'ON_SALE' COMMENT '状态: ON_SALE 在售, SOLD 已售/已下架',
+    `status` VARCHAR(16) NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING 待审核, ON_SALE 在售, SOLD 已售/已下架, REJECTED 审核拒绝',
     `created_time` VARCHAR(32) NOT NULL COMMENT '发布时间 (yyyy-MM-dd HH:mm:ss)',
     PRIMARY KEY (`id`),
     KEY `idx_sh_status` (`status`),
     CONSTRAINT `fk_sh_seller` FOREIGN KEY (`seller_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='校园二手市场商品表';
+
+-- 9.2 二手交易订单表 (tbl_second_hand_order)
+CREATE TABLE `tbl_second_hand_order` (
+    `order_id` VARCHAR(64) NOT NULL COMMENT '订单流水号',
+    `buyer_id` VARCHAR(32) NOT NULL COMMENT '买家一卡通号',
+    `seller_id` VARCHAR(32) NOT NULL COMMENT '卖家一卡通号',
+    `item_id` INT NOT NULL COMMENT '二手商品 ID',
+    `title` VARCHAR(64) NOT NULL COMMENT '商品标题快照',
+    `price` DECIMAL(10, 2) NOT NULL COMMENT '成交价',
+    `order_time` VARCHAR(32) NOT NULL COMMENT '成交时间 (yyyy-MM-dd HH:mm:ss)',
+    PRIMARY KEY (`order_id`),
+    KEY `idx_sho_buyer` (`buyer_id`),
+    KEY `idx_sho_seller` (`seller_id`),
+    CONSTRAINT `fk_sho_buyer` FOREIGN KEY (`buyer_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE,
+    CONSTRAINT `fk_sho_seller` FOREIGN KEY (`seller_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='二手交易订单记录表';
 
 -- 10. 教务处公告表 (tbl_notice)
 CREATE TABLE `tbl_notice` (

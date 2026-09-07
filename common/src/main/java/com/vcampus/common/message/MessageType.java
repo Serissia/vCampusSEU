@@ -136,6 +136,12 @@ public enum MessageType implements Serializable {
     SECOND_HAND_PUBLISH,
     SECOND_HAND_OFF_SHELF,
     SECOND_HAND_BUY,
+    /** 我的发布（学生查看自己发布的二手商品及审核状态） */
+    SECOND_HAND_MY_LIST,
+    /** 待审核商品列表（管理员） */
+    SECOND_HAND_PENDING_LIST,
+    /** 审核二手商品（管理员通过/拒绝） */
+    SECOND_HAND_REVIEW,
 
     /** 教务公告检索 */
     NOTICE_QUERY,

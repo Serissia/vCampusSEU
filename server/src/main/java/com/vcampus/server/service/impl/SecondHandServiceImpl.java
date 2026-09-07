@@ -2,6 +2,7 @@ package com.vcampus.server.service.impl;
 
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.util.DateUtil;
+import com.vcampus.common.vo.OrderVO;
 import com.vcampus.common.vo.SecondHandVO;
 import com.vcampus.common.vo.UserVO;
 import com.vcampus.server.dao.ISecondHandDao;
@@ -16,6 +17,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 校园二手市场业务实现。
@@ -37,6 +39,24 @@ public class SecondHandServiceImpl implements ISecondHandService {
     }
 
     @Override
+    public List<SecondHandVO> listPending() {
+        try {
+            return secondHandDao.listPending();
+        } catch (SQLException e) {
+            throw new RuntimeException("查询待审核商品失败", e);
+        }
+    }
+
+    @Override
+    public List<SecondHandVO> listMine(String uid) {
+        try {
+            return secondHandDao.listBySeller(uid == null ? "" : uid.trim());
+        } catch (SQLException e) {
+            throw new RuntimeException("查询我的发布失败", e);
+        }
+    }
+
+    @Override
     public ResponseCode publish(String uid, SecondHandVO vo) {
         try {
             if (uid == null || vo == null || vo.getTitle() == null || vo.getTitle().trim().isEmpty()
@@ -50,7 +70,7 @@ public class SecondHandServiceImpl implements ISecondHandService {
             vo.setSellerId(uid.trim());
             vo.setSellerName(seller.getName() == null ? uid.trim() : seller.getName());
             vo.setTitle(vo.getTitle().trim());
-            vo.setStatus("ON_SALE");
+            vo.setStatus("PENDING");
             vo.setCreatedTime(DateUtil.format(new Date()));
             return secondHandDao.insert(vo) ? ResponseCode.SUCCESS : ResponseCode.FAIL;
         } catch (SQLException e) {
@@ -66,6 +86,20 @@ public class SecondHandServiceImpl implements ISecondHandService {
                 return ResponseCode.INVALID_REQUEST;
             }
             return secondHandDao.offShelf(uid.trim(), id) ? ResponseCode.SUCCESS : ResponseCode.FAIL;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return ResponseCode.FAIL;
+        }
+    }
+
+    @Override
+    public ResponseCode review(String uid, Integer id, boolean approve) {
+        try {
+            if (id == null) {
+                return ResponseCode.INVALID_REQUEST;
+            }
+            String targetStatus = approve ? "ON_SALE" : "REJECTED";
+            return secondHandDao.review(id, targetStatus) ? ResponseCode.SUCCESS : ResponseCode.FAIL;
         } catch (SQLException e) {
             e.printStackTrace();
             return ResponseCode.FAIL;
@@ -121,6 +155,22 @@ public class SecondHandServiceImpl implements ISecondHandService {
                 return ResponseCode.SECOND_HAND_SOLD;
             }
 
+            // 写入二手交易订单快照（与货款流转同一事务）
+            OrderVO order = new OrderVO();
+            order.setOrderId(generateOrderId());
+            order.setStudentId(buyerId);
+            order.setSellerId(item.getSellerId());
+            order.setGoodsId(String.valueOf(item.getId()));
+            order.setGoodsName(item.getTitle());
+            order.setCount(1);
+            order.setTotalPrice(price);
+            order.setOrderTime(DateUtil.format(new Date()));
+            order.setOrderType("SECOND_HAND");
+            if (!secondHandDao.insertOrder(conn, order)) {
+                rollback(conn);
+                return ResponseCode.FAIL;
+            }
+
             conn.commit();
             return ResponseCode.SUCCESS;
         } catch (SQLException e) {
@@ -130,6 +180,13 @@ public class SecondHandServiceImpl implements ISecondHandService {
         } finally {
             closeQuietly(conn);
         }
+    }
+
+    /**
+     * 生成二手订单流水号（时间戳 + 随机后缀）。
+     */
+    private String generateOrderId() {
+        return "SHO" + System.currentTimeMillis() + ThreadLocalRandom.current().nextInt(100, 1000);
     }
 
     private void rollback(Connection conn) {
