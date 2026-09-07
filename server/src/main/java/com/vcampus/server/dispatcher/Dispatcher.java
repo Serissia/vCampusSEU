@@ -13,6 +13,7 @@ import com.vcampus.common.vo.GradeVO;
 import com.vcampus.common.vo.OrderVO;
 import com.vcampus.common.vo.PdfPageRequestVO;
 import com.vcampus.common.vo.ResourceFileVO;
+import com.vcampus.common.vo.SecondHandVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
 import com.vcampus.common.vo.NoticeQueryVO;
@@ -26,8 +27,9 @@ import com.vcampus.server.service.ICartService;
 import com.vcampus.server.service.IGoodsService;
 import com.vcampus.server.service.IOrderService;
 import com.vcampus.server.service.PdfRenderService;
-import com.vcampus.server.service.ResourceService;
+import com.vcampus.server.service.ISecondHandService;
 import com.vcampus.server.service.UserService;
+import com.vcampus.server.service.ResourceService;
 import com.vcampus.server.service.NoticeService;
 import com.vcampus.server.service.impl.BookServiceImpl;
 import com.vcampus.server.service.impl.BorrowServiceImpl;
@@ -40,6 +42,7 @@ import com.vcampus.server.service.impl.CartServiceImpl;
 import com.vcampus.server.service.impl.GoodsServiceImpl;
 import com.vcampus.server.service.impl.OrderServiceImpl;
 import com.vcampus.server.service.impl.NoticeServiceImpl;
+import com.vcampus.server.service.impl.SecondHandServiceImpl;
 import com.vcampus.server.service.impl.UserServiceImpl;
 
 import java.math.BigDecimal;
@@ -66,6 +69,7 @@ public class Dispatcher {
     private final IGoodsService goodsService = new GoodsServiceImpl();
     private final IOrderService orderService = new OrderServiceImpl();
     private final ICartService cartService = new CartServiceImpl();
+    private final ISecondHandService secondHandService = new SecondHandServiceImpl();
     private final NoticeService noticeService = new NoticeServiceImpl();
 
     /**
@@ -305,6 +309,19 @@ public class Dispatcher {
                 case ORDER_STATISTICS:
                     response.setData(orderService.getStatistics());
                     response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case SECOND_HAND_QUERY:
+                    response.setData(secondHandService.listOnSale());
+                    response.setCode(ResponseCode.SUCCESS);
+                    break;
+                case SECOND_HAND_PUBLISH:
+                    handleSecondHandPublish(request, response);
+                    break;
+                case SECOND_HAND_OFF_SHELF:
+                    handleSecondHandOffShelf(request, response);
+                    break;
+                case SECOND_HAND_BUY:
+                    handleSecondHandBuy(request, response);
                     break;
                 case BOOK_RESOURCE_UPLOAD:
                     handleResourceUpload(request, response);
@@ -1317,5 +1334,82 @@ public class Dispatcher {
     private void handleNoticeGetStatus(Message request, Message response) {
         response.setData(noticeService.getStatus());
         response.setCode(ResponseCode.SUCCESS);
+    }
+    /**
+     * 处理发布二手商品：负载为 SecondHandVO（title/price/description）。
+     */
+    private void handleSecondHandPublish(Message request, Message response) {
+        if (!(request.getData() instanceof SecondHandVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("发布参数不合法");
+            return;
+        }
+        SecondHandVO vo = (SecondHandVO) request.getData();
+        ResponseCode code = secondHandService.publish(request.getUid(), vo);
+        response.setCode(code);
+        if (code != ResponseCode.SUCCESS) {
+            response.setData("发布失败，请检查标题与定价");
+        }
+    }
+
+    /**
+     * 处理卖家下架自己发布的二手商品：负载为商品 ID。
+     */
+    private void handleSecondHandOffShelf(Message request, Message response) {
+        Integer id = toIntegerId(request.getData());
+        if (id == null) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("商品编号不合法");
+            return;
+        }
+        ResponseCode code = secondHandService.offShelf(request.getUid(), id);
+        response.setCode(code);
+        if (code != ResponseCode.SUCCESS) {
+            response.setData("下架失败，可能不是你的商品或已售出");
+        }
+    }
+
+    /**
+     * 处理购买二手商品：负载为商品 ID。
+     */
+    private void handleSecondHandBuy(Message request, Message response) {
+        Integer id = toIntegerId(request.getData());
+        if (id == null) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("商品编号不合法");
+            return;
+        }
+        ResponseCode code = secondHandService.buy(request.getUid(), id);
+        response.setCode(code);
+        if (code != ResponseCode.SUCCESS) {
+            String msg;
+            if (code == ResponseCode.SECOND_HAND_SOLD) {
+                msg = "该商品已被买走或已下架";
+            } else if (code == ResponseCode.BALANCE_INSUFFICIENT) {
+                msg = "校园卡余额不足，请先充值";
+            } else if (code == ResponseCode.INVALID_REQUEST) {
+                msg = "不能购买自己发布的商品";
+            } else {
+                msg = "购买失败，请稍后重试";
+            }
+            response.setData(msg);
+        }
+    }
+
+    /**
+     * 将负载安全转换为 Integer 商品 ID。
+     */
+    private Integer toIntegerId(Object data) {
+        if (data instanceof Integer) {
+            return (Integer) data;
+        }
+        if (data instanceof String) {
+            try {
+                return Integer.valueOf(((String) data).trim());
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 }

@@ -131,6 +131,12 @@ public enum MessageType implements Serializable {
     /** 订单统计（管理员/卖家） */
     ORDER_STATISTICS,
 
+    /** 校园二手市场 */
+    SECOND_HAND_QUERY,
+    SECOND_HAND_PUBLISH,
+    SECOND_HAND_OFF_SHELF,
+    SECOND_HAND_BUY,
+
     /** 教务公告检索 */
     NOTICE_QUERY,
     /** 手动触发教务公告同步抓取 */

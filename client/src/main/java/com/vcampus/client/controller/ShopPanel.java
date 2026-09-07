@@ -120,10 +120,15 @@ public class ShopPanel extends VBox {
     /** 顶部「订单中心」入口按钮 */
     private Button orderBtn;
 
+    /** 顶部「二手市场」入口按钮 */
+    private Button marketBtn;
+
     /** 主页面（商品浏览）、购物车二级页、订单中心二级页 */
     private VBox mainPage;
     private VBox cartPage;
     private VBox orderPage;
+    /** 二手市场二级页（校园超市内嵌） */
+    private SecondHandPanel secondHandPage;
     /** 三级页面宿主（main / cart / order 互斥显示） */
     private StackPane pageHost;
     /** 购物车二级页控件 */
@@ -167,6 +172,7 @@ public class ShopPanel extends VBox {
         applyRoleMode();
         // 订单中心二级页依赖 currentUser 与角色，必须在 applyRoleMode 之后构建
         buildOrderPageIntoHost();
+        buildSecondHandPageIntoHost();
         refreshGoods("");
         refreshBalance();
         refreshCartBadge();
@@ -218,6 +224,21 @@ public class ShopPanel extends VBox {
         orderPage.setVisible(false);
         orderPage.setManaged(false);
         pageHost.getChildren().add(orderPage);
+    }
+
+    /**
+     * 构建二手市场二级页并挂载到宿主区（依赖 currentUser，须在 initData 中调用）。
+     */
+    private void buildSecondHandPageIntoHost() {
+        if (pageHost == null) {
+            return;
+        }
+        secondHandPage = new SecondHandPanel();
+        secondHandPage.setOnBack(this::showMainPage);
+        secondHandPage.initData(currentUser, mainController);
+        secondHandPage.setVisible(false);
+        secondHandPage.setManaged(false);
+        pageHost.getChildren().add(secondHandPage);
     }
 
     /**
@@ -307,7 +328,12 @@ public class ShopPanel extends VBox {
         orderBtn.setGraphic(SvgIcons.createIcon("receipt", 14.0, "shop-order-icon"));
         orderBtn.setOnAction(e -> openOrderPage());
 
-        headerRow.getChildren().addAll(titleBox, spacer, orderBtn, cartBtn, balanceBox);
+        marketBtn = new Button("二手市场");
+        marketBtn.getStyleClass().add("btn-recharge-preset");
+        marketBtn.setGraphic(SvgIcons.createIcon("store", 14.0, "shop-order-icon"));
+        marketBtn.setOnAction(e -> openSecondHandPage());
+
+        headerRow.getChildren().addAll(titleBox, spacer, marketBtn, orderBtn, cartBtn, balanceBox);
 
         rechargeRow = new HBox(10.0);
         rechargeRow.setAlignment(Pos.CENTER_LEFT);
@@ -1374,6 +1400,27 @@ public class ShopPanel extends VBox {
     }
 
     /**
+     * 打开二手市场二级页并刷新在售列表。
+     */
+    private void openSecondHandPage() {
+        showSecondHandPage();
+        if (secondHandPage != null) {
+            secondHandPage.refresh();
+        }
+    }
+
+    /**
+     * 切换到二手市场二级页。
+     */
+    private void showSecondHandPage() {
+        hideSecondaryPages();
+        if (secondHandPage != null) {
+            secondHandPage.setVisible(true);
+            secondHandPage.setManaged(true);
+        }
+    }
+
+    /**
      * 切换到购物车二级页。
      */
     private void showCartPage() {
@@ -1417,6 +1464,10 @@ public class ShopPanel extends VBox {
         if (orderPage != null) {
             orderPage.setVisible(false);
             orderPage.setManaged(false);
+        }
+        if (secondHandPage != null) {
+            secondHandPage.setVisible(false);
+            secondHandPage.setManaged(false);
         }
         if (mainPage != null) {
             mainPage.setVisible(false);
