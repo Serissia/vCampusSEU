@@ -511,3 +511,47 @@
     -fx-border-width: 1px;
     -fx-padding: 12px;
 }
+
+/* ===================== 二手市场：顶部消息条与子页面 ===================== */
+/* 顶部消息条（替代 Alert，自动 3 秒消失） */
+.secondhand-toast {
+    -fx-background-radius: 6px;
+    -fx-padding: 10px 12px;
+    -fx-font-size: 13px;
+    -fx-text-fill: white;
+    -fx-background-color: -fx-text-muted;
+    -fx-border-radius: 6px;
+}
+
+.secondhand-toast-success { -fx-background-color: #22C55E; }
+.secondhand-toast-info    { -fx-background-color: #3B82F6; }
+.secondhand-toast-warning { -fx-background-color: #F59E0B; }
+.secondhand-toast-error   { -fx-background-color: #F54A45; }
+
+.secondhand-toast-text {
+    -fx-text-fill: white;
+}
+
+.secondhand-toast-close {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-padding: 0 6px;
+    -fx-background-radius: 4px;
+}
+.secondhand-toast-close:hover {
+    -fx-background-color: rgba(255,255,255,0.18);
+}
+
+/* 二手市场子页面（审核/我的发布/发布/确认购买/确认下架） */
+.secondhand-subpage {
+    -fx-padding: 12px 0 0 0;
+}
+
+.secondhand-confirm-price {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+}
