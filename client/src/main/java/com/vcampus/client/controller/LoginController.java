@@ -8,12 +8,16 @@ import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.UserVO;
+import javafx.animation.FadeTransition;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -30,6 +34,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import javafx.util.StringConverter;
 
 import java.io.IOException;
@@ -102,9 +107,29 @@ public class LoginController {
     private ProgressIndicator loadingIndicator;
 
     @FXML
+    private HBox carouselDots;
+
+    /** 左侧背景轮播图资源路径（按顺序循环） */
+    private static final String[] LOGIN_BG_IMAGES = {
+            "/images/login_bg1.JPG",
+            "/images/login_bg2.JPG",
+            "/images/login_bg3.JPG",
+            "/images/login_bg4.JPG"
+    };
+
+    /** 轮播切换间隔 */
+    private static final Duration CAROUSEL_INTERVAL = Duration.seconds(4);
+
+    /** 当前轮播图索引 */
+    private int currentBgIndex = 0;
+
+    /** 轮播定时器 */
+    private Timeline carouselTimeline;
+
+    @FXML
     public void initialize() {
-        // 加载 resources/images/login_bg.jpg 背景图
-        loadImageSafely("/images/login_bg.jpg", bgImageView);
+        // 启动左侧背景轮播
+        startBackgroundCarousel();
 
         setupAccountComboBox();
         loadSavedAccounts();
@@ -369,6 +394,7 @@ public class LoginController {
     }
 
     private void navigateToMainView(UserVO user) {
+        stopBackgroundCarousel();
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/MainView.fxml"));
             Parent root = loader.load();
@@ -422,6 +448,70 @@ public class LoginController {
             }
         } catch (Exception ignored) {
             // 资源未放置时降级为 CSS 背景
+        }
+    }
+
+    /**
+     * 启动左侧背景轮播：定时循环切换背景图并同步指示点。
+     */
+    private void startBackgroundCarousel() {
+        if (LOGIN_BG_IMAGES.length == 0) {
+            return;
+        }
+        // 首屏直接显示第一张，无需淡入
+        loadImageSafely(LOGIN_BG_IMAGES[0], bgImageView);
+        updateCarouselDots(0);
+
+        carouselTimeline = new Timeline(
+                new KeyFrame(CAROUSEL_INTERVAL, e -> {
+                    currentBgIndex = (currentBgIndex + 1) % LOGIN_BG_IMAGES.length;
+                    switchBackground(currentBgIndex);
+                })
+        );
+        carouselTimeline.setCycleCount(Timeline.INDEFINITE);
+        carouselTimeline.play();
+    }
+
+    /**
+     * 淡出旧图 → 载入新图 → 淡入，并更新指示点。
+     */
+    private void switchBackground(int index) {
+        FadeTransition fadeOut = new FadeTransition(Duration.millis(400), bgImageView);
+        fadeOut.setFromValue(1.0);
+        fadeOut.setToValue(0.0);
+        fadeOut.setOnFinished(e -> {
+            loadImageSafely(LOGIN_BG_IMAGES[index], bgImageView);
+            updateCarouselDots(index);
+            FadeTransition fadeIn = new FadeTransition(Duration.millis(400), bgImageView);
+            fadeIn.setFromValue(0.0);
+            fadeIn.setToValue(1.0);
+            fadeIn.play();
+        });
+        fadeOut.play();
+    }
+
+    /**
+     * 停止轮播定时器（进入主界面时调用，避免后台空转）。
+     */
+    private void stopBackgroundCarousel() {
+        if (carouselTimeline != null) {
+            carouselTimeline.stop();
+        }
+    }
+
+    /**
+     * 更新轮播指示点：仅当前项高亮。
+     */
+    private void updateCarouselDots(int activeIndex) {
+        if (carouselDots == null) {
+            return;
+        }
+        for (int i = 0; i < carouselDots.getChildren().size(); i++) {
+            Node dot = carouselDots.getChildren().get(i);
+            dot.getStyleClass().setAll("dot");
+            if (i == activeIndex) {
+                dot.getStyleClass().add("active");
+            }
         }
     }
 }
