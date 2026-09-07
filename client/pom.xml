@@ -44,6 +44,13 @@
             <version>${javafx.version}</version>
         </dependency>
 
+        <!-- JavaFX Swing 互操作，用于将课表节点导出为图片 -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-swing</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+
         <!-- GSON JSON 序列化库 -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
