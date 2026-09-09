@@ -227,6 +227,21 @@ CREATE TABLE `tbl_second_hand_order` (
     CONSTRAINT `fk_sho_seller` FOREIGN KEY (`seller_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='二手交易订单记录表';
 
+-- 9.3 二手商品买卖双方聊天记录表 (tbl_chat_message)
+CREATE TABLE `tbl_chat_message` (
+    `id` INT AUTO_INCREMENT NOT NULL COMMENT '消息ID',
+    `item_id` INT NOT NULL COMMENT '关联的二手商品 ID',
+    `from_uid` VARCHAR(32) NOT NULL COMMENT '发送者一卡通号',
+    `from_name` VARCHAR(32) NOT NULL COMMENT '发送者姓名快照',
+    `to_uid` VARCHAR(32) NOT NULL COMMENT '接收者一卡通号',
+    `content` VARCHAR(500) NOT NULL COMMENT '消息内容',
+    `send_time` VARCHAR(32) NOT NULL COMMENT '发送时间 (yyyy-MM-dd HH:mm:ss)',
+    PRIMARY KEY (`id`),
+    KEY `idx_chat_item` (`item_id`),
+    KEY `idx_chat_from` (`from_uid`),
+    KEY `idx_chat_to` (`to_uid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='二手商品买卖双方聊天记录表';
+
 -- 10. 教务处公告表 (tbl_notice)
 CREATE TABLE `tbl_notice` (
     `id` INT AUTO_INCREMENT NOT NULL COMMENT '公告自增ID',

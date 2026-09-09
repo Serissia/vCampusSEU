@@ -556,3 +556,46 @@
     -fx-font-weight: bold;
     -fx-text-fill: -fx-primary;
 }
+
+/* ===================== 二手市场：聊天与咨询 ===================== */
+/* 卡片右上角「联系卖家 / 咨询」按钮 */
+.secondhand-chat-btn {
+    -fx-background-color: -fx-primary-light;
+    -fx-text-fill: -fx-primary;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 12px;
+    -fx-padding: 3px 10px;
+    -fx-cursor: hand;
+}
+.secondhand-chat-btn:hover {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: white;
+}
+
+/* 聊天气泡 */
+.chat-bubble-name {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.chat-bubble-mine {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: white;
+    -fx-background-radius: 12px;
+    -fx-padding: 8px 12px;
+    -fx-font-size: 13px;
+}
+
+.chat-bubble-other {
+    -fx-background-color: -fx-bg-nav;
+    -fx-text-fill: -fx-text-main;
+    -fx-background-radius: 12px;
+    -fx-padding: 8px 12px;
+    -fx-font-size: 13px;
+}
+
+.chat-bubble-time {
+    -fx-font-size: 10px;
+    -fx-text-fill: -fx-text-disabled;
+}

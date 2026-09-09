@@ -5,6 +5,7 @@ import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.BookVO;
 import com.vcampus.common.vo.CartVO;
+import com.vcampus.common.vo.ChatMessageVO;
 import com.vcampus.common.vo.CourseVO;
 import com.vcampus.common.vo.CourseReviewVO;
 import com.vcampus.common.vo.EbookSubmissionVO;
@@ -28,6 +29,7 @@ import com.vcampus.server.service.IGoodsService;
 import com.vcampus.server.service.IOrderService;
 import com.vcampus.server.service.PdfRenderService;
 import com.vcampus.server.service.ISecondHandService;
+import com.vcampus.server.service.IChatService;
 import com.vcampus.server.service.UserService;
 import com.vcampus.server.service.ResourceService;
 import com.vcampus.server.service.NoticeService;
@@ -43,6 +45,7 @@ import com.vcampus.server.service.impl.GoodsServiceImpl;
 import com.vcampus.server.service.impl.OrderServiceImpl;
 import com.vcampus.server.service.impl.NoticeServiceImpl;
 import com.vcampus.server.service.impl.SecondHandServiceImpl;
+import com.vcampus.server.service.impl.ChatServiceImpl;
 import com.vcampus.server.service.impl.UserServiceImpl;
 
 import java.math.BigDecimal;
@@ -70,6 +73,7 @@ public class Dispatcher {
     private final IOrderService orderService = new OrderServiceImpl();
     private final ICartService cartService = new CartServiceImpl();
     private final ISecondHandService secondHandService = new SecondHandServiceImpl();
+    private final IChatService chatService = new ChatServiceImpl();
     private final NoticeService noticeService = new NoticeServiceImpl();
 
     /**
@@ -340,6 +344,15 @@ public class Dispatcher {
                     break;
                 case SECOND_HAND_REVIEW:
                     handleSecondHandReview(request, response);
+                    break;
+                case CHAT_SEND:
+                    handleChatSend(request, response);
+                    break;
+                case CHAT_HISTORY:
+                    handleChatHistory(request, response);
+                    break;
+                case CHAT_CONVERSATIONS:
+                    handleChatConversations(request, response);
                     break;
                 case BOOK_RESOURCE_UPLOAD:
                     handleResourceUpload(request, response);
@@ -1475,6 +1488,51 @@ public class Dispatcher {
         if (code != ResponseCode.SUCCESS) {
             response.setData("审核失败，商品可能不存在或已被处理");
         }
+    }
+
+    /**
+     * 处理发送聊天消息：负载为 ChatMessageVO（itemId + toUid + content）。
+     */
+    private void handleChatSend(Message request, Message response) {
+        if (!(request.getData() instanceof ChatMessageVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("消息参数不合法");
+            return;
+        }
+        ChatMessageVO vo = (ChatMessageVO) request.getData();
+        ResponseCode code = chatService.send(request.getUid(), vo.getItemId(), vo.getToUid(), vo.getContent());
+        response.setCode(code);
+        if (code != ResponseCode.SUCCESS) {
+            response.setData("发送失败，请检查消息内容");
+        }
+    }
+
+    /**
+     * 处理拉取聊天历史：负载为 ChatMessageVO（itemId + toUid，toUid 为对方）。
+     */
+    private void handleChatHistory(Message request, Message response) {
+        if (!(request.getData() instanceof ChatMessageVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("参数不合法");
+            return;
+        }
+        ChatMessageVO vo = (ChatMessageVO) request.getData();
+        response.setData(chatService.history(vo.getItemId(), request.getUid(), vo.getToUid()));
+        response.setCode(ResponseCode.SUCCESS);
+    }
+
+    /**
+     * 处理卖家查看某商品咨询会话：负载为 ChatMessageVO（仅 itemId）。
+     */
+    private void handleChatConversations(Message request, Message response) {
+        if (!(request.getData() instanceof ChatMessageVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("参数不合法");
+            return;
+        }
+        ChatMessageVO vo = (ChatMessageVO) request.getData();
+        response.setData(chatService.conversations(vo.getItemId(), request.getUid()));
+        response.setCode(ResponseCode.SUCCESS);
     }
 
     /**
