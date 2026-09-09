@@ -18,6 +18,7 @@ import java.awt.SystemTray;
 import java.awt.Toolkit;
 import java.awt.TrayIcon;
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * JavaFX 应用程序主实例
@@ -29,7 +30,20 @@ public class ClientApp extends Application {
     private static boolean trayInitialized = false;
 
     @Override
-    public void start(Stage primaryStage) throws IOException {
+    public void start(Stage primaryStage) throws Exception {
+        try (InputStream iconStream = getClass().getResourceAsStream("/images/comseucampus.png")) {
+            if (iconStream != null) {
+                javafx.scene.image.Image icon = new javafx.scene.image.Image(iconStream);
+                primaryStage.getIcons().add(icon);
+            }
+            else {
+                System.out.println("未能加载应用程序图标，请检查资源路径。");
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LoginView.fxml"));
         Parent root = loader.load();
 

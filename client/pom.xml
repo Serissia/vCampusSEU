@@ -55,7 +55,7 @@
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.2.3</version>
+            <version>5.4.0</version>
         </dependency>
 
         <!-- GSON JSON 序列化库 -->
@@ -88,6 +88,51 @@
                     <!-- 指定客户端的入口类 -->
                     <mainClass>com.vcampus.client.ClientLauncher</mainClass>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>com.akathist.maven.plugins.launch4j</groupId>
+                <artifactId>launch4j-maven-plugin</artifactId>
+                <version>2.4.1</version>
+                <executions>
+                    <execution>
+                        <id>l4j-clui</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>launch4j</goal>
+                        </goals>
+                        <configuration>
+                            <headerType>gui</headerType>
+                            <!-- 生成的 exe 路径与名称 -->
+                            <outfile>${project.build.directory}/vCampusSEU.exe</outfile>
+                            <!-- 指向前面打出来的可执行 jar（通常是 maven-shade-plugin 或 assembly 输出的 fat jar） -->
+                            <jar>${project.build.directory}/${project.build.finalName}.jar</jar>
+                            <errTitle>vCampusSEU 启动错误</errTitle>
+                            <classPath>
+                                <mainClass>com.vcampus.client.ClientApp</mainClass>
+                            </classPath>
+                            <!-- 核心：指定本地外观图标路径（相对于 pom.xml 的路径） -->
+                            <icon>src/main/resources/images/comseucampus.ico</icon>
+                            <!-- JRE 运行环境要求 -->
+                            <jre>
+                                <minVersion>17</minVersion>
+                                <jdkPreference>preferJre</jdkPreference>
+                            </jre>
+                            <!-- 版本信息与文件属性（右键属性可见） -->
+                            <versionInfo>
+                                <fileVersion>1.0</fileVersion>
+                                <txtFileVersion>1.0</txtFileVersion>
+                                <fileDescription>东南大学智慧校园客户端</fileDescription>
+                                <copyright>vCampus Team</copyright>
+                                <productVersion>1.0</productVersion>
+                                <txtProductVersion>1.0</txtProductVersion>
+                                <productName>vCampusSEU</productName>
+                                <internalName>vCampusSEU</internalName>
+                                <originalFilename>vCampusSEU.exe</originalFilename>
+                            </versionInfo>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
