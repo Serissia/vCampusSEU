@@ -13,8 +13,6 @@ import com.vcampus.common.vo.ResourceFileVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
 import javafx.application.Platform;
-import javafx.animation.PauseTransition;
-import javafx.util.Duration;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -24,7 +22,6 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
-import javafx.scene.control.Spinner;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
@@ -40,8 +37,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.shape.Circle;
-import javafx.scene.paint.Paint;
 import javafx.stage.FileChooser;
 
 import java.io.ByteArrayInputStream;
@@ -51,7 +46,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.util.List;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -111,9 +105,7 @@ public class ShopPanel extends VBox {
 
     private Label subtitleLabel;
     private Label balanceValueLabel;
-    private HBox rechargeRow;
     private VBox bottomBar;
-    private TextField rechargeField;
     private TextField searchField;
     private Button addToCartBtn;
 
@@ -286,35 +278,15 @@ public class ShopPanel extends VBox {
     }
 
     /**
-     * 创建购物车按钮图标：优先加载资源目录 /images/cart.png，
-     * 加载失败时回退到内建矢量购物车图标。
-     */
-    private Node createCartIconView() {
-//        try (InputStream is = getClass().getResourceAsStream("/images/cart.png")) {
-//            if (is != null) {
-//                ImageView view = new ImageView(new Image(is));
-//                view.setFitWidth(20.0);
-//                view.setFitHeight(20.0);
-//                view.setPreserveRatio(true);
-//                view.setSmooth(true);
-//                view.getStyleClass().add("shop-cart-icon-img");
-//                return view;
-//            }
-//        } catch (Exception ignored) {
-//            // 资源缺失或解码失败时回退矢量图标
-//        }
-        return SvgIcons.createIcon("cart-shopping", 14.0, "shop-cart-icon");
-    }
-
-    /**
      * 顶部卡片：标题 + 余额徽标 + 在线充值区（所有登录用户可见）。
      */
     private Node buildTopCard() {
-        VBox card = new VBox(14.0);
+        VBox card = new VBox();
         card.getStyleClass().add("profile-card");
 
         HBox headerRow = new HBox(12.0);
         headerRow.setAlignment(Pos.CENTER_LEFT);
+        headerRow.setFillHeight(true);
 
         VBox titleBox = new VBox(4.0);
         Label title = new Label("校园超市");
@@ -336,41 +308,38 @@ public class ShopPanel extends VBox {
 
         cartBtn = new Button("购物车 (0)");
         cartBtn.getStyleClass().add("btn-recharge-preset");
-        cartBtn.setGraphic(createCartIconView());
+        cartBtn.setGraphic(SvgIcons.createIcon("cart-shopping", 20.0, "shop-cart-icon"));
         cartBtn.setOnAction(e -> openCartPage());
+        cartBtn.setMinHeight(46.0);
+        cartBtn.setMaxHeight(Double.MAX_VALUE);
+        cartBtn.setPadding(new Insets(0, 16.0, 0, 16.0));
+        cartBtn.prefHeightProperty().bind(titleBox.heightProperty());
 
         orderBtn = new Button("订单中心");
         orderBtn.getStyleClass().add("btn-recharge-preset");
-        orderBtn.setGraphic(SvgIcons.createIcon("receipt", 14.0, "shop-order-icon"));
+        orderBtn.setGraphic(SvgIcons.createIcon("receipt", 20.0, "shop-order-icon"));
         orderBtn.setOnAction(e -> openOrderPage());
+        orderBtn.setMinHeight(46.0);
+        orderBtn.setMaxHeight(Double.MAX_VALUE);
+        orderBtn.setPadding(new Insets(0, 16.0, 0, 16.0));
+        orderBtn.prefHeightProperty().bind(titleBox.heightProperty());
 
         marketBtn = new Button("二手市场");
         marketBtn.getStyleClass().add("btn-recharge-preset");
-        marketBtn.setGraphic(SvgIcons.createIcon("store", 14.0, "shop-order-icon"));
+        marketBtn.setGraphic(SvgIcons.createIcon("store", 20.0, "shop-order-icon"));
         marketBtn.setOnAction(e -> openSecondHandPage());
+        marketBtn.setMinHeight(46.0);
+        marketBtn.setMaxHeight(Double.MAX_VALUE);
+        marketBtn.setPadding(new Insets(0, 16.0, 0, 16.0));
+        marketBtn.prefHeightProperty().bind(titleBox.heightProperty());
+
+        cartBtn.setMinHeight(46.0);
+        cartBtn.setMaxHeight(Double.MAX_VALUE);
+        cartBtn.setPadding(new Insets(0, 16.0, 0, 16.0));
+        cartBtn.prefHeightProperty().bind(titleBox.heightProperty());
 
         headerRow.getChildren().addAll(titleBox, spacer, marketBtn, orderBtn, cartBtn, balanceBox);
-
-        rechargeRow = new HBox(10.0);
-        rechargeRow.setAlignment(Pos.CENTER_LEFT);
-        Label rechargeCaption = new Label("在线充值:");
-        rechargeCaption.getStyleClass().add("shop-recharge-label");
-
-        Button r50 = buildRechargePreset("+ ¥50", new BigDecimal("50.00"));
-        Button r100 = buildRechargePreset("+ ¥100", new BigDecimal("100.00"));
-        Button r200 = buildRechargePreset("+ ¥200", new BigDecimal("200.00"));
-
-        rechargeField = new TextField();
-        rechargeField.setPromptText("自定义金额");
-        rechargeField.setPrefWidth(120.0);
-        rechargeField.getStyleClass().add("modern-input-field");
-
-        Button rechargeBtn = new Button("充值");
-        rechargeBtn.getStyleClass().add("btn-primary-action");
-        rechargeBtn.setOnAction(e -> handleCustomRecharge());
-
-        rechargeRow.getChildren().addAll(rechargeCaption, r50, r100, r200, rechargeField, rechargeBtn);
-        card.getChildren().addAll(headerRow, rechargeRow);
+        card.getChildren().add(headerRow);
         return card;
     }
 
@@ -648,7 +617,8 @@ public class ShopPanel extends VBox {
         addToCartBtn.getStyleClass().add("shop-btn-buy");
         addToCartBtn.setGraphic(SvgIcons.createIcon("cart-shopping", 14.0, "shop-buy-icon"));
         addToCartBtn.setOnAction(e -> handleBottomAddToCart());
-        addToCartBtn.setDisable(true); // 未选中或数量为 0 时不可用
+        // 未选中或数量为 0 时不可用
+        addToCartBtn.setDisable(true);
 
         bar.getChildren().addAll(searchField, searchBtn, spacer, addToCartBtn);
         return bar;
@@ -765,8 +735,7 @@ public class ShopPanel extends VBox {
                 Message response = socketClient.send(request);
                 Platform.runLater(() -> {
                     if (response != null && response.getCode() == ResponseCode.SUCCESS
-                            && response.getData() instanceof UserVO) {
-                        UserVO fresh = (UserVO) response.getData();
+                            && response.getData() instanceof UserVO fresh) {
                         currentUser.setBalance(fresh.getBalance());
                         updateBalanceDisplay();
                         if (mainController != null) {
@@ -776,71 +745,6 @@ public class ShopPanel extends VBox {
                 });
             } catch (Exception e) {
                 Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
-            }
-        });
-    }
-
-    /**
-     * 处理自定义金额充值输入。
-     */
-    private void handleCustomRecharge() {
-        String text = rechargeField.getText() == null ? "" : rechargeField.getText().trim();
-        if (text.isEmpty()) {
-            showAlert("提示", "请输入充值金额", Alert.AlertType.WARNING);
-            return;
-        }
-        try {
-            BigDecimal amount = new BigDecimal(text);
-            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                showAlert("提示", "充值金额必须大于 0", Alert.AlertType.WARNING);
-                return;
-            }
-            rechargeField.clear();
-            recharge(amount);
-        } catch (NumberFormatException e) {
-            showAlert("错误", "请输入合法的数字金额", Alert.AlertType.ERROR);
-        }
-    }
-
-    /**
-     * 构造快捷充值按钮。
-     */
-    private Button buildRechargePreset(String text, BigDecimal amount) {
-        Button btn = new Button(text);
-        btn.getStyleClass().add("btn-recharge-preset");
-        btn.setOnAction(e -> recharge(amount));
-        return btn;
-    }
-
-    /**
-     * 执行在线充值（异步发起 PAYMENT_RECHARGE 请求）。
-     */
-    private void recharge(BigDecimal amount) {
-        THREAD_POOL.execute(() -> {
-            try {
-                Message request = new Message(currentUser.getAccountNumber(), MessageType.PAYMENT_RECHARGE, null, amount);
-                Message response = socketClient.send(request);
-                Platform.runLater(() -> {
-                    if (response != null && response.getCode() == ResponseCode.SUCCESS
-                            && response.getData() instanceof UserVO) {
-                        UserVO fresh = (UserVO) response.getData();
-                        currentUser.setBalance(fresh.getBalance());
-                        updateBalanceDisplay();
-                        if (mainController != null) {
-                            mainController.updateBalance(fresh.getBalance());
-                        }
-                        showAlert("充值成功",
-                                "成功充值 ¥ " + amount.setScale(2, RoundingMode.HALF_UP).toPlainString()
-                                        + "，当前余额 ¥ " + fresh.getBalance().setScale(2, RoundingMode.HALF_UP).toPlainString(),
-                                Alert.AlertType.INFORMATION);
-                    } else {
-                        String errMsg = (response != null && response.getData() instanceof String)
-                                ? (String) response.getData() : "充值请求被服务器拒绝";
-                        showAlert("充值失败", errMsg, Alert.AlertType.ERROR);
-                    }
-                });
-            } catch (Exception e) {
-                Platform.runLater(() -> showAlert("网络错误", "无法连接服务器，充值失败: " + e.getMessage(), Alert.AlertType.ERROR));
             }
         });
     }
@@ -1161,8 +1065,7 @@ public class ShopPanel extends VBox {
                     Message upResponse = socketClient.send(upload);
                     Platform.runLater(() -> {
                         if (upResponse != null && upResponse.getCode() == ResponseCode.SUCCESS
-                                && upResponse.getData() instanceof String) {
-                            String newName = (String) upResponse.getData();
+                                && upResponse.getData() instanceof String newName) {
                             goods.setImage(newName);
                             // 替换旧图时，待更新成功后由 submitGoods 内部删除服务端旧图
                             submitGoods(type, goods, successMsg, isEdit ? originalImage : null);

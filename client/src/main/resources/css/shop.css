@@ -299,6 +299,7 @@
 /* ===================== 购物车 ===================== */
 .shop-cart-icon {
     -fx-fill: -fx-text-muted;
+    -fx-fill: -fx-primary;
 }
 
 .btn-recharge-preset:hover .shop-cart-icon {
