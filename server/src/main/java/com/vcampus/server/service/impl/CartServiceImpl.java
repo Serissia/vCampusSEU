@@ -21,9 +21,6 @@ import java.util.List;
  */
 public class CartServiceImpl implements ICartService {
 
-    /** 购物车单个商品数量上限 */
-    private static final int MAX_PER_ITEM = 99;
-
     private final ICartDao cartDao = new CartDaoImpl();
     private final IGoodsDao goodsDao = new GoodsDaoImpl();
 
@@ -41,8 +38,16 @@ public class CartServiceImpl implements ICartService {
             if (goods == null || goods.getStatus() == null || !"ON_SHELF".equals(goods.getStatus())) {
                 return ResponseCode.GOODS_NOT_FOUND;
             }
-            boolean ok = cartDao.addOrIncrease(studentId.trim(), goodsId.trim(),
-                    Math.min(count, MAX_PER_ITEM), DateUtil.format(new Date()));
+            // 累计数量不得超过库存（同时受单商品上限约束），防止“先加少量、再加大额”造成溢出
+            int existing = cartDao.findCount(studentId.trim(), goodsId.trim());
+            int totalCap = goods.getStock();
+            if (existing >= totalCap) {
+                return ResponseCode.GOODS_STOCK_INSUFFICIENT;
+            }
+            if (count > totalCap - existing) {
+                return ResponseCode.GOODS_STOCK_INSUFFICIENT;
+            }
+            boolean ok = cartDao.addOrIncrease(studentId.trim(), goodsId.trim(), count, DateUtil.format(new Date()));
             return ok ? ResponseCode.SUCCESS : ResponseCode.FAIL;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -71,8 +76,13 @@ public class CartServiceImpl implements ICartService {
             if (studentId == null || goodsId == null || goodsId.trim().isEmpty() || count <= 0) {
                 return ResponseCode.INVALID_REQUEST;
             }
-            boolean ok = cartDao.updateCount(studentId.trim(), goodsId.trim(),
-                    Math.min(count, MAX_PER_ITEM));
+            // 数量同样不得超过库存上限
+            GoodsVO goods = goodsDao.findById(goodsId.trim());
+            int totalCap = goods == null ? 0 : goods.getStock();
+            if (count > totalCap) {
+                return ResponseCode.GOODS_STOCK_INSUFFICIENT;
+            }
+            boolean ok = cartDao.updateCount(studentId.trim(), goodsId.trim(), count);
             return ok ? ResponseCode.SUCCESS : ResponseCode.FAIL;
         } catch (SQLException e) {
             e.printStackTrace();

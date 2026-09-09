@@ -1276,8 +1276,12 @@ public class Dispatcher {
         String goodsId = cart.getGoodsId() == null ? "" : cart.getGoodsId();
         ResponseCode code = cartService.addItem(request.getUid(), goodsId, cart.getCount());
         response.setCode(code);
-        if (code != ResponseCode.SUCCESS) {
-            response.setData("加入购物车失败，商品可能不存在或已下架");
+        if (code == ResponseCode.GOODS_STOCK_INSUFFICIENT) {
+            response.setData("加入失败：已达该商品库存上限（含购物车已有数量）");
+        } else if (code == ResponseCode.GOODS_NOT_FOUND) {
+            response.setData("商品不存在或已下架");
+        } else if (code != ResponseCode.SUCCESS) {
+            response.setData("加入购物车失败，请稍后重试");
         }
     }
 

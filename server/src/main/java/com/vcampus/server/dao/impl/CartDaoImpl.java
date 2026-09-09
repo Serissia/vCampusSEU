@@ -42,6 +42,22 @@ public class CartDaoImpl implements ICartDao {
     }
 
     /**
+     * 查询某商品在购物车中已有的数量。
+     */
+    @Override
+    public int findCount(String studentId, String goodsId) throws SQLException {
+        String sql = "SELECT COALESCE(SUM(count), 0) FROM tbl_cart WHERE student_id = ? AND goods_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, studentId);
+            ps.setString(2, goodsId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    /**
      * 更新某条目的数量。
      */
     @Override
