@@ -115,17 +115,20 @@ public class ShopPanel extends VBox {
     private VBox bottomBar;
     private TextField rechargeField;
     private TextField searchField;
-    private Button viewCartBtn;
+    private Button addToCartBtn;
 
-    /** 每张商品卡的数量步进状态（goodsId -> state），初始/最小 0，与购物车实时同步 */
+    /** 商品卡数量状态（goodsId -> state），供底部「加入购物车」读取选中卡片数量 */
     private final Map<String, CardQtyState> cardQtyStates = new ConcurrentHashMap<>();
 
-    /** 商品卡数量步进状态 */
+    /** 各商品已在购物车中的数量（goodsId -> count），用于计算剩余可加购上限 */
+    private final Map<String, Integer> inCartCounts = new ConcurrentHashMap<>();
+
+    /** 商品卡数量状态：可输入文本框 + −/+，最小 0 */
     private static final class CardQtyState {
         String goodsId;
-        int count = 0;
-        int max = 1;
-        Label countLabel;
+        int stock = 1;
+        int max = 1; // 剩余可加购上限 = stock - 已加购数量
+        TextField qtyField;
         Button minusBtn;
         Button plusBtn;
     }
@@ -605,7 +608,8 @@ public class ShopPanel extends VBox {
                 n.getStyleClass().add("shop-card-selected");
             }
         }
-        // “查看购物车”入口始终可用，不随卡片选中状态变化
+        // 底部「加入购物车」可用性取决于选中卡片数量
+        updateBottomAddEnable();
     }
 
     /**
@@ -616,6 +620,7 @@ public class ShopPanel extends VBox {
         for (Node n : cardFlowPane.getChildren()) {
             n.getStyleClass().remove("shop-card-selected");
         }
+        updateBottomAddEnable();
     }
 
     /**
@@ -639,12 +644,13 @@ public class ShopPanel extends VBox {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        viewCartBtn = new Button("查看购物车");
-        viewCartBtn.getStyleClass().add("shop-btn-buy");
-        viewCartBtn.setGraphic(SvgIcons.createIcon("cart-shopping", 14.0, "shop-buy-icon"));
-        viewCartBtn.setOnAction(e -> openCartPage());
+        addToCartBtn = new Button("加入购物车");
+        addToCartBtn.getStyleClass().add("shop-btn-buy");
+        addToCartBtn.setGraphic(SvgIcons.createIcon("cart-shopping", 14.0, "shop-buy-icon"));
+        addToCartBtn.setOnAction(e -> handleBottomAddToCart());
+        addToCartBtn.setDisable(true); // 未选中或数量为 0 时不可用
 
-        bar.getChildren().addAll(searchField, searchBtn, spacer, viewCartBtn);
+        bar.getChildren().addAll(searchField, searchBtn, spacer, addToCartBtn);
         return bar;
     }
 
@@ -713,7 +719,7 @@ public class ShopPanel extends VBox {
                         @SuppressWarnings("unchecked")
                         List<GoodsVO> goods = (List<GoodsVO>) response.getData();
                         rebuildCards(goods);
-                        refreshCartCounts();
+                        refreshInCartCounts();
                     }
                 });
             } catch (Exception e) {
@@ -746,6 +752,7 @@ public class ShopPanel extends VBox {
 
             }
         }
+        updateBottomAddEnable();
     }
 
     /**
@@ -1194,19 +1201,25 @@ public class ShopPanel extends VBox {
     }
 
     /**
-     * 商品卡片数量步进器：[-][n][+]，初始/最小 0，加减直接同步购物车。
+     * 商品卡片数量输入框：[-][文本框][+]，可直接输入（非法/负数归 0，最小 0）。
+     * 数量由底部「加入购物车」读取（需先选中该卡片）。
      */
     private Node buildCardCartControl(GoodsVO goods) {
         boolean offShelf = goods.getStatus() == null || "OFF_SHELF".equals(goods.getStatus());
         boolean soldOut = !offShelf && goods.getStock() <= 0;
         if (offShelf || soldOut) {
-            return buildCardAddButton(goods);
+            Button disabled = new Button(offShelf ? "已下架" : "已售罄");
+            disabled.getStyleClass().add("shop-card-add");
+            disabled.setMaxWidth(Double.MAX_VALUE);
+            disabled.setMinHeight(28.0);
+            disabled.setDisable(true);
+            return disabled;
         }
 
         CardQtyState st = new CardQtyState();
         st.goodsId = goods.getGoodsId();
-        st.max = Math.max(1, Math.min(99, goods.getStock()));
-        st.count = 0;
+        st.stock = Math.max(1, goods.getStock());
+        st.max = st.stock;
 
         HBox row = new HBox(6.0);
         row.setAlignment(Pos.CENTER);
@@ -1215,80 +1228,118 @@ public class ShopPanel extends VBox {
         st.minusBtn = new Button("−");
         st.minusBtn.getStyleClass().add("shop-cart-step");
 
-        st.countLabel = new Label("0");
-        st.countLabel.getStyleClass().add("shop-cart-count");
+        st.qtyField = new TextField("0");
+        st.qtyField.getStyleClass().add("modern-input-field");
+        st.qtyField.setPrefWidth(46.0);
+        st.qtyField.setMaxWidth(60.0);
+        st.qtyField.setAlignment(Pos.CENTER);
+        st.qtyField.setTextFormatter(new javafx.scene.control.TextFormatter<String>((change) ->
+                change.getControlNewText().matches("\\d{0,3}") ? change : null));
 
         st.plusBtn = new Button("+");
         st.plusBtn.getStyleClass().add("shop-cart-step");
 
-        st.minusBtn.setOnAction(e -> changeCardQty(goods, st, -1));
-        st.plusBtn.setOnAction(e -> changeCardQty(goods, st, 1));
+        st.minusBtn.setOnAction(e -> {
+            commitQtyField(st);
+            setQty(st, parseQty(st) - 1);
+        });
+        st.plusBtn.setOnAction(e -> {
+            commitQtyField(st);
+            setQty(st, parseQty(st) + 1);
+        });
+        st.qtyField.setOnAction(e -> commitQtyField(st));
+        st.qtyField.focusedProperty().addListener((obs, was, is) -> {
+            if (!is) {
+                commitQtyField(st);
+            }
+        });
+        st.qtyField.textProperty().addListener((obs, o, n) -> {
+            if (n != null && n.matches("\\d+")) {
+                int typed = Integer.parseInt(n);
+                if (typed > st.max) {
+                    st.qtyField.setText(String.valueOf(st.max));
+                    return;
+                }
+            }
+            updateQtyControls(st);
+            updateBottomAddEnable();
+        });
 
-        applyCardQtyState(st);
-        row.getChildren().addAll(st.minusBtn, st.countLabel, st.plusBtn);
+        row.getChildren().addAll(st.minusBtn, st.qtyField, st.plusBtn);
         cardQtyStates.put(goods.getGoodsId(), st);
+        applyCardLimit(st);
         return row;
     }
 
     /**
-     * 步进器加减：直接对该商品在购物车中的数量 +1 / -1（减到 0 时移除该条目）。
+     * 解析数量输入：非法/负数视为 0，超出上限按上限处理。
      */
-    private void changeCardQty(GoodsVO goods, CardQtyState st, int delta) {
-        int target = st.count + delta;
-        if (delta < 0 && target < 0) {
-            return;
+    private int parseQty(CardQtyState st) {
+        int value;
+        try {
+            value = Integer.parseInt(st.qtyField.getText().trim());
+        } catch (NumberFormatException e) {
+            value = 0;
         }
-        if (delta > 0 && target > st.max) {
-            return;
+        if (value < 0) {
+            value = 0;
         }
-        st.minusBtn.setDisable(true);
-        st.plusBtn.setDisable(true);
-        THREAD_POOL.execute(() -> {
-            try {
-                Message request;
-                if (target == 0) {
-                    request = new Message(currentUser.getAccountNumber(), MessageType.CART_REMOVE, null, goods.getGoodsId());
-                } else if (delta < 0) {
-                    CartVO update = new CartVO();
-                    update.setGoodsId(goods.getGoodsId());
-                    update.setCount(target);
-                    request = new Message(currentUser.getAccountNumber(), MessageType.CART_UPDATE, null, update);
-                } else {
-                    CartVO add = new CartVO();
-                    add.setGoodsId(goods.getGoodsId());
-                    add.setCount(1);
-                    request = new Message(currentUser.getAccountNumber(), MessageType.CART_ADD, null, add);
-                }
-                Message response = socketClient.send(request);
-                Platform.runLater(() -> {
-                    if (response != null && response.getCode() == ResponseCode.SUCCESS) {
-                        st.count = target;
-                        refreshCartBadge();
-                    }
-                    applyCardQtyState(st);
-                });
-            } catch (Exception e) {
-                Platform.runLater(() -> applyCardQtyState(st));
-            }
-        });
+        if (value > st.max) {
+            value = st.max;
+        }
+        return value;
     }
 
     /**
-     * 按 st.count 刷新步进器按钮与数字（0 时禁用减号）。
+     * 提交文本框内容（非法输入归一为 0）。
      */
-    private void applyCardQtyState(CardQtyState st) {
-        if (st.countLabel == null) {
-            return;
-        }
-        st.countLabel.setText(String.valueOf(st.count));
-        st.minusBtn.setDisable(st.count <= 0);
-        st.plusBtn.setDisable(st.count >= st.max);
+    private void commitQtyField(CardQtyState st) {
+        int value = parseQty(st);
+        st.qtyField.setText(String.valueOf(value));
+        updateQtyControls(st);
     }
 
     /**
-     * 从服务端同步各卡片已加入购物车的数量（用于进入/刷新后回显）。
+     * 设定数量（0..max）并刷新控件状态。
      */
-    private void refreshCartCounts() {
+    private void setQty(CardQtyState st, int value) {
+        if (value < 0) {
+            value = 0;
+        }
+        if (value > st.max) {
+            value = st.max;
+        }
+        st.qtyField.setText(String.valueOf(value));
+        updateQtyControls(st);
+    }
+
+    /**
+     * 依据当前数量刷新 − / + 的可用状态（0 时禁用减号）。
+     */
+    private void updateQtyControls(CardQtyState st) {
+        int value = parseQty(st);
+        st.minusBtn.setDisable(value <= 0);
+        st.plusBtn.setDisable(value >= st.max);
+    }
+
+    /**
+     * 刷新某卡片剩余可加购上限 = 库存 - 已在购物车数量，并封顶当前输入。
+     */
+    private void applyCardLimit(CardQtyState st) {
+        int inCart = inCartCounts.getOrDefault(st.goodsId, 0);
+        st.max = Math.max(0, st.stock - inCart);
+        int current = parseQty(st);
+        if (current > st.max) {
+            st.qtyField.setText(String.valueOf(st.max));
+        }
+        updateQtyControls(st);
+        updateBottomAddEnable();
+    }
+
+    /**
+     * 拉取购物车中各商品已加购数量，刷新所有卡片上限。
+     */
+    private void refreshInCartCounts() {
         THREAD_POOL.execute(() -> {
             try {
                 Message request = new Message(currentUser.getAccountNumber(), MessageType.CART_QUERY, null, null);
@@ -1300,22 +1351,91 @@ public class ShopPanel extends VBox {
                     }
                     @SuppressWarnings("unchecked")
                     List<CartVO> items = (List<CartVO>) response.getData();
-                    Map<String, Integer> serverCounts = new HashMap<>();
+                    inCartCounts.clear();
                     if (items != null) {
                         for (CartVO item : items) {
-                            serverCounts.put(item.getGoodsId(), item.getCount());
+                            inCartCounts.put(item.getGoodsId(), item.getCount());
                         }
                     }
                     for (CardQtyState st : cardQtyStates.values()) {
-                        Integer serverCount = serverCounts.get(st.goodsId);
-                        st.count = serverCount == null ? 0 : serverCount;
-                        applyCardQtyState(st);
+                        applyCardLimit(st);
                     }
                 });
             } catch (Exception ignored) {
                 // 同步失败不影响浏览
             }
         });
+    }
+    /**
+     * 底部「加入购物车」：一次性将各卡片上 >0 的数量加入购物车，成功后全部复位为 0。
+     */
+    private void handleBottomAddToCart() {
+        final java.util.List<CartVO> toAdd = new java.util.ArrayList<>();
+        for (CardQtyState st : cardQtyStates.values()) {
+            int value = parseQty(st);
+            if (value > 0) {
+                CartVO cart = new CartVO();
+                cart.setGoodsId(st.goodsId);
+                cart.setCount(value);
+                toAdd.add(cart);
+            }
+        }
+        if (toAdd.isEmpty()) {
+            return;
+        }
+        addToCartBtn.setDisable(true);
+        THREAD_POOL.execute(() -> {
+            final java.util.List<CardQtyState> added = new java.util.ArrayList<>();
+            final java.util.Set<String> addedKeys = new java.util.HashSet<>();
+            String failMsg = null;
+            try {
+                for (CartVO cart : toAdd) {
+                    Message request = new Message(currentUser.getAccountNumber(), MessageType.CART_ADD, null, cart);
+                    Message response = socketClient.send(request);
+                    if (response == null || response.getCode() != ResponseCode.SUCCESS) {
+                        failMsg = response != null && response.getData() instanceof String
+                                ? (String) response.getData() : "加购失败，请稍后重试";
+                        break;
+                    }
+                    addedKeys.add(cart.getGoodsId());
+                    inCartCounts.merge(cart.getGoodsId(), cart.getCount(), Integer::sum);
+                }
+            } catch (Exception e) {
+                failMsg = "无法连接服务器，加购失败";
+            }
+            for (CardQtyState st : cardQtyStates.values()) {
+                if (addedKeys.contains(st.goodsId)) {
+                    added.add(st);
+                }
+            }
+            final String msg = failMsg;
+            Platform.runLater(() -> {
+                for (CardQtyState st : added) {
+                    setQty(st, 0);
+                    applyCardLimit(st);
+                }
+                refreshCartBadge();
+                if (msg != null) {
+                    showAlert("加购提示", msg, Alert.AlertType.WARNING);
+                }
+                updateBottomAddEnable();
+            });
+        });
+    }
+    /**
+     * 底部「加入购物车」可用性：任意卡片数量 > 0 即可点击（无需先选中卡片）。
+     */
+    private void updateBottomAddEnable() {
+        boolean enable = false;
+        for (CardQtyState st : cardQtyStates.values()) {
+            if (st.qtyField != null && parseQty(st) > 0) {
+                enable = true;
+                break;
+            }
+        }
+        if (addToCartBtn != null) {
+            addToCartBtn.setDisable(!enable);
+        }
     }    /**
      * 刷新顶部购物车按钮的数量角标（购物车内商品总件数）。
      */

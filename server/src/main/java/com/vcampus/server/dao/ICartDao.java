@@ -19,6 +19,11 @@ public interface ICartDao {
     boolean addOrIncrease(String studentId, String goodsId, int count, String addTime) throws SQLException;
 
     /**
+     * 查询某商品在购物车中已有的数量（无则 0）。
+     */
+    int findCount(String studentId, String goodsId) throws SQLException;
+
+    /**
      * 更新某条目的数量。
      */
     boolean updateCount(String studentId, String goodsId, int count) throws SQLException;
