@@ -1824,6 +1824,7 @@ public class ShopPanel extends VBox {
                         showAlert("更新失败", cartErrorText(response), Alert.AlertType.ERROR);
                     }
                     refreshCartBadge();
+                    refreshInCartCounts();
                     reloadCartPage();
                 });
             } catch (Exception e) {
@@ -1845,6 +1846,7 @@ public class ShopPanel extends VBox {
                         showAlert("移除失败", cartErrorText(response), Alert.AlertType.ERROR);
                     }
                     refreshCartBadge();
+                    refreshInCartCounts();
                     reloadCartPage();
                 });
             } catch (Exception e) {
@@ -1869,6 +1871,7 @@ public class ShopPanel extends VBox {
                     socketClient.send(request);
                     Platform.runLater(() -> {
                         refreshCartBadge();
+                        refreshInCartCounts();
                         reloadCartPage();
                     });
                 } catch (Exception e) {
