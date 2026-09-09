@@ -52,6 +52,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
@@ -85,6 +86,9 @@ public class AcademicViewController {
     private static final String DOC_CLIP_PATH = "M370.368 275.756V255.233H412.277V275.756C412.28 289.891 423.731 301.347 437.868 301.347H590.663C604.8 301.347 616.273 289.891 616.277 275.756V255.233H658.163V275.756C658.16 313.027 627.935 343.233 590.663 343.233H437.868C400.595 343.233 370.371 313.027 370.368 275.756Z";
     private static final String DOC_LINE1_PATH = "M597.836 442.382C609.401 442.385 618.768 451.771 618.768 463.337C618.768 474.903 609.401 484.288 597.836 484.291H426.45C414.882 484.291 405.495 474.904 405.495 463.337C405.495 451.769 414.882 442.382 426.45 442.382H597.836Z";
     private static final String DOC_LINE2_PATH = "M499.904 569.593C511.469 569.596 520.836 578.982 520.836 590.548C520.836 602.114 511.469 611.499 499.904 611.502H426.45C414.882 611.502 405.495 602.115 405.495 590.548C405.495 578.98 414.882 569.593 426.45 569.593H499.904Z";
+    private static final String ICON_CHECK_PATH = "M511.974401 0c-282.75527 0-511.974401 229.219131-511.974401 511.974401 0 282.757318 229.219131 511.974401 511.974401 511.974401 282.757318 0 511.974401-229.217083 511.974401-511.974401C1023.948803 229.219131 794.729672 0 511.974401 0zM805.63063 379.174385 474.510162 710.296901c0 0-0.004096 0.004096-0.010239 0.010239-15.265029 15.269125-38.541433 17.652877-56.31104 7.157402-3.290971-1.945503-6.393536-4.333351-9.219635-7.157402-0.002048-0.004096-0.006144-0.006144-0.006144-0.006144l-190.642884-190.642884c-18.095223-18.095223-18.095223-47.4375 0-65.536819 18.095223-18.095223 47.4375-18.095223 65.532723 0l157.884714 157.884714 298.362298-298.362298c18.097271-18.095223 47.439548-18.095223 65.534771 0C823.725854 331.738933 823.725854 361.079162 805.63063 379.174385z";
+    private static final String ICON_ERROR_PATH = "M957.6 872l-432-736c-6.4-10.4-21.6-10.4-27.2 0l-432 736c-6.4 10.4 1.6 24 13.6 24h864c12 0 20-13.6 13.6-24z m-416-104h-64v-64h64v64z m-63.2-128V384h64v256h-64z";
+    private static final String ICON_INFO_PATH = "M514.048 54.272q95.232 0 178.688 36.352t145.92 98.304 98.304 145.408 35.84 178.688-35.84 178.176-98.304 145.408-145.92 98.304-178.688 35.84-178.176-35.84-145.408-98.304-98.304-145.408-35.84-178.176 35.84-178.688 98.304-145.408 145.408-98.304 178.176-36.352zM515.072 826.368q26.624 0 44.544-17.92t17.92-43.52q0-26.624-17.92-44.544t-44.544-17.92-44.544 17.92-17.92 44.544q0 25.6 17.92 43.52t44.544 17.92zM567.296 574.464q-1.024-16.384 20.48-34.816t48.128-40.96 49.152-50.688 24.576-65.024q2.048-39.936-8.192-74.752t-33.792-59.904-60.928-39.936-87.552-14.848q-62.464 0-103.936 22.016t-67.072 53.248-35.84 64.512-9.216 55.808q1.024 26.624 16.896 38.912t34.304 12.8 33.792-10.24 15.36-31.232q0-12.288 7.68-30.208t20.992-34.304 32.256-27.648 42.496-11.264q46.08 0 73.728 23.04t25.6 57.856q0 17.408-10.24 32.256t-26.112 28.672-33.792 27.648-33.792 28.672-26.624 32.256-11.776 37.888l1.024 38.912q0 15.36 14.336 29.184t37.888 14.848q23.552-1.024 37.376-15.36t12.8-32.768l0-24.576z";
 
     private static final ExecutorService THREAD_POOL = new ThreadPoolExecutor(
             2,
@@ -431,6 +435,55 @@ public class AcademicViewController {
             }
         }
         return false;
+    }
+
+    /**
+     * 判断多个时间段之间是否存在交叉。
+     * 仅当星期相同、周次范围重叠且节次范围重叠时才判为冲突。
+     */
+    private boolean hasTimeOverlap(List<CourseTimeSlotVO> slots) {
+        for (int i = 0; i < slots.size(); i++) {
+            for (int j = i + 1; j < slots.size(); j++) {
+                if (slotOverlap(slots.get(i), slots.get(j))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 校验教师自身课程是否与当前课程时间冲突。
+     */
+    private void validateTeacherTimeConflict(CourseVO course,
+                                             List<CourseTimeSlotVO> newSlots,
+                                             Runnable onValid) {
+        THREAD_POOL.execute(() -> {
+            try {
+                String conflictName = null;
+                List<CourseVO> teacherCourses = academicController.queryByTeacher(course.getTeacherId());
+                for (CourseVO other : teacherCourses) {
+                    if (course.getCourseCode().equals(other.getCourseCode())) {
+                        continue;
+                    }
+                    if (slotsOverlap(newSlots, effectiveSlots(other))) {
+                        String code = other.getDisplayCode() == null ? other.getCourseCode() : other.getDisplayCode();
+                        conflictName = code + " " + other.getCourseName();
+                        break;
+                    }
+                }
+                final String conflict = conflictName;
+                Platform.runLater(() -> {
+                    if (conflict == null) {
+                        onValid.run();
+                    } else {
+                        showInfo("课程时间冲突：与[" + conflict + "]时间冲突，请调整后再保存");
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(onValid);
+            }
+        });
     }
 
     private boolean slotOverlap(CourseTimeSlotVO a, CourseTimeSlotVO b) {
@@ -1658,20 +1711,25 @@ public class AcademicViewController {
             showInfo("请至少添加一个上课时间段");
             return;
         }
-
-        CourseVO temp = new CourseVO();
-        temp.setTimeSlots(slots);
-        String scheduleText = temp.toScheduleText();
+        if (hasTimeOverlap(slots)) {
+            showInfo("检测到课程时间段交叉，请调整后再保存");
+            return;
+        }
         final int savedMinWeek = minWeek;
         final int savedMaxWeek = maxWeek;
+        validateTeacherTimeConflict(course, slots, () -> {
+            CourseVO temp = new CourseVO();
+            temp.setTimeSlots(slots);
+            String scheduleText = temp.toScheduleText();
 
-        runAction("保存课程时间", () -> {
-            ResponseCode timeCode = academicController.scheduleCourseTime(course.getCourseCode(), scheduleText);
-            if (timeCode != ResponseCode.SUCCESS) {
-                return timeCode;
-            }
-            return academicController.scheduleCourseWeeks(course.getCourseCode(), savedMinWeek, savedMaxWeek);
-        }, () -> fetchCourses(() -> academicController.listAllCourses()));
+            runAction("保存课程时间", () -> {
+                ResponseCode timeCode = academicController.scheduleCourseTime(course.getCourseCode(), scheduleText);
+                if (timeCode != ResponseCode.SUCCESS) {
+                    return timeCode;
+                }
+                return academicController.scheduleCourseWeeks(course.getCourseCode(), savedMinWeek, savedMaxWeek);
+            }, () -> fetchCourses(() -> academicController.listAllCourses()));
+        });
     }
 
     /**
@@ -1771,31 +1829,37 @@ public class AcademicViewController {
             showInfo("请至少保留一个上课时间段");
             return;
         }
-        CourseVO temp = new CourseVO();
-        temp.setTimeSlots(slots);
-        String scheduleText = temp.toScheduleText();
-        int minWeek = Integer.MAX_VALUE;
-        int maxWeek = 0;
-        for (CourseTimeSlotVO slot : slots) {
-            minWeek = Math.min(minWeek, slot.getStartWeek());
-            maxWeek = Math.max(maxWeek, slot.getEndWeek());
+        if (hasTimeOverlap(slots)) {
+            showInfo("检测到调整后时间段交叉，请调整后再保存");
+            return;
         }
-        final int savedMinWeek = minWeek;
-        final int savedMaxWeek = maxWeek;
-        final String firstLocation = slots.get(0).getLocation();
+        validateTeacherTimeConflict(course, slots, () -> {
+            CourseVO temp = new CourseVO();
+            temp.setTimeSlots(slots);
+            String scheduleText = temp.toScheduleText();
+            int minWeek = Integer.MAX_VALUE;
+            int maxWeek = 0;
+            for (CourseTimeSlotVO slot : slots) {
+                minWeek = Math.min(minWeek, slot.getStartWeek());
+                maxWeek = Math.max(maxWeek, slot.getEndWeek());
+            }
+            final int savedMinWeek = minWeek;
+            final int savedMaxWeek = maxWeek;
+            final String firstLocation = slots.get(0).getLocation();
 
-        runAction("保存调课", () -> {
-            ResponseCode timeCode = academicController.scheduleCourseTime(course.getCourseCode(), scheduleText);
-            if (timeCode != ResponseCode.SUCCESS) {
-                return timeCode;
-            }
-            ResponseCode weekCode = academicController.scheduleCourseWeeks(
-                    course.getCourseCode(), savedMinWeek, savedMaxWeek);
-            if (weekCode != ResponseCode.SUCCESS) {
-                return weekCode;
-            }
-            return academicController.scheduleCourseLocation(course.getCourseCode(), firstLocation);
-        }, () -> fetchCourses(() -> academicController.listAllCourses()));
+            runAction("保存调课", () -> {
+                ResponseCode timeCode = academicController.scheduleCourseTime(course.getCourseCode(), scheduleText);
+                if (timeCode != ResponseCode.SUCCESS) {
+                    return timeCode;
+                }
+                ResponseCode weekCode = academicController.scheduleCourseWeeks(
+                        course.getCourseCode(), savedMinWeek, savedMaxWeek);
+                if (weekCode != ResponseCode.SUCCESS) {
+                    return weekCode;
+                }
+                return academicController.scheduleCourseLocation(course.getCourseCode(), firstLocation);
+            }, () -> fetchCourses(() -> academicController.listAllCourses()));
+        });
     }
 
     /**
@@ -2203,13 +2267,13 @@ public class AcademicViewController {
 
         Label text = new Label(message);
         text.getStyleClass().add("toast-banner-text");
+        text.setWrapText(true);
         Node icon = createToastIconByType(type);
-        StackPane banner = new StackPane(text, icon);
-        StackPane.setAlignment(text, Pos.CENTER);
-        StackPane.setAlignment(icon, Pos.CENTER_LEFT);
-        banner.setPadding(new Insets(6, 12, 6, 12));
-        banner.setMinWidth(240);
-        banner.setMaxWidth(Double.MAX_VALUE);
+        icon.setTranslateX(-36);
+        HBox banner = new HBox(-16, icon, text);
+        banner.setAlignment(Pos.CENTER_LEFT);
+        banner.setPadding(new Insets(12, 14, 12, 4));
+        banner.setMinHeight(48);
         banner.getStyleClass().add("toast-banner");
         banner.getStyleClass().add(type == 0 ? "success" : type == 1 ? "error" : "info");
         banner.setMouseTransparent(true);
@@ -2235,47 +2299,28 @@ public class AcademicViewController {
      * 创建通知图标：成功为对勾，失败为感叹号。
      */
     private Node createToastIconByType(int type) {
-        double scale = 36.0 / 1040.0;
+        double scale = 28.0 / 1024.0;
         StackPane wrapper = new StackPane();
-        wrapper.setMinSize(36, 36);
-        wrapper.setPrefSize(36, 36);
-        wrapper.setMaxSize(36, 36);
+        wrapper.setMinSize(28, 28);
+        wrapper.setPrefSize(28, 28);
+        wrapper.setMaxSize(28, 28);
         if (type == 0) {
-            SVGPath check = new SVGPath();
-            check.setContent(CHECK_ICON_PATH);
-            check.setScaleX(scale);
-            check.setScaleY(scale);
-            check.setFill(Color.web("#40C892"));
-            wrapper.getChildren().add(check);
+            wrapper.getChildren().add(createIconSvg(ICON_CHECK_PATH, scale, "#2E8B57"));
         } else if (type == 1) {
-            Label bang = new Label("!");
-            bang.setAlignment(Pos.CENTER);
-            bang.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #FB673B;");
-            wrapper.getChildren().add(bang);
+            wrapper.getChildren().add(createIconSvg(ICON_ERROR_PATH, scale, "#F54A45"));
         } else {
-            SVGPath doc = new SVGPath();
-            doc.setContent(DOC_PATH);
-            doc.setScaleX(scale);
-            doc.setScaleY(scale);
-            doc.setFill(Color.WHITE);
-            SVGPath clip = new SVGPath();
-            clip.setContent(DOC_CLIP_PATH);
-            clip.setScaleX(scale);
-            clip.setScaleY(scale);
-            clip.setFill(Color.web("#FFBD35"));
-            SVGPath line1 = new SVGPath();
-            line1.setContent(DOC_LINE1_PATH);
-            line1.setScaleX(scale);
-            line1.setScaleY(scale);
-            line1.setFill(Color.web("#FFBD35"));
-            SVGPath line2 = new SVGPath();
-            line2.setContent(DOC_LINE2_PATH);
-            line2.setScaleX(scale);
-            line2.setScaleY(scale);
-            line2.setFill(Color.web("#FFBD35"));
-            wrapper.getChildren().addAll(doc, clip, line1, line2);
+            wrapper.getChildren().add(createIconSvg(ICON_INFO_PATH, scale, "#B58500"));
         }
         return wrapper;
+    }
+
+    private SVGPath createIconSvg(String pathData, double scale, String color) {
+        SVGPath path = new SVGPath();
+        path.setContent(pathData);
+        path.setScaleX(scale);
+        path.setScaleY(scale);
+        path.setFill(Color.web(color));
+        return path;
     }
 
     private CourseVO selectedCourse() {
