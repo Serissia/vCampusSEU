@@ -5,6 +5,7 @@ import com.vcampus.client.util.ScrollSpeedUtil;
 import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
+import com.vcampus.common.vo.ChatMessageVO;
 import com.vcampus.common.vo.SecondHandVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
@@ -99,6 +100,17 @@ public class SecondHandPanel extends VBox {
     private VBox reviewListContainer;
     private VBox myListContainer;
 
+    /** 聊天相关：聊天页 / 咨询列表页 / 聊天上下文 */
+    private VBox chatPage;
+    private VBox conversationsPage;
+    private VBox chatMessagesContainer;
+    private TextField chatInputField;
+    private Label chatTitleLabel;
+    private SecondHandVO chatItem;
+    private String chatOtherUid;
+    private String chatOtherName;
+    private VBox conversationsContainer;
+
     public SecondHandPanel() {
         buildUi();
     }
@@ -154,12 +166,14 @@ public class SecondHandPanel extends VBox {
         publishPage = buildPublishPage();
         confirmBuyPage = new VBox();
         confirmOffShelfPage = new VBox();
+        chatPage = buildChatPage();
+        conversationsPage = buildConversationsPage();
 
         // 页面宿主：StackPane 互斥显示
         pageHost = new StackPane();
         VBox.setVgrow(pageHost, Priority.ALWAYS);
         pageHost.getChildren().addAll(listingsPage, reviewPage, myListPage,
-                publishPage, confirmBuyPage, confirmOffShelfPage);
+                publishPage, confirmBuyPage, confirmOffShelfPage, chatPage, conversationsPage);
         showPage(listingsPage);
 
         getChildren().addAll(buildHeader(), toastBar, pageHost);
@@ -472,6 +486,303 @@ public class SecondHandPanel extends VBox {
     }
 
     /**
+     * 构建聊天页：标题（商品 + 对方）、消息列表、底部输入区。
+     */
+    private VBox buildChatPage() {
+        VBox page = new VBox(12.0);
+        page.getStyleClass().add("secondhand-subpage");
+
+        chatTitleLabel = new Label();
+        chatTitleLabel.getStyleClass().add("lib-section-title");
+        chatTitleLabel.setWrapText(true);
+
+        chatMessagesContainer = new VBox(8.0);
+        chatMessagesContainer.setPadding(new Insets(8.0, 4.0, 8.0, 4.0));
+
+        ScrollPane scroll = new ScrollPane(chatMessagesContainer);
+        scroll.setFitToWidth(true);
+        scroll.getStyleClass().add("shop-card-scroll");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        ScrollSpeedUtil.applyCustomScrollSpeed(scroll);
+
+        chatInputField = new TextField();
+        chatInputField.setPromptText("输入消息…");
+        chatInputField.getStyleClass().add("modern-input-field");
+        chatInputField.setOnAction(e -> sendChatMessage());
+        Button sendBtn = new Button("发送");
+        sendBtn.getStyleClass().add("btn-primary-action");
+        sendBtn.setOnAction(e -> sendChatMessage());
+        HBox inputRow = new HBox(8.0, chatInputField, sendBtn);
+        inputRow.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(chatInputField, Priority.ALWAYS);
+
+        page.getChildren().addAll(chatTitleLabel, scroll, inputRow);
+        return page;
+    }
+
+    /**
+     * 构建咨询列表页（卖家查看某商品的咨询买家）。
+     */
+    private VBox buildConversationsPage() {
+        VBox page = new VBox(12.0);
+        page.getStyleClass().add("secondhand-subpage");
+        Label title = new Label("商品咨询");
+        title.getStyleClass().add("lib-section-title");
+        conversationsContainer = new VBox(8.0);
+        conversationsContainer.setPadding(new Insets(8.0, 0, 8.0, 0));
+        ScrollPane scroll = new ScrollPane(conversationsContainer);
+        scroll.setFitToWidth(true);
+        scroll.getStyleClass().add("shop-card-scroll");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        ScrollSpeedUtil.applyCustomScrollSpeed(scroll);
+        page.getChildren().addAll(title, scroll);
+        return page;
+    }
+
+    /**
+     * 打开与指定用户的聊天页。
+     */
+    private void openChatWith(SecondHandVO item, String otherUid, String otherName) {
+        this.chatItem = item;
+        this.chatOtherUid = otherUid;
+        this.chatOtherName = (otherName == null || otherName.isEmpty()) ? otherUid : otherName;
+        if (chatTitleLabel != null) {
+            chatTitleLabel.setText("与 " + this.chatOtherName + " 聊聊「" + item.getTitle() + "」");
+        }
+        if (chatMessagesContainer != null) {
+            chatMessagesContainer.getChildren().clear();
+            Label loading = new Label("加载中…");
+            loading.getStyleClass().add("lib-subtitle");
+            chatMessagesContainer.getChildren().add(loading);
+        }
+        if (chatInputField != null) {
+            chatInputField.clear();
+        }
+        showPage(chatPage);
+        loadChatHistory();
+    }
+
+    /**
+     * 打开某商品的咨询列表页（卖家视角）。
+     */
+    private void openConversationsPage(SecondHandVO item) {
+        this.chatItem = item;
+        if (conversationsContainer != null) {
+            conversationsContainer.getChildren().clear();
+            Label loading = new Label("加载中…");
+            loading.getStyleClass().add("lib-subtitle");
+            conversationsContainer.getChildren().add(loading);
+        }
+        showPage(conversationsPage);
+        loadConversations();
+    }
+
+    /**
+     * 拉取当前聊天会话的历史消息。
+     */
+    private void loadChatHistory() {
+        if (chatItem == null || chatOtherUid == null) {
+            return;
+        }
+        ChatMessageVO req = new ChatMessageVO();
+        req.setItemId(chatItem.getId());
+        req.setToUid(chatOtherUid);
+        THREAD_POOL.execute(() -> {
+            try {
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.CHAT_HISTORY, null, req);
+                Message response = socketClient.send(request);
+                Platform.runLater(() -> {
+                    if (chatMessagesContainer == null) {
+                        return;
+                    }
+                    chatMessagesContainer.getChildren().clear();
+                    if (response != null && response.getCode() == ResponseCode.SUCCESS
+                            && response.getData() instanceof List) {
+                        @SuppressWarnings("unchecked")
+                        List<ChatMessageVO> msgs = (List<ChatMessageVO>) response.getData();
+                        if (msgs == null || msgs.isEmpty()) {
+                            Label empty = new Label("还没有消息，先打个招呼吧～");
+                            empty.getStyleClass().add("lib-subtitle");
+                            chatMessagesContainer.getChildren().add(empty);
+                        } else {
+                            for (ChatMessageVO m : msgs) {
+                                chatMessagesContainer.getChildren().add(renderChatBubble(m));
+                            }
+                        }
+                    } else {
+                        chatMessagesContainer.getChildren().add(new Label(errorText(response, "加载失败")));
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    if (chatMessagesContainer != null) {
+                        chatMessagesContainer.getChildren().clear();
+                        chatMessagesContainer.getChildren().add(new Label("网络错误: " + e.getMessage()));
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 发送当前输入框里的消息。
+     */
+    private void sendChatMessage() {
+        if (chatItem == null || chatOtherUid == null || chatInputField == null) {
+            return;
+        }
+        String text = chatInputField.getText() == null ? "" : chatInputField.getText().trim();
+        if (text.isEmpty()) {
+            showToast("消息不能为空", ToastType.WARNING);
+            return;
+        }
+        ChatMessageVO req = new ChatMessageVO();
+        req.setItemId(chatItem.getId());
+        req.setToUid(chatOtherUid);
+        req.setContent(text);
+        THREAD_POOL.execute(() -> {
+            try {
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.CHAT_SEND, null, req);
+                Message response = socketClient.send(request);
+                Platform.runLater(() -> {
+                    if (response != null && response.getCode() == ResponseCode.SUCCESS) {
+                        if (chatInputField != null) {
+                            chatInputField.clear();
+                        }
+                        loadChatHistory();
+                    } else {
+                        String msg = (response != null && response.getData() instanceof String)
+                                ? (String) response.getData() : "请稍后重试";
+                        showToast("发送失败：" + msg, ToastType.ERROR);
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> showToast("网络错误：" + e.getMessage(), ToastType.ERROR));
+            }
+        });
+    }
+
+    /**
+     * 渲染单条聊天气泡（自己的靠右，对方的靠左）。
+     */
+    private Node renderChatBubble(ChatMessageVO msg) {
+        boolean mine = currentUser != null && currentUser.getAccountNumber() != null
+                && currentUser.getAccountNumber().equals(msg.getFromUid());
+
+        VBox bubble = new VBox(3.0);
+        bubble.setMaxWidth(420.0);
+
+        Label name = new Label(mine ? "我" : (msg.getFromName() == null || msg.getFromName().isEmpty()
+                ? msg.getFromUid() : msg.getFromName()));
+        name.getStyleClass().add("chat-bubble-name");
+
+        Label content = new Label(msg.getContent() == null ? "" : msg.getContent());
+        content.setWrapText(true);
+        content.getStyleClass().add(mine ? "chat-bubble-mine" : "chat-bubble-other");
+
+        Label time = new Label(msg.getSendTime() == null ? "" : msg.getSendTime());
+        time.getStyleClass().add("chat-bubble-time");
+
+        bubble.getChildren().addAll(name, content, time);
+        bubble.setAlignment(mine ? Pos.TOP_RIGHT : Pos.TOP_LEFT);
+        if (mine) {
+            name.setAlignment(Pos.TOP_RIGHT);
+            time.setAlignment(Pos.TOP_RIGHT);
+        }
+
+        HBox row = new HBox(8.0);
+        row.setAlignment(mine ? Pos.CENTER_RIGHT : Pos.CENTER_LEFT);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        if (mine) {
+            row.getChildren().addAll(spacer, bubble);
+        } else {
+            row.getChildren().addAll(bubble, spacer);
+        }
+        return row;
+    }
+
+    /**
+     * 拉取某商品的咨询会话列表（卖家视角）。
+     */
+    private void loadConversations() {
+        if (chatItem == null) {
+            return;
+        }
+        ChatMessageVO req = new ChatMessageVO();
+        req.setItemId(chatItem.getId());
+        THREAD_POOL.execute(() -> {
+            try {
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.CHAT_CONVERSATIONS, null, req);
+                Message response = socketClient.send(request);
+                Platform.runLater(() -> {
+                    if (conversationsContainer == null) {
+                        return;
+                    }
+                    conversationsContainer.getChildren().clear();
+                    if (response != null && response.getCode() == ResponseCode.SUCCESS
+                            && response.getData() instanceof List) {
+                        @SuppressWarnings("unchecked")
+                        List<ChatMessageVO> convs = (List<ChatMessageVO>) response.getData();
+                        if (convs == null || convs.isEmpty()) {
+                            Label empty = new Label("暂无买家咨询");
+                            empty.getStyleClass().add("lib-subtitle");
+                            conversationsContainer.getChildren().add(empty);
+                        } else {
+                            for (ChatMessageVO c : convs) {
+                                conversationsContainer.getChildren().add(renderConversationRow(c));
+                            }
+                        }
+                    } else {
+                        conversationsContainer.getChildren().add(new Label(errorText(response, "加载失败")));
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    if (conversationsContainer != null) {
+                        conversationsContainer.getChildren().clear();
+                        conversationsContainer.getChildren().add(new Label("网络错误: " + e.getMessage()));
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 渲染单条咨询会话（卖家视角：显示买家 + 最后一条消息 + 回复按钮）。
+     */
+    private Node renderConversationRow(ChatMessageVO c) {
+        String otherUid = c.getFromUid() == null ? "" : c.getFromUid();
+        String otherName = (c.getFromName() == null || c.getFromName().isEmpty()) ? otherUid : c.getFromName();
+
+        HBox row = new HBox(10.0);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.getStyleClass().add("profile-card");
+        row.setPadding(new Insets(10.0));
+
+        VBox infoBox = new VBox(3.0);
+        Label name = new Label(otherName);
+        name.getStyleClass().add("shop-card-name");
+        Label last = new Label(c.getContent() == null ? "" : c.getContent());
+        last.getStyleClass().add("lib-subtitle");
+        last.setWrapText(true);
+        Label time = new Label(c.getSendTime() == null ? "" : c.getSendTime());
+        time.getStyleClass().add("lib-subtitle");
+        infoBox.getChildren().addAll(name, last, time);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button openBtn = new Button("回复");
+        openBtn.getStyleClass().add("btn-primary-action");
+        final String fOtherUid = otherUid;
+        openBtn.setOnAction(e -> openChatWith(chatItem, fOtherUid, otherName));
+
+        row.getChildren().addAll(infoBox, spacer, openBtn);
+        return row;
+    }
+
+    /**
      * 刷新在售列表与余额。
      */
     /**
@@ -554,20 +865,31 @@ public class SecondHandPanel extends VBox {
         card.setMinWidth(200.0);
         card.setMaxWidth(240.0);
 
-        // 顶部：状态徽标
+        boolean mine = currentUser != null && currentUser.getAccountNumber() != null
+                && currentUser.getAccountNumber().equals(item.getSellerId());
+
+        // 顶部：状态徽标 + 右上角"联系卖家/咨询"按钮
         HBox topRow = new HBox(6.0);
         topRow.setAlignment(Pos.CENTER_LEFT);
         Label badge = new Label("在售");
         badge.getStyleClass().addAll("shop-card-badge", "shop-card-badge-on");
         Region topSpacer = new Region();
         HBox.setHgrow(topSpacer, Priority.ALWAYS);
-        Label seller = new Label("卖家 " + (item.getSellerName() == null ? "" : item.getSellerName()));
-        seller.getStyleClass().add("lib-subtitle");
-        topRow.getChildren().addAll(badge, topSpacer, seller);
+        Button chatBtn = new Button(mine ? "咨询" : "联系卖家");
+        chatBtn.getStyleClass().add("secondhand-chat-btn");
+        if (mine) {
+            chatBtn.setOnAction(e -> openConversationsPage(item));
+        } else {
+            chatBtn.setOnAction(e -> openChatWith(item, item.getSellerId(), item.getSellerName()));
+        }
+        topRow.getChildren().addAll(badge, topSpacer, chatBtn);
 
         Label title = new Label(item.getTitle() == null ? "" : item.getTitle());
         title.getStyleClass().add("shop-card-name");
         title.setWrapText(true);
+
+        Label seller = new Label("卖家 " + (item.getSellerName() == null ? "" : item.getSellerName()));
+        seller.getStyleClass().add("lib-subtitle");
 
         Label desc = new Label(item.getDescription() == null ? "" : item.getDescription());
         desc.getStyleClass().add("shop-card-desc");
@@ -578,9 +900,6 @@ public class SecondHandPanel extends VBox {
 
         Label price = new Label(formatPrice(item.getPrice()));
         price.getStyleClass().add("shop-card-price");
-
-        boolean mine = currentUser != null && currentUser.getAccountNumber() != null
-                && currentUser.getAccountNumber().equals(item.getSellerId());
 
         Button actionBtn = mine ? new Button("下架") : new Button("购买");
         actionBtn.setMaxWidth(Double.MAX_VALUE);
@@ -593,7 +912,7 @@ public class SecondHandPanel extends VBox {
             actionBtn.setOnAction(e -> confirmBuy(item));
         }
 
-        card.getChildren().addAll(topRow, title, desc, price, actionBtn);
+        card.getChildren().addAll(topRow, title, seller, desc, price, actionBtn);
         return card;
     }
 

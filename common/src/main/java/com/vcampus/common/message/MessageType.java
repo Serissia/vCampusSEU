@@ -145,6 +145,13 @@ public enum MessageType implements Serializable {
     /** 审核二手商品（管理员通过/拒绝） */
     SECOND_HAND_REVIEW,
 
+    /** 二手商品买卖双方聊天：发送消息 */
+    CHAT_SEND,
+    /** 拉取某商品 + 某对方的聊天记录 */
+    CHAT_HISTORY,
+    /** 卖家查看某商品的咨询买家列表（按买家去重的会话摘要） */
+    CHAT_CONVERSATIONS,
+
     /** 教务公告检索 */
     NOTICE_QUERY,
     /** 手动触发教务公告同步抓取 */
