@@ -865,6 +865,18 @@ public class AcademicViewController {
     }
 
     private void showCourseDetail(CourseVO course, CourseTimeSlotVO slot) {
+        formContent.getChildren().clear();
+        dataCard.setVisible(false);
+        dataCard.setManaged(false);
+        formCard.setVisible(true);
+        formCard.setManaged(true);
+
+        Button backBtn = button("返回课表", "btn-recharge-preset");
+        backBtn.setOnAction(e -> configureView());
+
+        Label title = new Label(course.getCourseName() + " - 课程详情");
+        title.getStyleClass().add("lib-title");
+
         StringBuilder info = new StringBuilder();
         info.append("课程名称：").append(nvl(course.getCourseName())).append("\n");
         info.append("课程代码：").append(nvl(course.getDisplayCode())).append("\n");
@@ -881,7 +893,13 @@ public class AcademicViewController {
         info.append("上课时间：").append(slot.getDay()).append(" 第").append(slot.getStartPeriod())
                 .append("-").append(slot.getEndPeriod()).append("节\n");
         info.append("已选人数：").append(course.getSelectedCount()).append("/").append(course.getCapacity()).append("\n");
-        showInfo(info.toString());
+
+        Label detail = new Label(info.toString());
+        detail.setWrapText(true);
+        detail.setMaxWidth(Double.MAX_VALUE);
+        detail.getStyleClass().add("lib-form-label");
+
+        formContent.getChildren().addAll(backBtn, title, detail);
     }
 
     private int dayIndex(String day) {
@@ -2004,6 +2022,8 @@ public class AcademicViewController {
     private void updateLiveGrade(VBox scoreInputs, Label calcLabel) {
         double total = 0.0;
         boolean complete = true;
+        boolean negative = false;
+        boolean over = false;
         StringBuilder formula = new StringBuilder();
 
         for (var node : scoreInputs.getChildren()) {
@@ -2026,6 +2046,16 @@ public class AcademicViewController {
             }
             try {
                 double score = Double.parseDouble(text);
+                if (score < 0) {
+                    negative = true;
+                    complete = false;
+                    continue;
+                }
+                if (score > 100) {
+                    over = true;
+                    complete = false;
+                    continue;
+                }
                 double weight = component.getWeight();
                 total += score * weight;
                 if (formula.length() > 0) {
@@ -2039,8 +2069,14 @@ public class AcademicViewController {
 
         if (!complete || formula.length() == 0) {
             calcLabel.getStyleClass().removeAll("error", "success");
-            calcLabel.getStyleClass().add("success");
-            calcLabel.setText("实时计算：请完整输入各项成绩（可包含小数）");
+            calcLabel.getStyleClass().add((negative || over) ? "error" : "success");
+            if (negative) {
+                calcLabel.setText("实时计算：成绩不能为负");
+            } else if (over) {
+                calcLabel.setText("实时计算：成绩不能超过100");
+            } else {
+                calcLabel.setText("实时计算：请完整输入各项成绩（可包含小数）");
+            }
             return;
         }
 
@@ -2087,6 +2123,14 @@ public class AcademicViewController {
                 }
                 String name = ((ScoreComponentVO) scoreField.getUserData()).getComponentName();
                 double score = Double.parseDouble(scoreField.getText().trim());
+                if (score < 0) {
+                    showInfo("成绩不能为负");
+                    return;
+                }
+                if (score > 100) {
+                    showInfo("成绩不能超过100");
+                    return;
+                }
                 scores.add(new GradeScoreVO(name, score));
             }
         } catch (Exception ex) {
