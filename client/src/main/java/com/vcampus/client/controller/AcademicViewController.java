@@ -1414,15 +1414,17 @@ public class AcademicViewController {
                 return null;
             }
         });
-        loadStudentOptions(studentBox);
         VBox scoreInputs = new VBox(6);
         Label calcLabel = new Label("实时计算：等待输入");
         calcLabel.getStyleClass().addAll("lib-msg-label", "success");
         calcLabel.setWrapText(true);
         calcLabel.setMaxWidth(Double.MAX_VALUE);
 
-        dataTable.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) ->
-                rebuildScoreInputs(scoreInputs, calcLabel));
+        dataTable.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> {
+            CourseVO course = selectedCourse();
+            loadStudentOptionsForCourse(studentBox, course);
+            rebuildScoreInputs(scoreInputs, calcLabel);
+        });
 
         Button submitBtn = button("提交成绩", "btn-primary-action");
         submitBtn.setOnAction(e -> submitGrade(studentBox, scoreInputs));
@@ -1442,11 +1444,19 @@ public class AcademicViewController {
     /**
      * 异步加载学生选项到下拉框。
      */
-    private void loadStudentOptions(ComboBox<UserVO> studentBox) {
+    private void loadStudentOptionsForCourse(ComboBox<UserVO> studentBox, CourseVO course) {
         THREAD_POOL.execute(() -> {
             try {
-                List<UserVO> students = academicController.listStudents();
-                Platform.runLater(() -> studentBox.setItems(FXCollections.observableArrayList(students)));
+                List<UserVO> students;
+                if (course == null) {
+                    students = new ArrayList<UserVO>();
+                } else {
+                    students = academicController.listStudentsByCourse(course.getCourseCode());
+                }
+                Platform.runLater(() -> {
+                    studentBox.setItems(FXCollections.observableArrayList(students));
+                    studentBox.setValue(null);
+                });
             } catch (Exception e) {
                 Platform.runLater(() -> showError("加载学生列表失败：" + e.getMessage()));
             }
