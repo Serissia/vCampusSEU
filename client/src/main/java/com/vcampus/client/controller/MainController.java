@@ -1,6 +1,7 @@
 package com.vcampus.client.controller;
 
 import com.vcampus.client.config.AppConfigManager;
+import com.vcampus.client.net.ClientSession;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.ScrollSpeedUtil;
 import com.vcampus.client.util.SvgIcons;
@@ -63,7 +64,8 @@ public class MainController {
         }
     }
 
-    private final SocketClient socketClient = new SocketClient();
+    /** 全局共享连接：服务端把身份绑定在连接上，全客户端必须复用同一条 */
+    private final SocketClient socketClient = ClientSession.client();
     private final AcademicController academicController = new AcademicController(socketClient);
     private final List<Button> navButtons = new ArrayList<>();
 
@@ -367,6 +369,8 @@ public class MainController {
      */
     @FXML
     private void handleLogout() {
+        // 先结束会话：作废服务端连接上的身份并回收连接，避免旧连接泄漏与身份残留
+        ClientSession.getInstance().end();
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/LoginView.fxml"));
             Parent root = loader.load();

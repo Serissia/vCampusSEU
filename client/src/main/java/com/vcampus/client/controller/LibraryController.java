@@ -1,5 +1,6 @@
 package com.vcampus.client.controller;
 
+import com.vcampus.client.net.ClientSession;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.ScrollSpeedUtil;
 import com.vcampus.client.util.SvgIcons;
@@ -90,7 +91,8 @@ public class LibraryController {
     private VBox ebookSection;
 
     private UserVO currentUser;
-    private final SocketClient socketClient = new SocketClient();
+    /** 全局共享连接：服务端把身份绑定在连接上，全客户端必须复用同一条 */
+    private final SocketClient socketClient = ClientSession.client();
 
     /** 导航历史栈，用于返回时恢复上一层视图 */
     private final Deque<Node> navStack = new ArrayDeque<>();

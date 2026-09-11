@@ -2,6 +2,7 @@ package com.vcampus.client.controller;
 
 import com.vcampus.client.config.AppConfig;
 import com.vcampus.client.config.AppConfigManager;
+import com.vcampus.client.net.ClientSession;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.ThemeManager;
 import com.vcampus.common.message.Message;
@@ -80,7 +81,8 @@ public class LoginController {
     /**
      * 底层 Socket 通信客户端
      */
-    private final SocketClient socketClient = new SocketClient();
+    /** 全局共享连接：服务端把身份绑定在连接上，全客户端必须复用同一条 */
+    private final SocketClient socketClient = ClientSession.client();
 
     @FXML
     private ImageView bgImageView;
@@ -354,6 +356,9 @@ public class LoginController {
                     setLoading(false);
                     if (responseMsg != null && responseMsg.getCode() == ResponseCode.SUCCESS) {
                         UserVO currentUser = (UserVO) responseMsg.getData();
+
+                        // 服务端已在本次登录所用的连接上绑定该用户身份，客户端据此登记会话
+                        ClientSession.getInstance().begin(currentUser);
 
                         // 登录成功时统一委托给 AppConfigManager 更新保存对应用户的配置
                         AppConfigManager configManager = AppConfigManager.getInstance();

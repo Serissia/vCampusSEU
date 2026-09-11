@@ -1,5 +1,6 @@
 package com.vcampus.client.controller;
 
+import com.vcampus.client.net.ClientSession;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.ScrollSpeedUtil;
 import com.vcampus.client.util.SvgIcons;
@@ -73,7 +74,8 @@ public class UserInfoController {
 
     private UserVO currentUser;
     private Runnable backAction;
-    private final SocketClient socketClient = new SocketClient();
+    /** 全局共享连接：服务端把身份绑定在连接上，全客户端必须复用同一条 */
+    private final SocketClient socketClient = ClientSession.client();
 
     /** 当前选中的用户（用于记录原账号，便于删除与更新定位） */
     private UserVO selectedUser;

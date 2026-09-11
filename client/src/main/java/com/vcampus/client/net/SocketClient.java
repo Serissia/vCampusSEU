@@ -8,6 +8,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 /**
@@ -48,7 +49,10 @@ public class SocketClient implements Closeable {
         if (socket != null && !socket.isClosed()) {
             return;
         }
-        socket = new Socket(host, port);
+        socket = new Socket();
+        // 使用配置里的连接超时，避免服务端不可达时后台线程被系统默认超时挂住
+        int timeout = AppConfigManager.getInstance().getConfig().getConnectTimeoutMs();
+        socket.connect(new InetSocketAddress(host, port), timeout);
         // 与服务端保持相同的对象流初始化顺序
         out = new ObjectOutputStream(socket.getOutputStream());
         out.flush();
