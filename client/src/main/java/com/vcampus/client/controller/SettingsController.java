@@ -3,6 +3,7 @@ package com.vcampus.client.controller;
 import com.vcampus.client.config.AppConfig;
 import com.vcampus.client.config.AppConfigManager;
 import com.vcampus.client.config.ConfigPathUtil;
+import com.vcampus.client.net.ClientSession;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.MonetColorUtil;
 import com.vcampus.client.util.ScrollSpeedUtil;
@@ -393,6 +394,8 @@ public class SettingsController {
             }
 
             AppConfig config = AppConfigManager.getInstance().getConfig();
+            // 服务器地址变化必须重建连接：身份绑定在连接上，旧连接连的是旧地址
+            boolean endpointChanged = !host.equals(config.getServerHost()) || port != config.getServerPort();
             config.setServerHost(host);
             config.setServerPort(port);
             config.setConnectTimeoutMs(timeout);
@@ -418,8 +421,14 @@ public class SettingsController {
             ScrollSpeedUtil.SPEED_MULTIPLIER.set(speedFactor);
 
             if (ok) {
+                if (endpointChanged) {
+                    // 丢弃旧连接，下一次请求会按新地址重建（当前登录态随之失效，需重新登录）
+                    ClientSession.getInstance().reset();
+                }
                 previewTheme();
-                showStatusMessage("偏好设置与个性化壁纸已成功保存！");
+                showStatusMessage(endpointChanged
+                        ? "已保存。服务器地址已变更，请在重新登录后继续操作。"
+                        : "偏好设置与个性化壁纸已成功保存！");
             } else {
                 showAlert("保存受限", "保存失败，请检查运行目录写权限。", Alert.AlertType.ERROR);
             }

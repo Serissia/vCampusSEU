@@ -11,8 +11,11 @@ public class Message implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /** 请求发起方标识（学号/工号） */
+    /** 请求发起方标识（学号/工号）。服务端不采信该字段，仅作回显，身份以会话或令牌为准。 */
     private String uid;
+
+    /** 登录令牌：登录成功后由服务端下发，客户端在后续请求中回传，用于在新连接上自证身份 */
+    private String token;
 
     /** 业务动作枚举 */
     private MessageType type;
@@ -56,6 +59,20 @@ public class Message implements Serializable {
      */
     public void setUid(String uid) {
         this.uid = uid;
+    }
+
+    /**
+     * 获取登录令牌。
+     */
+    public String getToken() {
+        return token;
+    }
+
+    /**
+     * 设置登录令牌。
+     */
+    public void setToken(String token) {
+        this.token = token;
     }
 
     /**

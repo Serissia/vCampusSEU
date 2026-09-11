@@ -1,5 +1,6 @@
 package com.vcampus.client.controller;
 
+import com.vcampus.client.net.ClientSession;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.common.vo.UserVO;
 import com.vcampus.client.util.ScrollSpeedUtil;
@@ -94,7 +95,8 @@ public class ProfileController {
 
     private UserVO currentUser;
     private MainController mainController;
-    private final SocketClient socketClient = new SocketClient();
+    /** 全局共享连接：服务端把身份绑定在连接上，全客户端必须复用同一条 */
+    private final SocketClient socketClient = ClientSession.client();
 
     /**
      * 注入上下文用户数据与主框架控制器引用

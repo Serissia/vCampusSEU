@@ -1,5 +1,6 @@
 package com.vcampus.client.controller;
 
+import com.vcampus.client.net.ClientSession;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.ScrollSpeedUtil;
 import com.vcampus.client.util.SvgIcons;
@@ -56,7 +57,8 @@ public class EbookMyListController {
 
     private UserVO currentUser;
     private Runnable backAction;
-    private final SocketClient socketClient = new SocketClient();
+    /** 全局共享连接：服务端把身份绑定在连接上，全客户端必须复用同一条 */
+    private final SocketClient socketClient = ClientSession.client();
 
     @FXML
     private void initialize() {

@@ -1,5 +1,6 @@
 package com.vcampus.client.controller;
 
+import com.vcampus.client.net.ClientSession;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
@@ -57,7 +58,8 @@ public class OrderHistoryPanel extends VBox {
             new ThreadPoolExecutor.CallerRunsPolicy()
     );
 
-    private final SocketClient socketClient = new SocketClient();
+    /** 全局共享连接：服务端把身份绑定在连接上，全客户端必须复用同一条 */
+    private final SocketClient socketClient = ClientSession.client();
 
     private UserVO currentUser;
     private TableView<OrderVO> orderTable;
