@@ -211,6 +211,19 @@ CREATE TABLE `tbl_second_hand` (
     CONSTRAINT `fk_sh_seller` FOREIGN KEY (`seller_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='校园二手市场商品表';
 
+-- 9.2 二手商品调价日志表 (tbl_secondhand_price_log)
+CREATE TABLE `tbl_secondhand_price_log` (
+    `id` INT AUTO_INCREMENT NOT NULL COMMENT '日志ID',
+    `item_id` INT NOT NULL COMMENT '二手商品ID',
+    `seller_id` VARCHAR(32) NOT NULL COMMENT '卖家一卡通号',
+    `old_price` DECIMAL(10, 2) NOT NULL COMMENT '原价',
+    `new_price` DECIMAL(10, 2) NOT NULL COMMENT '新价',
+    `update_time` VARCHAR(32) NOT NULL COMMENT '调价时间 (yyyy-MM-dd HH:mm:ss)',
+    PRIMARY KEY (`id`),
+    KEY `idx_shpl_item` (`item_id`),
+    CONSTRAINT `fk_shpl_item` FOREIGN KEY (`item_id`) REFERENCES `tbl_second_hand`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='二手商品调价日志表';
+
 -- 9.2 二手交易订单表 (tbl_second_hand_order)
 CREATE TABLE `tbl_second_hand_order` (
     `order_id` VARCHAR(64) NOT NULL COMMENT '订单流水号',

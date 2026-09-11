@@ -182,6 +182,47 @@ public class SecondHandServiceImpl implements ISecondHandService {
         }
     }
 
+    @Override
+    public ResponseCode updatePrice(String uid, Integer id, BigDecimal newPrice) {
+        Connection conn = null;
+        try {
+            if (uid == null || id == null || newPrice == null) {
+                return ResponseCode.INVALID_REQUEST;
+            }
+            BigDecimal min = new BigDecimal("0.01");
+            BigDecimal max = new BigDecimal("99999.99");
+            if (newPrice.compareTo(min) < 0 || newPrice.compareTo(max) > 0
+                    || newPrice.stripTrailingZeros().scale() > 2) {
+                return ResponseCode.INVALID_REQUEST;
+            }
+            conn = DBUtil.getConnection();
+            conn.setAutoCommit(false);
+
+            SecondHandVO item = secondHandDao.findByIdForUpdate(conn, id);
+            if (item == null || !"ON_SALE".equals(item.getStatus())) {
+                rollback(conn);
+                return ResponseCode.SECOND_HAND_SOLD;
+            }
+            if (!uid.trim().equals(item.getSellerId())) {
+                rollback(conn);
+                return ResponseCode.UNAUTHORIZED;
+            }
+            String now = DateUtil.format(new Date());
+            if (!secondHandDao.insertPriceLog(conn, id, uid.trim(), item.getPrice(), newPrice, now)
+                    || !secondHandDao.updatePrice(conn, id, newPrice)) {
+                rollback(conn);
+                return ResponseCode.FAIL;
+            }
+            conn.commit();
+            return ResponseCode.SUCCESS;
+        } catch (SQLException e) {
+            rollback(conn);
+            e.printStackTrace();
+            return ResponseCode.FAIL;
+        } finally {
+            closeQuietly(conn);
+        }
+    }
     /**
      * 生成二手订单流水号（时间戳 + 随机后缀）。
      */
