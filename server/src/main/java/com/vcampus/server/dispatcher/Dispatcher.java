@@ -18,6 +18,7 @@ import com.vcampus.common.vo.SecondHandVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
 import com.vcampus.common.vo.NoticeQueryVO;
+import com.vcampus.server.net.SessionContext;
 import com.vcampus.server.service.BookService;
 import com.vcampus.server.service.BorrowService;
 import com.vcampus.server.service.CourseSelectionService;
@@ -59,6 +60,11 @@ import java.util.List;
  */
 public class Dispatcher {
 
+    /**
+     * 本连接对应的会话上下文。身份的唯一可信来源：所有业务分支取用户一律用它，不再读报文里的 uid。
+     */
+    private final SessionContext session;
+
     private final CourseService courseService = new CourseServiceImpl();
     private final CourseSelectionService selectionService = new CourseSelectionServiceImpl();
     private final CourseReviewServiceImpl courseReviewService = new CourseReviewServiceImpl();
@@ -77,28 +83,70 @@ public class Dispatcher {
     private final NoticeService noticeService = new NoticeServiceImpl();
 
     /**
+     * 构造一个绑定到指定连接会话的分发器。
+     *
+     * <p>刻意不提供无参构造：分发器一旦脱离会话就没有可信身份来源，
+     * 从编译期杜绝「随手 new 一个 Dispatcher」而绕过认证。</p>
+     *
+     * @param session 本连接的会话上下文
+     */
+    public Dispatcher(SessionContext session) {
+        this.session = session;
+    }
+
+    /**
      * 根据 Message.type 将请求分发到对应业务服务，并统一构造响应报文。
+     *
+     * <p>身份一律取自连接会话（{@link SessionContext}），报文里的 {@code uid} 仅作为回显字段，
+     * 服务端不再据此认定调用者是谁。</p>
      *
      * @param request 客户端请求消息
      * @return 响应消息
      */
     public Message dispatch(Message request) {
         Message response = new Message();
-        response.setUid(request.getUid());
         response.setType(request.getType());
 
-        if (requiresPermissionCheck(request.getType())
-                && !hasPermission(request.getUid(), request.getType())) {
-            response.setCode(ResponseCode.PERMISSION_DENIED);
-            response.setData("当前角色无权执行该操作");
-            return response;
+        // 公开接口（登录、心跳）无需身份；其余接口一律要求本连接已登录
+        if (!PermissionTable.isPublic(request.getType())) {
+            if (!session.isAuthenticated()) {
+                response.setCode(ResponseCode.UNAUTHORIZED);
+                response.setData("尚未登录或会话已失效，请重新登录");
+                return response;
+            }
+
+            // 以主键复核账号：被删除或被冻结的账号即使连接仍在，也立即失效
+            UserVO currentUser = userService.queryByUid(session.getUid());
+            if (currentUser == null) {
+                session.clear();
+                response.setCode(ResponseCode.UNAUTHORIZED);
+                response.setData("账号不存在或已被删除，请重新登录");
+                return response;
+            }
+            if (currentUser.getStatus() != null && currentUser.getStatus() == 0) {
+                session.clear();
+                response.setCode(ResponseCode.ACCOUNT_FROZEN);
+                response.setData("账号已被冻结，请联系管理员");
+                return response;
+            }
+
+            if (!PermissionTable.isAuthorized(currentUser.getRole(), request.getType())) {
+                response.setCode(ResponseCode.PERMISSION_DENIED);
+                response.setData("当前角色无权执行该操作");
+                return response;
+            }
         }
+
+        response.setUid(session.getUid());
 
         try {
             // 请求类型是服务端唯一的业务路由入口
             switch (request.getType()) {
                 case LOGIN:
                     handleLogin(request, response);
+                    break;
+                case LOGOUT:
+                    handleLogout(request, response);
                     break;
                 case CHANGE_PASSWORD:
                     handlePasswordChange(request, response);
@@ -186,7 +234,7 @@ public class Dispatcher {
                     response.setCode(handleSelection(request));
                     break;
                 case COURSE_TIMETABLE:
-                    response.setData(selectionService.listMyCourses(request.getUid()));
+                    response.setData(selectionService.listMyCourses(session.getUid()));
                     response.setCode(ResponseCode.SUCCESS);
                     break;
                 case COURSE_STUDENT_LIST:
@@ -197,7 +245,7 @@ public class Dispatcher {
                     response.setCode(gradeService.submitGrade((GradeVO) request.getData()));
                     break;
                 case GRADE_QUERY:
-                    response.setData(gradeService.queryByStudent(request.getUid()));
+                    response.setData(gradeService.queryByStudent(session.getUid()));
                     response.setCode(ResponseCode.SUCCESS);
                     break;
                 case GRADE_QUERY_BY_COURSE:
@@ -216,7 +264,7 @@ public class Dispatcher {
                     response.setCode(ResponseCode.SUCCESS);
                     break;
                 case COURSE_REVIEW_DELETE:
-                    response.setCode(courseReviewService.delete(request.getUid(),
+                    response.setCode(courseReviewService.delete(session.getUid(),
                             String.valueOf(request.getData())));
                     break;
                 case BOOK_QUERY:
@@ -242,10 +290,10 @@ public class Dispatcher {
                     response.setCode(handleReturn(request));
                     break;
                 case BOOK_RENEW:
-                    response.setCode(borrowService.renew(request.getUid(), String.valueOf(request.getData())));
+                    response.setCode(borrowService.renew(session.getUid(), String.valueOf(request.getData())));
                     break;
                 case BORROW_MY_LIST:
-                    response.setData(borrowService.listByStudent(request.getUid()));
+                    response.setData(borrowService.listByStudent(session.getUid()));
                     response.setCode(ResponseCode.SUCCESS);
                     break;
                 case BORROW_BY_STUDENT:
@@ -279,14 +327,14 @@ public class Dispatcher {
                     break;
                 case ORDER_CREATE:
                     OrderVO orderPayload = (OrderVO) request.getData();
-                    orderPayload.setStudentId(request.getUid());
+                    orderPayload.setStudentId(session.getUid());
                     response.setCode(orderService.createOrder(orderPayload));
                     if (response.getCode() == ResponseCode.SUCCESS) {
                         response.setData(orderPayload);
                     }
                     break;
                 case ORDER_QUERY:
-                    response.setData(orderService.listOrders(request.getUid()));
+                    response.setData(orderService.listOrders(session.getUid()));
                     response.setCode(ResponseCode.SUCCESS);
                     break;
                 case PAYMENT_RECHARGE:
@@ -335,7 +383,7 @@ public class Dispatcher {
                     handleSecondHandBuy(request, response);
                     break;
                 case SECOND_HAND_MY_LIST:
-                    response.setData(secondHandService.listMine(request.getUid()));
+                    response.setData(secondHandService.listMine(session.getUid()));
                     response.setCode(ResponseCode.SUCCESS);
                     break;
                 case SECOND_HAND_PENDING_LIST:
@@ -405,187 +453,6 @@ public class Dispatcher {
         return response;
     }
 
-    private boolean requiresPermissionCheck(MessageType type) {
-        switch (type) {
-            case COURSE_QUERY:
-            case COURSE_ADD:
-            case COURSE_UPDATE:
-            case COURSE_DISABLE:
-            case COURSE_DELETE:
-            case COURSE_APPROVE:
-            case COURSE_REJECT:
-            case COURSE_LIST_ALL:
-            case COURSE_QUERY_BY_TEACHER:
-            case COURSE_QUERY_BY_SEMESTER:
-            case COURSE_PENDING_LIST:
-            case COURSE_SCHEDULE:
-            case COURSE_WEEK_SCHEDULE:
-            case COURSE_LOCATION_SCHEDULE:
-            case COURSE_SELECT:
-            case COURSE_DROP:
-            case COURSE_TIMETABLE:
-            case COURSE_STUDENT_LIST:
-            case GRADE_SUBMIT:
-            case GRADE_QUERY:
-            case GRADE_QUERY_BY_COURSE:
-            case GRADE_STATISTICS:
-            case COURSE_REVIEW_SUBMIT:
-            case COURSE_REVIEW_LIST:
-            case COURSE_REVIEW_DELETE:
-            case BOOK_QUERY:
-            case BOOK_ADD:
-            case BOOK_UPDATE:
-            case BOOK_DELETE:
-            case BOOK_BORROW:
-            case BOOK_RETURN:
-            case BOOK_RENEW:
-            case BORROW_MY_LIST:
-            case BORROW_BY_STUDENT:
-            case BOOK_RESOURCE_UPLOAD:
-            case BOOK_RESOURCE_DOWNLOAD:
-            case BOOK_RESOURCE_DELETE:
-            case BOOK_RESOURCE_PAGE_COUNT:
-            case BOOK_RESOURCE_RENDER_PAGE:
-            case USER_REGISTER:
-            case USER_LIST:
-            case STUDENT_LIST:
-            case USER_UPDATE:
-            case USER_DELETE:
-            case USER_RESET_PASSWORD:
-            case EBK_SUBMIT:
-            case EBK_MY_LIST:
-            case EBK_PENDING_LIST:
-            case EBK_REVIEW:
-            case ORDER_LIST_ALL:
-            case ORDER_STATISTICS:
-            case SECOND_HAND_PENDING_LIST:
-            case SECOND_HAND_REVIEW:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private boolean hasPermission(String uid, MessageType type) {
-        UserVO user = userService.queryByUid(uid);
-        if (user == null || user.getRole() == null) {
-            return false;
-        }
-
-        UserRole role = user.getRole();
-        switch (type) {
-            case COURSE_QUERY:
-            case COURSE_LIST_ALL:
-            case COURSE_QUERY_BY_TEACHER:
-            case COURSE_QUERY_BY_SEMESTER:
-                return true;
-            case COURSE_ADD:
-            case COURSE_UPDATE:
-            case COURSE_DISABLE:
-                return isCourseManager(role);
-            case COURSE_DELETE:
-                return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
-            case COURSE_APPROVE:
-            case COURSE_REJECT:
-            case COURSE_PENDING_LIST:
-                return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
-            case COURSE_SCHEDULE:
-                return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
-            case COURSE_WEEK_SCHEDULE:
-                return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
-            case COURSE_LOCATION_SCHEDULE:
-                return role == UserRole.ADMIN || role == UserRole.ACADEMIC_AFFAIRS_TEACHER;
-            case COURSE_SELECT:
-            case COURSE_DROP:
-            case COURSE_TIMETABLE:
-                return role == UserRole.STUDENT;
-            case COURSE_STUDENT_LIST:
-                return role == UserRole.ADMIN
-                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
-                        || role == UserRole.TEACHER;
-            case GRADE_SUBMIT:
-                return role == UserRole.ADMIN
-                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
-                        || role == UserRole.TEACHER;
-            case GRADE_QUERY:
-                return role == UserRole.STUDENT
-                        || role == UserRole.TEACHER
-                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
-                        || role == UserRole.ADMIN;
-            case GRADE_QUERY_BY_COURSE:
-            case GRADE_STATISTICS:
-                return role == UserRole.ADMIN
-                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
-                        || role == UserRole.TEACHER;
-            case COURSE_REVIEW_SUBMIT:
-            case COURSE_REVIEW_DELETE:
-                return role == UserRole.STUDENT;
-            case COURSE_REVIEW_LIST:
-                return role == UserRole.STUDENT
-                        || role == UserRole.TEACHER
-                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
-                        || role == UserRole.ADMIN;
-            case BOOK_QUERY:
-                return true;
-            case BOOK_ADD:
-            case BOOK_UPDATE:
-            case BOOK_DELETE:
-            case BOOK_RESOURCE_DELETE:
-                return role == UserRole.ADMIN || role == UserRole.LIBRARIAN;
-            case BOOK_RESOURCE_UPLOAD:
-                return role == UserRole.ADMIN
-                        || role == UserRole.LIBRARIAN
-                        || role == UserRole.STUDENT
-                        || role == UserRole.TEACHER;
-            case BOOK_BORROW:
-            case BOOK_RETURN:
-                return role == UserRole.ADMIN || role == UserRole.LIBRARIAN;
-            case BOOK_RENEW:
-                return role == UserRole.STUDENT || role == UserRole.TEACHER;
-            case BORROW_MY_LIST:
-                return role == UserRole.STUDENT || role == UserRole.TEACHER;
-            case BORROW_BY_STUDENT:
-                return role == UserRole.ADMIN || role == UserRole.LIBRARIAN;
-            case BOOK_RESOURCE_DOWNLOAD:
-            case BOOK_RESOURCE_PAGE_COUNT:
-            case BOOK_RESOURCE_RENDER_PAGE:
-                return role == UserRole.ADMIN
-                        || role == UserRole.LIBRARIAN
-                        || role == UserRole.STUDENT
-                        || role == UserRole.TEACHER;
-            case USER_REGISTER:
-            case USER_LIST:
-            case USER_UPDATE:
-            case USER_DELETE:
-            case USER_RESET_PASSWORD:
-                return role == UserRole.ADMIN;
-            case STUDENT_LIST:
-                return role == UserRole.ADMIN
-                        || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
-                        || role == UserRole.TEACHER;
-            case EBK_SUBMIT:
-            case EBK_MY_LIST:
-                return role == UserRole.STUDENT || role == UserRole.TEACHER;
-            case EBK_PENDING_LIST:
-            case EBK_REVIEW:
-                return role == UserRole.ADMIN || role == UserRole.LIBRARIAN;
-            case ORDER_LIST_ALL:
-            case ORDER_STATISTICS:
-                return role == UserRole.ADMIN || role == UserRole.SELLER;
-            case SECOND_HAND_PENDING_LIST:
-            case SECOND_HAND_REVIEW:
-                return role == UserRole.ADMIN;
-            default:
-                return false;
-        }
-    }
-
-    private boolean isCourseManager(UserRole role) {
-        return role == UserRole.ADMIN
-                || role == UserRole.ACADEMIC_AFFAIRS_TEACHER
-                || role == UserRole.TEACHER;
-    }
-
     /**
      * 登录成功时返回完整用户信息，客户端据此识别角色。
      */
@@ -604,9 +471,20 @@ public class Dispatcher {
             response.setData("账号已被冻结，请联系管理员");
             return;
         }
+        // 登录成功即把身份写入本连接的会话，此后该连接上的请求都以这个身份为准
+        session.authenticate(user);
         response.setUid(user.getAccountNumber());
         response.setData(user);
         response.setCode(ResponseCode.SUCCESS);
+    }
+
+    /**
+     * 注销当前连接上的会话身份。客户端登出时调用，之后本连接需重新登录。
+     */
+    private void handleLogout(Message request, Message response) {
+        session.clear();
+        response.setCode(ResponseCode.SUCCESS);
+        response.setData("已退出登录");
     }
 
     /**
@@ -677,7 +555,7 @@ public class Dispatcher {
             return;
         }
         uid = uid.trim();
-        if (uid.equals(request.getUid())) {
+        if (uid.equals(session.getUid())) {
             response.setCode(ResponseCode.FAIL);
             response.setData("不能删除当前登录的账号");
             return;
@@ -717,7 +595,7 @@ public class Dispatcher {
             return;
         }
         EbookSubmissionVO submission = (EbookSubmissionVO) data;
-        submission.setUploaderUid(request.getUid());
+        submission.setUploaderUid(session.getUid());
         boolean ok = ebookSubmissionService.submit(submission);
         response.setCode(ok ? ResponseCode.SUCCESS : ResponseCode.FAIL);
     }
@@ -726,7 +604,7 @@ public class Dispatcher {
      * 查询当前用户的投稿记录。
      */
     private void handleEbookMyList(Message request, Message response) {
-        response.setData(ebookSubmissionService.listByUploader(request.getUid()));
+        response.setData(ebookSubmissionService.listByUploader(session.getUid()));
         response.setCode(ResponseCode.SUCCESS);
     }
 
@@ -784,11 +662,11 @@ public class Dispatcher {
                 response.setData("上架电子书失败");
                 return;
             }
-            ebookSubmissionService.updateStatus(id, "APPROVED", request.getUid(), comment);
+            ebookSubmissionService.updateStatus(id, "APPROVED", session.getUid(), comment);
             response.setCode(ResponseCode.SUCCESS);
         } else {
             resourceService.delete(submission.getResourceFile());
-            ebookSubmissionService.updateStatus(id, "REJECTED", request.getUid(), comment);
+            ebookSubmissionService.updateStatus(id, "REJECTED", session.getUid(), comment);
             response.setCode(ResponseCode.SUCCESS);
         }
     }
@@ -801,7 +679,7 @@ public class Dispatcher {
             if (pwdData.length >= 2) {
                 String oldPwd = pwdData[0];
                 String newPwd = pwdData[1];
-                boolean ok = userService.changePassword(request.getUid(), oldPwd, newPwd);
+                boolean ok = userService.changePassword(session.getUid(), oldPwd, newPwd);
                 if (ok) {
                     response.setCode(ResponseCode.SUCCESS);
                     response.setData("密码修改成功");
@@ -828,9 +706,9 @@ public class Dispatcher {
         }
 
         if (newBalance != null) {
-            boolean ok = userService.updateBalance(request.getUid(), newBalance);
+            boolean ok = userService.updateBalance(session.getUid(), newBalance);
             if (ok) {
-                UserVO updatedUser = userService.queryByUid(request.getUid());
+                UserVO updatedUser = userService.queryByUid(session.getUid());
                 response.setCode(ResponseCode.SUCCESS);
                 response.setData(updatedUser);
             } else {
@@ -853,9 +731,9 @@ public class Dispatcher {
             return ResponseCode.INVALID_REQUEST;
         }
         if (request.getType() == MessageType.COURSE_SELECT) {
-            return selectionService.selectCourse(request.getUid(), courseCode);
+            return selectionService.selectCourse(session.getUid(), courseCode);
         }
-        return selectionService.dropCourse(request.getUid(), courseCode);
+        return selectionService.dropCourse(session.getUid(), courseCode);
     }
 
     /**
@@ -998,7 +876,7 @@ public class Dispatcher {
             return ResponseCode.INVALID_REQUEST;
         }
         OrderVO order = (OrderVO) request.getData();
-        order.setStudentId(request.getUid());
+        order.setStudentId(session.getUid());
         return orderService.createOrder(order);
     }
 
@@ -1012,7 +890,7 @@ public class Dispatcher {
             response.setData("充值金额不合法");
             return;
         }
-        UserVO user = userService.queryByUid(request.getUid());
+        UserVO user = userService.queryByUid(session.getUid());
         if (user == null) {
             response.setCode(ResponseCode.FAIL);
             response.setData("用户不存在");
@@ -1020,20 +898,20 @@ public class Dispatcher {
         }
         BigDecimal current = user.getBalance() != null ? user.getBalance() : BigDecimal.ZERO;
         BigDecimal target = current.add(amount);
-        if (!userService.updateBalance(request.getUid(), target)) {
+        if (!userService.updateBalance(session.getUid(), target)) {
             response.setCode(ResponseCode.FAIL);
             response.setData("余额更新失败");
             return;
         }
         response.setCode(ResponseCode.SUCCESS);
-        response.setData(userService.queryByUid(request.getUid()));
+        response.setData(userService.queryByUid(session.getUid()));
     }
 
     /**
      * 处理一卡通余额查询：返回最新用户实体（含余额）。
      */
     private void handleBalance(Message request, Message response) {
-        UserVO user = userService.queryByUid(request.getUid());
+        UserVO user = userService.queryByUid(session.getUid());
         if (user == null) {
             response.setCode(ResponseCode.FAIL);
             response.setData("用户不存在");
@@ -1064,11 +942,6 @@ public class Dispatcher {
      * 处理新增商品：仅管理员或卖家允许。
      */
     private void handleGoodsAdd(Message request, Message response) {
-        if (!isGoodsManager(request)) {
-            response.setCode(ResponseCode.UNAUTHORIZED);
-            response.setData("无权执行该操作：仅管理员或卖家可管理商品");
-            return;
-        }
         if (!(request.getData() instanceof GoodsVO)) {
             response.setCode(ResponseCode.INVALID_REQUEST);
             response.setData("商品参数不合法");
@@ -1085,11 +958,6 @@ public class Dispatcher {
      * 处理修改商品：仅管理员或卖家允许。
      */
     private void handleGoodsUpdate(Message request, Message response) {
-        if (!isGoodsManager(request)) {
-            response.setCode(ResponseCode.UNAUTHORIZED);
-            response.setData("无权执行该操作：仅管理员或卖家可管理商品");
-            return;
-        }
         if (!(request.getData() instanceof GoodsVO)) {
             response.setCode(ResponseCode.INVALID_REQUEST);
             response.setData("商品参数不合法");
@@ -1106,11 +974,6 @@ public class Dispatcher {
      * 处理删除商品：仅管理员或卖家允许。
      */
     private void handleGoodsDelete(Message request, Message response) {
-        if (!isGoodsManager(request)) {
-            response.setCode(ResponseCode.UNAUTHORIZED);
-            response.setData("无权执行该操作：仅管理员或卖家可管理商品");
-            return;
-        }
         String goodsId = String.valueOf(request.getData());
         if (goodsId == null || "null".equals(goodsId) || goodsId.trim().isEmpty()) {
             response.setCode(ResponseCode.INVALID_REQUEST);
@@ -1125,26 +988,9 @@ public class Dispatcher {
     }
 
     /**
-     * 商品管理权限校验：仅 ADMIN 或 SELLER 允许。
-     */
-    private boolean isGoodsManager(Message request) {
-        UserVO user = userService.queryByUid(request.getUid());
-        if (user == null || user.getRole() == null) {
-            return false;
-        }
-        UserRole role = user.getRole();
-        return role == UserRole.ADMIN || role == UserRole.SELLER;
-    }
-
-    /**
-     * 处理商品强制下架：仅管理员允许。
+     * 处理商品强制下架：仅管理员允许（权限由 PermissionTable 统一校验）。
      */
     private void handleGoodsOffShelf(Message request, Message response) {
-        if (!isAdmin(request)) {
-            response.setCode(ResponseCode.UNAUTHORIZED);
-            response.setData("无权执行该操作：仅管理员可强制下架商品");
-            return;
-        }
         String goodsId = String.valueOf(request.getData());
         if (goodsId == null || "null".equals(goodsId) || goodsId.trim().isEmpty()) {
             response.setCode(ResponseCode.INVALID_REQUEST);
@@ -1159,22 +1005,9 @@ public class Dispatcher {
     }
 
     /**
-     * 管理员权限校验。
-     */
-    private boolean isAdmin(Message request) {
-        UserVO user = userService.queryByUid(request.getUid());
-        return user != null && user.getRole() == UserRole.ADMIN;
-    }
-
-    /**
-     * 处理商品图片上传：仅管理员或卖家允许，保存后返回服务端文件名。
+     * 处理商品图片上传：仅管理员或卖家允许（权限由 PermissionTable 统一校验），保存后返回服务端文件名。
      */
     private void handleGoodsImageUpload(Message request, Message response) {
-        if (!isGoodsManager(request)) {
-            response.setCode(ResponseCode.UNAUTHORIZED);
-            response.setData("无权执行该操作：仅管理员或卖家可上传商品图片");
-            return;
-        }
         if (!(request.getData() instanceof ResourceFileVO)) {
             response.setCode(ResponseCode.INVALID_REQUEST);
             response.setData("图片参数不合法");
@@ -1213,11 +1046,6 @@ public class Dispatcher {
      * 处理商品图片删除：仅管理员或卖家允许。
      */
     private void handleGoodsImageDelete(Message request, Message response) {
-        if (!isGoodsManager(request)) {
-            response.setCode(ResponseCode.UNAUTHORIZED);
-            response.setData("无权执行该操作：仅管理员或卖家可删除商品图片");
-            return;
-        }
         String name = request.getData() == null ? "" : String.valueOf(request.getData());
         if (name.isEmpty() || "null".equals(name)) {
             response.setCode(ResponseCode.INVALID_REQUEST);
@@ -1290,7 +1118,7 @@ public class Dispatcher {
         }
         CartVO cart = (CartVO) request.getData();
         String goodsId = cart.getGoodsId() == null ? "" : cart.getGoodsId();
-        ResponseCode code = cartService.addItem(request.getUid(), goodsId, cart.getCount());
+        ResponseCode code = cartService.addItem(session.getUid(), goodsId, cart.getCount());
         response.setCode(code);
         if (code == ResponseCode.GOODS_STOCK_INSUFFICIENT) {
             response.setData("加入失败：已达该商品库存上限（含购物车已有数量）");
@@ -1305,7 +1133,7 @@ public class Dispatcher {
      * 处理查询购物车：返回购物车条目列表（含商品快照）。
      */
     private void handleCartQuery(Message request, Message response) {
-        response.setData(cartService.listCart(request.getUid()));
+        response.setData(cartService.listCart(session.getUid()));
         response.setCode(ResponseCode.SUCCESS);
     }
 
@@ -1320,21 +1148,21 @@ public class Dispatcher {
         }
         CartVO cart = (CartVO) request.getData();
         String goodsId = cart.getGoodsId() == null ? "" : cart.getGoodsId();
-        response.setCode(cartService.updateCount(request.getUid(), goodsId, cart.getCount()));
+        response.setCode(cartService.updateCount(session.getUid(), goodsId, cart.getCount()));
     }
 
     /**
      * 处理移除购物车条目：负载为商品编码字符串。
      */
     private void handleCartRemove(Message request, Message response) {
-        response.setCode(cartService.removeItem(request.getUid(), String.valueOf(request.getData())));
+        response.setCode(cartService.removeItem(session.getUid(), String.valueOf(request.getData())));
     }
 
     /**
      * 处理清空购物车。
      */
     private void handleCartClear(Message request, Message response) {
-        response.setCode(cartService.clearCart(request.getUid()));
+        response.setCode(cartService.clearCart(session.getUid()));
     }
 
     /**
@@ -1342,7 +1170,7 @@ public class Dispatcher {
      */
     private void handleCartCheckout(Message request, Message response) {
         List<OrderVO> created = new ArrayList<>();
-        ResponseCode code = orderService.checkoutCart(request.getUid(), created);
+        ResponseCode code = orderService.checkoutCart(session.getUid(), created);
         response.setCode(code);
         if (code == ResponseCode.SUCCESS) {
             response.setData(created);
@@ -1387,7 +1215,7 @@ public class Dispatcher {
         }
 
         // 组装调用来源描述：包含操作人一卡通号/UID
-        String source = "用户手动触发 (UID: " + request.getUid() + ")";
+        String source = "用户手动触发 (UID: " + session.getUid() + ")";
         ResponseCode code = noticeService.triggerSync(days, source);
         response.setCode(code);
         response.setData(noticeService.getStatus());
@@ -1412,7 +1240,7 @@ public class Dispatcher {
             return;
         }
         SecondHandVO vo = (SecondHandVO) request.getData();
-        ResponseCode code = secondHandService.publish(request.getUid(), vo);
+        ResponseCode code = secondHandService.publish(session.getUid(), vo);
         response.setCode(code);
         if (code != ResponseCode.SUCCESS) {
             response.setData("发布失败，请检查标题与定价");
@@ -1429,7 +1257,7 @@ public class Dispatcher {
             response.setData("商品编号不合法");
             return;
         }
-        ResponseCode code = secondHandService.offShelf(request.getUid(), id);
+        ResponseCode code = secondHandService.offShelf(session.getUid(), id);
         response.setCode(code);
         if (code != ResponseCode.SUCCESS) {
             response.setData("下架失败，可能不是你的商品或已售出");
@@ -1446,7 +1274,7 @@ public class Dispatcher {
             response.setData("商品编号不合法");
             return;
         }
-        ResponseCode code = secondHandService.buy(request.getUid(), id);
+        ResponseCode code = secondHandService.buy(session.getUid(), id);
         response.setCode(code);
         if (code != ResponseCode.SUCCESS) {
             String msg;
@@ -1490,11 +1318,6 @@ public class Dispatcher {
      * APPROVE 通过 / REJECT 拒绝）。
      */
     private void handleSecondHandReview(Message request, Message response) {
-        if (!isAdmin(request)) {
-            response.setCode(ResponseCode.UNAUTHORIZED);
-            response.setData("无权执行该操作：仅管理员可审核二手商品");
-            return;
-        }
         if (!(request.getData() instanceof SecondHandVO)) {
             response.setCode(ResponseCode.INVALID_REQUEST);
             response.setData("审核参数不合法");
@@ -1508,7 +1331,7 @@ public class Dispatcher {
             response.setData("商品编号不合法");
             return;
         }
-        ResponseCode code = secondHandService.review(request.getUid(), id, approve);
+        ResponseCode code = secondHandService.review(session.getUid(), id, approve);
         response.setCode(code);
         if (code != ResponseCode.SUCCESS) {
             response.setData("审核失败，商品可能不存在或已被处理");
@@ -1525,7 +1348,7 @@ public class Dispatcher {
             return;
         }
         ChatMessageVO vo = (ChatMessageVO) request.getData();
-        ResponseCode code = chatService.send(request.getUid(), vo.getItemId(), vo.getToUid(), vo.getContent());
+        ResponseCode code = chatService.send(session.getUid(), vo.getItemId(), vo.getToUid(), vo.getContent());
         response.setCode(code);
         if (code != ResponseCode.SUCCESS) {
             response.setData("发送失败，请检查消息内容");
@@ -1542,7 +1365,7 @@ public class Dispatcher {
             return;
         }
         ChatMessageVO vo = (ChatMessageVO) request.getData();
-        response.setData(chatService.history(vo.getItemId(), request.getUid(), vo.getToUid()));
+        response.setData(chatService.history(vo.getItemId(), session.getUid(), vo.getToUid()));
         response.setCode(ResponseCode.SUCCESS);
     }
 
@@ -1556,7 +1379,7 @@ public class Dispatcher {
             return;
         }
         ChatMessageVO vo = (ChatMessageVO) request.getData();
-        response.setData(chatService.conversations(vo.getItemId(), request.getUid()));
+        response.setData(chatService.conversations(vo.getItemId(), session.getUid()));
         response.setCode(ResponseCode.SUCCESS);
     }
 

@@ -18,11 +18,21 @@ import java.net.SocketException;
 public class ClientHandler implements Runnable {
 
     private final Socket socket;
+    private final SessionContext session;
     private final Dispatcher dispatcher;
 
-    public ClientHandler(Socket socket, Dispatcher dispatcher) {
+    /**
+     * 构造一条连接的处理线程。
+     *
+     * <p>会话上下文与分发器都在此处创建，确保「一条连接 ↔ 一个会话 ↔ 一个分发器」严格一一对应：
+     * 身份状态不会跨连接串味，也无法从外部注入另一个会话。</p>
+     *
+     * @param socket 客户端连接
+     */
+    public ClientHandler(Socket socket) {
         this.socket = socket;
-        this.dispatcher = dispatcher;
+        this.session = new SessionContext();
+        this.dispatcher = new Dispatcher(session);
     }
 
     /**
@@ -53,6 +63,8 @@ public class ClientHandler implements Runnable {
         } catch (ClassNotFoundException e) {
             System.err.println("无法识别客户端报文：" + e.getMessage());
         } finally {
+            // 连接断开即注销会话身份，避免已废弃的连接继续持有登录态
+            session.clear();
             closeQuietly(in);
             closeQuietly(out);
             closeSocket();

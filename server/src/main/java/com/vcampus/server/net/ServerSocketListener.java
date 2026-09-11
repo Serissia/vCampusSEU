@@ -1,7 +1,5 @@
 package com.vcampus.server.net;
 
-import com.vcampus.server.dispatcher.Dispatcher;
-
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -31,7 +29,8 @@ public class ServerSocketListener implements Runnable {
             while (running) {
                 // 每接入一个客户端就交给工作线程处理，主线程继续监听
                 Socket socket = serverSocket.accept();
-                pool.execute(new ClientHandler(socket, new Dispatcher()));
+                // 会话上下文与分发器由 ClientHandler 内部按连接创建，外部不再手工组装
+                pool.execute(new ClientHandler(socket));
             }
         } catch (IOException e) {
             e.printStackTrace();
