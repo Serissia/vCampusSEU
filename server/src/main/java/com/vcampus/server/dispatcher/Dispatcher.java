@@ -345,6 +345,9 @@ public class Dispatcher {
                 case SECOND_HAND_REVIEW:
                     handleSecondHandReview(request, response);
                     break;
+                case SECOND_HAND_UPDATE_PRICE:
+                    handleSecondHandUpdatePrice(request, response);
+                    break;
                 case CHAT_SEND:
                     handleChatSend(request, response);
                     break;
@@ -1460,6 +1463,28 @@ public class Dispatcher {
         }
     }
 
+    /**
+     * 处理卖家修改二手商品价格：负载为 SecondHandVO（id 与 price）。
+     */
+    private void handleSecondHandUpdatePrice(Message request, Message response) {
+        if (!(request.getData() instanceof SecondHandVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("参数不合法");
+            return;
+        }
+        SecondHandVO vo = (SecondHandVO) request.getData();
+        ResponseCode code = secondHandService.updatePrice(request.getUid(), vo.getId(), vo.getPrice());
+        response.setCode(code);
+        if (code == ResponseCode.INVALID_REQUEST) {
+            response.setData("价格需在 0.01 ~ 99999.99 之间（最多两位小数）");
+        } else if (code == ResponseCode.SECOND_HAND_SOLD) {
+            response.setData("商品已售出或已下架，无法改价");
+        } else if (code == ResponseCode.UNAUTHORIZED) {
+            response.setData("只能修改自己发布的商品价格");
+        } else if (code != ResponseCode.SUCCESS) {
+            response.setData("改价失败，请稍后重试");
+        }
+    }
     /**
      * 处理管理员审核二手商品：负载为 SecondHandVO（id 为商品 ID，status 为审核结果
      * APPROVE 通过 / REJECT 拒绝）。

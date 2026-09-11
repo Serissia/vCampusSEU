@@ -2,6 +2,7 @@ package com.vcampus.server.service;
 
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.SecondHandVO;
+import java.math.BigDecimal;
 
 import java.util.List;
 
@@ -46,4 +47,9 @@ public interface ISecondHandService {
      * 购买二手商品：买家扣款、卖家收款、商品标记已售、写入交易订单，全程单事务。
      */
     ResponseCode buy(String uid, Integer id);
+
+    /**
+     * 卖家修改自己商品的定价（仅在售且本人可改），写入调价日志。
+     */
+    ResponseCode updatePrice(String uid, Integer id, BigDecimal newPrice);
 }

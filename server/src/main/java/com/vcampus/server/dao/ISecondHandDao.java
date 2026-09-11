@@ -3,6 +3,7 @@ package com.vcampus.server.dao;
 import com.vcampus.common.vo.OrderVO;
 import com.vcampus.common.vo.SecondHandVO;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -53,6 +54,17 @@ public interface ISecondHandDao {
      * 卖家下架自己发布的商品。
      */
     boolean offShelf(String sellerId, int id) throws SQLException;
+
+    /**
+     * 在同一事务内更新商品价格（卖家改价）。
+     */
+    boolean updatePrice(Connection conn, int id, BigDecimal price) throws SQLException;
+
+    /**
+     * 在同一事务内写入一条调价日志。
+     */
+    boolean insertPriceLog(Connection conn, int itemId, String sellerId,
+                           BigDecimal oldPrice, BigDecimal newPrice, String updateTime) throws SQLException;
 
     /**
      * 在同一事务内写入一条二手交易订单（购买流程使用）。

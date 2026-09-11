@@ -5,6 +5,7 @@ import com.vcampus.common.vo.SecondHandVO;
 import com.vcampus.server.dao.ISecondHandDao;
 import com.vcampus.server.util.DBUtil;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -145,6 +146,30 @@ public class SecondHandDaoImpl implements ISecondHandDao {
         }
     }
 
+    @Override
+    public boolean updatePrice(Connection conn, int id, BigDecimal price) throws SQLException {
+        String sql = "UPDATE tbl_second_hand SET price = ? WHERE id = ? AND status = 'ON_SALE'";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setBigDecimal(1, price);
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean insertPriceLog(Connection conn, int itemId, String sellerId,
+                                  BigDecimal oldPrice, BigDecimal newPrice, String updateTime) throws SQLException {
+        String sql = "INSERT INTO tbl_secondhand_price_log(item_id, seller_id, old_price, new_price, update_time) "
+                + "VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, itemId);
+            ps.setString(2, sellerId);
+            ps.setBigDecimal(3, oldPrice);
+            ps.setBigDecimal(4, newPrice);
+            ps.setString(5, updateTime);
+            return ps.executeUpdate() > 0;
+        }
+    }
     private SecondHandVO mapRow(ResultSet rs) throws SQLException {
         SecondHandVO vo = new SecondHandVO();
         vo.setId(rs.getInt("id"));

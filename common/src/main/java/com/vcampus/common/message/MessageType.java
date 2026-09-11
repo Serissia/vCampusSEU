@@ -144,6 +144,7 @@ public enum MessageType implements Serializable {
     SECOND_HAND_PENDING_LIST,
     /** 审核二手商品（管理员通过/拒绝） */
     SECOND_HAND_REVIEW,
+    SECOND_HAND_UPDATE_PRICE,
 
     /** 二手商品买卖双方聊天：发送消息 */
     CHAT_SEND,

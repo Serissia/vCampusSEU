@@ -84,6 +84,9 @@ public class SecondHandPanel extends VBox {
     private VBox publishPage;
     private VBox confirmBuyPage;
     private VBox confirmOffShelfPage;
+    private VBox editPricePage;
+    private TextField editPriceField;
+    private Label editPriceErrorLabel;
     /** 当前显示的页面（用于"← 返回"智能处理） */
     private VBox currentPage;
     /** 顶部消息条（替代 Alert，用于提示成功/失败/网络错误） */
@@ -166,6 +169,7 @@ public class SecondHandPanel extends VBox {
         publishPage = buildPublishPage();
         confirmBuyPage = new VBox();
         confirmOffShelfPage = new VBox();
+        editPricePage = new VBox();
         chatPage = buildChatPage();
         conversationsPage = buildConversationsPage();
 
@@ -173,7 +177,7 @@ public class SecondHandPanel extends VBox {
         pageHost = new StackPane();
         VBox.setVgrow(pageHost, Priority.ALWAYS);
         pageHost.getChildren().addAll(listingsPage, reviewPage, myListPage,
-                publishPage, confirmBuyPage, confirmOffShelfPage, chatPage, conversationsPage);
+                publishPage, confirmBuyPage, confirmOffShelfPage, editPricePage, chatPage, conversationsPage);
         showPage(listingsPage);
 
         getChildren().addAll(buildHeader(), toastBar, pageHost);
@@ -526,7 +530,7 @@ public class SecondHandPanel extends VBox {
     private VBox buildConversationsPage() {
         VBox page = new VBox(12.0);
         page.getStyleClass().add("secondhand-subpage");
-        Label title = new Label("商品咨询");
+        Label title = new Label("联系买家");
         title.getStyleClass().add("lib-section-title");
         conversationsContainer = new VBox(8.0);
         conversationsContainer.setPadding(new Insets(8.0, 0, 8.0, 0));
@@ -875,7 +879,7 @@ public class SecondHandPanel extends VBox {
         badge.getStyleClass().addAll("shop-card-badge", "shop-card-badge-on");
         Region topSpacer = new Region();
         HBox.setHgrow(topSpacer, Priority.ALWAYS);
-        Button chatBtn = new Button(mine ? "咨询" : "联系卖家");
+        Button chatBtn = new Button(mine ? "联系买家" : "联系卖家");
         chatBtn.getStyleClass().add("secondhand-chat-btn");
         if (mine) {
             chatBtn.setOnAction(e -> openConversationsPage(item));
@@ -901,18 +905,37 @@ public class SecondHandPanel extends VBox {
         Label price = new Label(formatPrice(item.getPrice()));
         price.getStyleClass().add("shop-card-price");
 
-        Button actionBtn = mine ? new Button("下架") : new Button("购买");
-        actionBtn.setMaxWidth(Double.MAX_VALUE);
-        actionBtn.setMinHeight(28.0);
-        if (mine) {
-            actionBtn.getStyleClass().add("lib-btn-danger");
-            actionBtn.setOnAction(e -> confirmOffShelf(item));
-        } else {
-            actionBtn.getStyleClass().add("shop-btn-buy");
-            actionBtn.setOnAction(e -> confirmBuy(item));
-        }
+        card.getChildren().addAll(topRow, title, seller, desc, price);
 
-        card.getChildren().addAll(topRow, title, seller, desc, price, actionBtn);
+        boolean available = "ON_SALE".equals(item.getStatus());
+        if (mine && available) {
+            Button editPriceBtn = new Button("修改价格");
+            editPriceBtn.getStyleClass().add("btn-recharge-preset");
+            editPriceBtn.setMaxWidth(Double.MAX_VALUE);
+            HBox.setHgrow(editPriceBtn, Priority.ALWAYS);
+            editPriceBtn.setOnAction(e -> openEditPricePage(item));
+
+            Button offShelfBtn = new Button("下架");
+            offShelfBtn.getStyleClass().add("lib-btn-danger");
+            offShelfBtn.setOnAction(e -> confirmOffShelf(item));
+
+            HBox actions = new HBox(8.0, editPriceBtn, offShelfBtn);
+            actions.setAlignment(Pos.CENTER_LEFT);
+            actions.setMaxWidth(Double.MAX_VALUE);
+            card.getChildren().add(actions);
+        } else {
+            Button actionBtn = new Button(mine ? "下架" : "购买");
+            actionBtn.setMaxWidth(Double.MAX_VALUE);
+            actionBtn.setMinHeight(28.0);
+            if (mine) {
+                actionBtn.getStyleClass().add("lib-btn-danger");
+                actionBtn.setOnAction(e -> confirmOffShelf(item));
+            } else {
+                actionBtn.getStyleClass().add("shop-btn-buy");
+                actionBtn.setOnAction(e -> confirmBuy(item));
+            }
+            card.getChildren().add(actionBtn);
+        }
         return card;
     }
 
@@ -1018,6 +1041,124 @@ public class SecondHandPanel extends VBox {
         });
     }
 
+    /**
+     * 进入「修改价格」二级页（仅卖家本人的在售商品）。
+     */
+    private void openEditPricePage(SecondHandVO item) {
+        editPricePage.getChildren().clear();
+        editPricePage.getStyleClass().add("secondhand-subpage");
+        editPricePage.setSpacing(14.0);
+        editPricePage.setPadding(new Insets(16.0));
+
+        Label title = new Label("修改价格");
+        title.getStyleClass().add("lib-section-title");
+
+        VBox summary = new VBox(8.0);
+        summary.getStyleClass().add("profile-card");
+        summary.setPadding(new Insets(16.0));
+        Label name = new Label(item.getTitle() == null ? "" : item.getTitle());
+        name.getStyleClass().add("shop-card-name");
+        name.setWrapText(true);
+        Label curPrice = new Label("当前价格：" + formatPrice(item.getPrice()));
+        curPrice.getStyleClass().add("lib-subtitle");
+        summary.getChildren().addAll(name, curPrice);
+
+        VBox form = new VBox(8.0);
+        form.getStyleClass().add("profile-card");
+        form.setPadding(new Insets(16.0));
+
+        Label inputCaption = new Label("新价格（0.01 ~ 99999.99）");
+        inputCaption.getStyleClass().add("shop-form-label");
+        editPriceField = new TextField(item.getPrice() == null ? "" : item.getPrice().stripTrailingZeros().toPlainString());
+        editPriceField.getStyleClass().add("modern-input-field");
+        editPriceField.setPromptText("请输入新价格，如 88.00");
+
+        Label hint = new Label("价格修改立即生效");
+        hint.getStyleClass().add("lib-subtitle");
+
+        editPriceErrorLabel = new Label();
+        editPriceErrorLabel.getStyleClass().addAll("lib-msg-label", "error");
+        editPriceErrorLabel.setVisible(false);
+        editPriceErrorLabel.setManaged(false);
+
+        form.getChildren().addAll(inputCaption, editPriceField, hint, editPriceErrorLabel);
+
+        HBox footer = new HBox(10.0);
+        footer.setAlignment(Pos.CENTER_RIGHT);
+        Region sp = new Region();
+        HBox.setHgrow(sp, Priority.ALWAYS);
+        Button cancelBtn = new Button("取消");
+        cancelBtn.getStyleClass().add("btn-recharge-preset");
+        cancelBtn.setOnAction(e -> showPage(listingsPage));
+        Button okBtn = new Button("确认");
+        okBtn.getStyleClass().add("btn-primary-action");
+        okBtn.setOnAction(e -> submitPriceChange(item));
+        footer.getChildren().addAll(sp, cancelBtn, okBtn);
+
+        editPricePage.getChildren().addAll(title, summary, form, footer);
+        showPage(editPricePage);
+    }
+
+    /**
+     * 提交改价：本地校验 0.01~99999.99（最多两位小数），成功返回列表并提示，失败内联红字。
+     */
+    private void submitPriceChange(SecondHandVO item) {
+        String text = editPriceField == null || editPriceField.getText() == null ? "" : editPriceField.getText().trim();
+        BigDecimal price;
+        try {
+            price = new BigDecimal(text);
+        } catch (NumberFormatException e) {
+            showEditPriceError("请输入合法的价格数字");
+            return;
+        }
+        BigDecimal min = new BigDecimal("0.01");
+        BigDecimal max = new BigDecimal("99999.99");
+        if (price.compareTo(min) < 0 || price.compareTo(max) > 0) {
+            showEditPriceError("价格需在 0.01 ~ 99999.99 之间");
+            return;
+        }
+        if (price.stripTrailingZeros().scale() > 2) {
+            showEditPriceError("价格最多保留两位小数");
+            return;
+        }
+        hideEditPriceError();
+
+        SecondHandVO payload = new SecondHandVO();
+        payload.setId(item.getId());
+        payload.setPrice(price);
+        THREAD_POOL.execute(() -> {
+            try {
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.SECOND_HAND_UPDATE_PRICE, null, payload);
+                Message response = socketClient.send(request);
+                Platform.runLater(() -> {
+                    if (response != null && response.getCode() == ResponseCode.SUCCESS) {
+                        showToast("价格已更新为 " + formatPrice(price), ToastType.SUCCESS);
+                        showPage(listingsPage);
+                        refresh();
+                    } else {
+                        showEditPriceError(errorText(response, "改价失败，请稍后重试"));
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> showEditPriceError("网络错误，改价失败"));
+            }
+        });
+    }
+
+    private void showEditPriceError(String msg) {
+        if (editPriceErrorLabel != null) {
+            editPriceErrorLabel.setText(msg);
+            editPriceErrorLabel.setVisible(true);
+            editPriceErrorLabel.setManaged(true);
+        }
+    }
+
+    private void hideEditPriceError() {
+        if (editPriceErrorLabel != null) {
+            editPriceErrorLabel.setVisible(false);
+            editPriceErrorLabel.setManaged(false);
+        }
+    }
     private void confirmOffShelf(SecondHandVO item) {
         openConfirmOffShelfPage(item);
     }
