@@ -511,7 +511,7 @@ public class SecondHandPanel extends VBox {
 
         chatInputField = new TextField();
         chatInputField.setPromptText("输入消息…");
-        chatInputField.getStyleClass().add("modern-input-field");
+        chatInputField.getStyleClass().addAll("modern-input-field", "chat-input-field");
         chatInputField.setOnAction(e -> sendChatMessage());
         Button sendBtn = new Button("发送");
         sendBtn.getStyleClass().add("btn-primary-action");

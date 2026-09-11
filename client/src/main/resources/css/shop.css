@@ -575,7 +575,7 @@
 
 /* 聊天气泡 */
 .chat-bubble-name {
-    -fx-font-size: 11px;
+    -fx-font-size: 13px;
     -fx-text-fill: -fx-text-muted;
 }
 
@@ -584,7 +584,7 @@
     -fx-text-fill: white;
     -fx-background-radius: 12px;
     -fx-padding: 8px 12px;
-    -fx-font-size: 13px;
+    -fx-font-size: 15px;
 }
 
 .chat-bubble-other {
@@ -592,10 +592,14 @@
     -fx-text-fill: -fx-text-main;
     -fx-background-radius: 12px;
     -fx-padding: 8px 12px;
-    -fx-font-size: 13px;
+    -fx-font-size: 15px;
 }
 
 .chat-bubble-time {
-    -fx-font-size: 10px;
+    -fx-font-size: 12px;
     -fx-text-fill: -fx-text-disabled;
+}
+
+.chat-input-field {
+    -fx-font-size: 14px;
 }
