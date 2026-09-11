@@ -177,6 +177,8 @@ public final class PermissionTable {
         allowAny(MessageType.SECOND_HAND_QUERY,
                 MessageType.SECOND_HAND_PUBLISH,
                 MessageType.SECOND_HAND_OFF_SHELF,
+                // 卖家改价：与发布/下架同级，服务端还会校验「只能改自己发布的商品」
+                MessageType.SECOND_HAND_UPDATE_PRICE,
                 MessageType.SECOND_HAND_BUY,
                 MessageType.SECOND_HAND_MY_LIST,
                 MessageType.CHAT_SEND,

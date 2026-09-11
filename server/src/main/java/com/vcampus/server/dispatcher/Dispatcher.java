@@ -1346,7 +1346,7 @@ public class Dispatcher {
             return;
         }
         SecondHandVO vo = (SecondHandVO) request.getData();
-        ResponseCode code = secondHandService.updatePrice(request.getUid(), vo.getId(), vo.getPrice());
+        ResponseCode code = secondHandService.updatePrice(session.getUid(), vo.getId(), vo.getPrice());
         response.setCode(code);
         if (code == ResponseCode.INVALID_REQUEST) {
             response.setData("价格需在 0.01 ~ 99999.99 之间（最多两位小数）");
