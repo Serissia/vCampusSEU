@@ -91,10 +91,9 @@ public class SocketClient implements Closeable {
             out.flush();
             out.reset();
         } catch (IOException writeFailure) {
-            if (sessionToken == null) {
-                throw writeFailure;
-            }
-            // 请求未送出，可以安全地重连后重试一次
+            // 请求未送出，可以安全地重连后重试一次。
+            // 这里不能加「只有带令牌才重试」的限制：登录请求本身就没有令牌，
+            // 而登录页停留超过服务端空闲超时后连接会被回收，那条登录请求同样需要重连。
             close();
             connect();
             out.writeObject(request);

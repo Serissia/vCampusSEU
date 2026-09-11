@@ -10,6 +10,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 
 /**
  * 单客户端长连接处理线程。
@@ -60,6 +61,9 @@ public class ClientHandler implements Runnable {
             }
         } catch (EOFException | SocketException ignored) {
             // 客户端正常关闭连接或探测断开，无需打印错误堆栈
+        } catch (SocketTimeoutException e) {
+            // 空闲超时：客户端多半是异常退出（没有 FIN），此处按断线回收连接与线程
+            System.out.println("客户端连接空闲超时，已回收：" + socket.getRemoteSocketAddress());
         } catch (IOException e) {
             System.err.println("客户端连接异常：" + e.getMessage());
         } catch (ClassNotFoundException e) {

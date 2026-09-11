@@ -115,6 +115,11 @@ public class Dispatcher {
         Message response = new Message();
         response.setType(request.getType());
 
+        // 为请求携带的令牌续期（仅当它本就属于本连接的用户）。
+        // 放在权限判断之前，使心跳这类公开请求也能续期——否则用户挂着应用不做操作时，
+        // 连接被心跳维持着，令牌却在 30 分钟后悄悄过期，一旦断线重连就得重新登录。
+        sessionManager.touch(request.getToken(), session.getUid());
+
         // 公开接口（登录、心跳）无需身份；其余接口一律要求已认证
         if (!PermissionTable.isPublic(request.getType())) {
             String uid = resolveIdentity(request);
@@ -479,8 +484,6 @@ public class Dispatcher {
      */
     private String resolveIdentity(Message request) {
         if (session.isAuthenticated()) {
-            // 已认证的连接：顺带为同属该用户的令牌续期，使滑动过期真正以「还在操作」为准
-            sessionManager.touch(request.getToken(), session.getUid());
             return session.getUid();
         }
 

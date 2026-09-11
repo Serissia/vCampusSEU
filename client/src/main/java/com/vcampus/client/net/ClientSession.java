@@ -7,6 +7,8 @@ import com.vcampus.common.vo.UserVO;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 客户端会话与全局唯一网络连接。
@@ -35,6 +37,14 @@ public final class ClientSession {
         thread.setDaemon(true);
         return thread;
     });
+
+    /**
+     * 心跳间隔（秒）。服务端连接空闲超时为 180 秒，这里取 60 秒留三次余量。
+     */
+    private static final long HEARTBEAT_INTERVAL_SECONDS = 60L;
+
+    /** 心跳线程池，仅在登录期间存在 */
+    private ScheduledExecutorService heartbeat;
 
     /** 当前共享连接；为 null 表示尚未建立（首次请求时按配置懒创建） */
     private SocketClient client;
@@ -92,6 +102,59 @@ public final class ClientSession {
         if (current != null) {
             current.setSessionToken(token);
         }
+        startHeartbeat();
+    }
+
+    /**
+     * 启动心跳：周期性在本连接上发一次 HEARTBEAT。
+     *
+     * <p>两个作用：一是让服务端的连接空闲超时看到流量，从而把「应用开着但用户没操作」
+     * 与「客户端已经死了」区分开；二是服务端借此为令牌滑动续期，避免挂着不动时令牌悄悄过期。</p>
+     */
+    private void startHeartbeat() {
+        stopHeartbeat();
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "ClientSession-Heartbeat");
+            thread.setDaemon(true);
+            return thread;
+        });
+        synchronized (this) {
+            heartbeat = scheduler;
+        }
+        // fixedDelay 而非 fixedRate：上一个心跳卡在慢请求后面时，不会堆积出连续多次心跳
+        scheduler.scheduleWithFixedDelay(this::sendHeartbeat,
+                HEARTBEAT_INTERVAL_SECONDS, HEARTBEAT_INTERVAL_SECONDS, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 停止心跳。
+     */
+    private void stopHeartbeat() {
+        ScheduledExecutorService scheduler;
+        synchronized (this) {
+            scheduler = heartbeat;
+            heartbeat = null;
+        }
+        if (scheduler != null) {
+            scheduler.shutdownNow();
+        }
+    }
+
+    private void sendHeartbeat() {
+        SocketClient current;
+        synchronized (this) {
+            current = client;
+        }
+        if (current == null) {
+            return;
+        }
+        try {
+            current.send(new Message(null, MessageType.HEARTBEAT, null, "ping"));
+        } catch (Exception e) {
+            // 心跳失败说明连接已不可用：关掉它，下一次真实请求会自动重连并凭令牌恢复身份
+            System.err.println("[ClientSession] 心跳失败，连接将被重建：" + e.getMessage());
+            current.close();
+        }
     }
 
     /**
@@ -112,6 +175,7 @@ public final class ClientSession {
     public void end() {
         SocketClient toClose;
         String uid;
+        stopHeartbeat();
         synchronized (this) {
             toClose = client;
             uid = currentUser == null ? null : currentUser.getAccountNumber();
