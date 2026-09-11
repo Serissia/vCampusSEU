@@ -2,6 +2,7 @@ package com.vcampus.server.net;
 
 import com.vcampus.common.message.Message;
 import com.vcampus.server.dispatcher.Dispatcher;
+import com.vcampus.server.session.SessionManager;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -27,12 +28,13 @@ public class ClientHandler implements Runnable {
      * <p>会话上下文与分发器都在此处创建，确保「一条连接 ↔ 一个会话 ↔ 一个分发器」严格一一对应：
      * 身份状态不会跨连接串味，也无法从外部注入另一个会话。</p>
      *
-     * @param socket 客户端连接
+     * @param socket         客户端连接
+     * @param sessionManager 服务端共享的令牌会话表，用于跨连接认证
      */
-    public ClientHandler(Socket socket) {
+    public ClientHandler(Socket socket, SessionManager sessionManager) {
         this.socket = socket;
         this.session = new SessionContext();
-        this.dispatcher = new Dispatcher(session);
+        this.dispatcher = new Dispatcher(session, sessionManager);
     }
 
     /**

@@ -357,8 +357,8 @@ public class LoginController {
                     if (responseMsg != null && responseMsg.getCode() == ResponseCode.SUCCESS) {
                         UserVO currentUser = (UserVO) responseMsg.getData();
 
-                        // 服务端已在本次登录所用的连接上绑定该用户身份，客户端据此登记会话
-                        ClientSession.getInstance().begin(currentUser);
+                        // 服务端已在本次登录所用的连接上绑定该用户身份，并下发了登录令牌
+                        ClientSession.getInstance().begin(currentUser, responseMsg.getToken());
 
                         // 登录成功时统一委托给 AppConfigManager 更新保存对应用户的配置
                         AppConfigManager configManager = AppConfigManager.getInstance();

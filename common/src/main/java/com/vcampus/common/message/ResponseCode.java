@@ -12,6 +12,8 @@ public enum ResponseCode {
     FAIL,
     /** 未登录或身份校验失败 */
     UNAUTHORIZED,
+    /** 登录令牌无效或已过期，需要重新登录 */
+    SESSION_EXPIRED,
     /** 请求参数非法 */
     INVALID_REQUEST,
     /** 课程不存在或已停开 */

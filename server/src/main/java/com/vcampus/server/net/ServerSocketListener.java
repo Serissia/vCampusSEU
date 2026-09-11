@@ -1,5 +1,7 @@
 package com.vcampus.server.net;
 
+import com.vcampus.server.session.SessionManager;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -24,13 +26,15 @@ public class ServerSocketListener implements Runnable {
     @Override
     public void run() {
         ExecutorService pool = Executors.newFixedThreadPool(THREAD_COUNT);
+        // 令牌会话表由全部连接共享：这是身份能够脱离单条连接的前提
+        SessionManager sessionManager = new SessionManager();
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("vCampusSEU Server 已启动，监听端口 " + PORT);
             while (running) {
                 // 每接入一个客户端就交给工作线程处理，主线程继续监听
                 Socket socket = serverSocket.accept();
                 // 会话上下文与分发器由 ClientHandler 内部按连接创建，外部不再手工组装
-                pool.execute(new ClientHandler(socket));
+                pool.execute(new ClientHandler(socket, sessionManager));
             }
         } catch (IOException e) {
             e.printStackTrace();

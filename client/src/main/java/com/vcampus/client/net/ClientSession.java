@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
  *
  * <p>代价与取舍：{@link SocketClient#send} 全程 synchronized，因此单连接意味着<b>请求串行化</b>——
  * 电子资源上传/下载、PDF 单页渲染这类慢请求执行期间，其它请求会排队等待。
- * 后续引入令牌（token）后，可为慢请求单独开一条带令牌的连接来消除这个瓶颈。</p>
+ * 登录令牌已经具备，需要时可为慢请求单独开一条带令牌的连接（它会凭令牌自证身份）来消除这个瓶颈。</p>
  *
  * <p>使用方式：控制器照旧保留 {@code private final SocketClient socketClient = ClientSession.client();}
  * 字段，调用点无需改动。</p>
@@ -42,6 +42,9 @@ public final class ClientSession {
     /** 已登录用户 */
     private UserVO currentUser;
 
+    /** 服务端签发的登录令牌，随每个请求发出，使连接失效重连后仍能自证身份 */
+    private String token;
+
     private ClientSession() {
     }
 
@@ -60,11 +63,14 @@ public final class ClientSession {
 
     /**
      * 取得全局共享连接；为 null 时按当前 AppConfig 中的地址端口创建（连接本身仍是懒建立）。
+     *
+     * <p>重建的连接会立刻装上当前令牌，因此换连接后第一个请求即可恢复登录态。</p>
      */
     public SocketClient getClient() {
         synchronized (this) {
             if (client == null) {
                 client = new SocketClient();
+                client.setSessionToken(token);
             }
             return client;
         }
@@ -73,11 +79,18 @@ public final class ClientSession {
     /**
      * 登录成功后登记本次会话。
      *
-     * @param user 登录用户
+     * @param user  登录用户
+     * @param token 服务端签发的登录令牌，可为 null（旧服务端或异常响应）
      */
-    public void begin(UserVO user) {
+    public void begin(UserVO user, String token) {
+        SocketClient current;
         synchronized (this) {
             this.currentUser = user;
+            this.token = token;
+            current = client;
+        }
+        if (current != null) {
+            current.setSessionToken(token);
         }
     }
 
@@ -89,7 +102,7 @@ public final class ClientSession {
     }
 
     /**
-     * 结束会话：尽力通知服务端注销本连接的身份，随后关闭并丢弃连接。
+     * 结束会话：尽力通知服务端注销本连接的身份与令牌，随后关闭并丢弃连接。
      *
      * <p>会话状态在方法返回前即已清空，注销通知与关闭连接则交给后台线程执行 ——
      * 登出是 UI 线程上的操作，不能因为服务端不可达而卡住界面。</p>
@@ -103,6 +116,7 @@ public final class ClientSession {
             toClose = client;
             uid = currentUser == null ? null : currentUser.getAccountNumber();
             currentUser = null;
+            token = null;
             client = null;
         }
 
@@ -110,13 +124,16 @@ public final class ClientSession {
             return;
         }
         CLEANUP_POOL.execute(() -> {
-            // 通知服务端清空该连接的会话身份；失败也不影响本地登出，连接即将被关闭
+            // 登出请求要带上令牌：服务端据此把令牌一并作废，否则它在有效期内仍可被冒用，
+            // 令牌在请求发出后被清掉，避免残留在已废弃的连接上
             try {
                 toClose.send(new Message(uid, MessageType.LOGOUT, null, null));
             } catch (IOException | ClassNotFoundException ignored) {
                 // 服务端不可达或已断开，直接关闭即可
+            } finally {
+                toClose.setSessionToken(null);
+                toClose.close();
             }
-            toClose.close();
         });
     }
 

@@ -19,6 +19,7 @@ import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
 import com.vcampus.common.vo.NoticeQueryVO;
 import com.vcampus.server.net.SessionContext;
+import com.vcampus.server.session.SessionManager;
 import com.vcampus.server.service.BookService;
 import com.vcampus.server.service.BorrowService;
 import com.vcampus.server.service.CourseSelectionService;
@@ -65,6 +66,11 @@ public class Dispatcher {
      */
     private final SessionContext session;
 
+    /**
+     * 服务端共享的令牌会话表。连接上没有会话时，允许凭令牌认证并把该连接绑定成会话。
+     */
+    private final SessionManager sessionManager;
+
     private final CourseService courseService = new CourseServiceImpl();
     private final CourseSelectionService selectionService = new CourseSelectionServiceImpl();
     private final CourseReviewServiceImpl courseReviewService = new CourseReviewServiceImpl();
@@ -88,10 +94,12 @@ public class Dispatcher {
      * <p>刻意不提供无参构造：分发器一旦脱离会话就没有可信身份来源，
      * 从编译期杜绝「随手 new 一个 Dispatcher」而绕过认证。</p>
      *
-     * @param session 本连接的会话上下文
+     * @param session        本连接的会话上下文
+     * @param sessionManager 服务端共享的令牌会话表
      */
-    public Dispatcher(SessionContext session) {
+    public Dispatcher(SessionContext session, SessionManager sessionManager) {
         this.session = session;
+        this.sessionManager = sessionManager;
     }
 
     /**
@@ -107,16 +115,22 @@ public class Dispatcher {
         Message response = new Message();
         response.setType(request.getType());
 
-        // 公开接口（登录、心跳）无需身份；其余接口一律要求本连接已登录
+        // 公开接口（登录、心跳）无需身份；其余接口一律要求已认证
         if (!PermissionTable.isPublic(request.getType())) {
-            if (!session.isAuthenticated()) {
-                response.setCode(ResponseCode.UNAUTHORIZED);
-                response.setData("尚未登录或会话已失效，请重新登录");
+            String uid = resolveIdentity(request);
+            if (uid == null) {
+                // 报文带过令牌说明「曾经登录过但凭据已失效」，与「从未登录」区分开，
+                // 便于客户端决定是提示重新登录还是打开登录页
+                boolean hadToken = request.getToken() != null && !request.getToken().isEmpty();
+                response.setCode(hadToken ? ResponseCode.SESSION_EXPIRED : ResponseCode.UNAUTHORIZED);
+                response.setData(hadToken
+                        ? "登录状态已过期，请重新登录"
+                        : "尚未登录或会话已失效，请重新登录");
                 return response;
             }
 
             // 以主键复核账号：被删除或被冻结的账号即使连接仍在，也立即失效
-            UserVO currentUser = userService.queryByUid(session.getUid());
+            UserVO currentUser = userService.queryByUid(uid);
             if (currentUser == null) {
                 session.clear();
                 response.setCode(ResponseCode.UNAUTHORIZED);
@@ -454,6 +468,31 @@ public class Dispatcher {
     }
 
     /**
+     * 解析请求的调用者身份：连接会话优先，其次令牌。
+     *
+     * <p>两条来源的关系是「会话为主、令牌为辅」：连接上已有会话就直接采信它（这是 A 阶段的机制，
+     * 记不住也偷不走）；只有连接尚未认证时才去看令牌，令牌有效即顺手把该连接绑定成会话，
+     * 于是后续请求不必再带令牌。报文里的 uid 自始至终不参与判断。</p>
+     *
+     * @param request 客户端请求
+     * @return 认证通过的一卡通号；两条来源都给不出身份时返回 null
+     */
+    private String resolveIdentity(Message request) {
+        if (session.isAuthenticated()) {
+            // 已认证的连接：顺带为同属该用户的令牌续期，使滑动过期真正以「还在操作」为准
+            sessionManager.touch(request.getToken(), session.getUid());
+            return session.getUid();
+        }
+
+        String uid = sessionManager.resolveUid(request.getToken());
+        if (uid != null) {
+            // 令牌即身份，绑定到本连接后无需每个请求再带令牌
+            session.authenticate(uid);
+        }
+        return uid;
+    }
+
+    /**
      * 登录成功时返回完整用户信息，客户端据此识别角色。
      */
     private void handleLogin(Message request, Message response) {
@@ -472,16 +511,19 @@ public class Dispatcher {
             return;
         }
         // 登录成功即把身份写入本连接的会话，此后该连接上的请求都以这个身份为准
-        session.authenticate(user);
+        session.authenticate(user.getAccountNumber());
+        // 同时签发令牌：换一条连接（重连或另开专门跑大文件的连接）也能凭它自证身份
+        response.setToken(sessionManager.createSession(user.getAccountNumber()));
         response.setUid(user.getAccountNumber());
         response.setData(user);
         response.setCode(ResponseCode.SUCCESS);
     }
 
     /**
-     * 注销当前连接上的会话身份。客户端登出时调用，之后本连接需重新登录。
+     * 注销当前连接上的会话身份，并作废该令牌。客户端登出时调用，之后本连接需重新登录。
      */
     private void handleLogout(Message request, Message response) {
+        sessionManager.invalidate(request.getToken());
         session.clear();
         response.setCode(ResponseCode.SUCCESS);
         response.setData("已退出登录");
