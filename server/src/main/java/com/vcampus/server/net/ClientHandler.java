@@ -34,7 +34,7 @@ public class ClientHandler implements Runnable {
      */
     public ClientHandler(Socket socket, SessionManager sessionManager) {
         this.socket = socket;
-        this.session = new SessionContext();
+        this.session = new SessionContext(sessionManager);
         this.dispatcher = new Dispatcher(session, sessionManager);
     }
 

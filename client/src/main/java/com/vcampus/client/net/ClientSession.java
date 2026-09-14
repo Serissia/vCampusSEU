@@ -43,6 +43,9 @@ public final class ClientSession {
      */
     private static final long HEARTBEAT_INTERVAL_SECONDS = 60L;
 
+    /** 进程退出时补发登出的最长等待时间（毫秒），服务端不可达时不至于拖住退出 */
+    private static final long SHUTDOWN_LOGOUT_WAIT_MS = 1500L;
+
     /** 心跳线程池，仅在登录期间存在 */
     private ScheduledExecutorService heartbeat;
 
@@ -56,6 +59,7 @@ public final class ClientSession {
     private String token;
 
     private ClientSession() {
+        registerShutdownLogout();
     }
 
     public static ClientSession getInstance() {
@@ -199,6 +203,52 @@ public final class ClientSession {
                 toClose.close();
             }
         });
+    }
+
+    /**
+     * 注册 JVM 关停钩子：进程退出时尽力补发一次登出。
+     *
+     * <p>为什么要补：服务端的令牌独立于连接保存到过期为止，而关闭窗口、托盘退出都不会经过
+     * 登出按钮，令牌会一直滞留到自然过期，这期间被别人拿到仍然管用。退出前打一声招呼就能让它立刻作废。</p>
+     *
+     * <p>这只是令牌卫生，不是重新登录的前提——登录判重看的是「还有没有活连接的账号在用这个身份」，
+     * 钩子没跑成（强杀、断电）时账号也会随连接断开立刻下线。</p>
+     */
+    private void registerShutdownLogout() {
+        Runtime.getRuntime().addShutdownHook(
+                new Thread(this::sendLogoutOnExit, "ClientSession-ShutdownLogout"));
+    }
+
+    /**
+     * 关停钩子的实际动作，见 {@link #registerShutdownLogout()}。
+     */
+    private void sendLogoutOnExit() {
+        SocketClient current;
+        String uid;
+        synchronized (this) {
+            current = client;
+            uid = currentUser == null ? null : currentUser.getAccountNumber();
+        }
+        // 已经登出过（client 被置空）或压根没登录，无需通知
+        if (current == null || uid == null) {
+            return;
+        }
+        // 发送放到独立线程并限时等待：共享连接可能正卡在某个慢请求上，也可能服务端已经不可达，
+        // 两种情况都不该让「关闭应用」跟着卡住
+        Thread sender = new Thread(() -> {
+            try {
+                current.send(new Message(uid, MessageType.LOGOUT, null, null));
+            } catch (IOException | ClassNotFoundException | RuntimeException ignored) {
+                // 服务端不可达或已断开，连接会随进程退出一起消失
+            }
+        }, "ClientSession-ShutdownLogout-Send");
+        sender.setDaemon(true);
+        sender.start();
+        try {
+            sender.join(SHUTDOWN_LOGOUT_WAIT_MS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**
