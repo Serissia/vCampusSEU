@@ -656,7 +656,7 @@ public class SecondHandPanel extends VBox {
         }
         if (chatMessagesContainer != null) {
             chatMessagesContainer.getChildren().clear();
-            Label loading = new Label("加载中…");
+            Label loading = new Label("暂无消息，开启一段对话吧～");
             loading.getStyleClass().add("lib-subtitle");
             chatMessagesContainer.getChildren().add(loading);
         }
@@ -750,7 +750,7 @@ public class SecondHandPanel extends VBox {
         } else {
             chatMessagesContainer.getChildren().clear();
             if (serverCount == 0) {
-                Label empty = new Label("还没有消息，先打个招呼吧～");
+                Label empty = new Label("暂无消息，开启一段对话吧～");
                 empty.getStyleClass().add("lib-subtitle");
                 chatMessagesContainer.getChildren().add(empty);
             } else {
