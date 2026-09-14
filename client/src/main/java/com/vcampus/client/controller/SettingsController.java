@@ -49,6 +49,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class SettingsController {
 
+    private static final double BG_OPACITY_STEP = 0.1;
+    private static final double BG_OPACITY_MAX = 0.8;
+    private static final double VALUE_EPSILON = 1e-6;
+
     /**
      * 设置页后台线程池，统一命名并复用线程，避免每次点击创建裸线程。
      */
@@ -74,6 +78,7 @@ public class SettingsController {
     private final AtomicBoolean connectionCheckRunning = new AtomicBoolean(false);
     /** 阻止初始化期间触发预览事件覆盖配置 */
     private boolean isInitializing = true;
+    private boolean isSnappingBgOpacity;
 
     @FXML private ScrollPane settingsScrollPane;
 
@@ -221,10 +226,31 @@ public class SettingsController {
         });
 
         bgOpacitySlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            int percent = (int) Math.round(newVal.doubleValue() * 100);
-            bgOpacityValueLabel.setText(percent + "%");
-            previewTheme();
+            if (isSnappingBgOpacity) {
+                return;
+            }
+
+            double value = newVal.doubleValue();
+            double snapped = snapBgOpacity(value);
+            if (Math.abs(snapped - value) > VALUE_EPSILON) {
+                isSnappingBgOpacity = true;
+                try {
+                    bgOpacitySlider.setValue(snapped);
+                } finally {
+                    isSnappingBgOpacity = false;
+                }
+            }
+
+            bgOpacityValueLabel.setText((int) Math.round(snapped * 100) + "%");
+            if (oldVal == null || Math.abs(snapped - snapBgOpacity(oldVal.doubleValue())) > VALUE_EPSILON) {
+                previewTheme();
+            }
         });
+    }
+
+    private double snapBgOpacity(double value) {
+        double snapped = Math.round(value / BG_OPACITY_STEP) * BG_OPACITY_STEP;
+        return Math.max(0.0, Math.min(BG_OPACITY_MAX, snapped));
     }
 
     private void updatePaletteSelection() {
@@ -265,7 +291,7 @@ public class SettingsController {
 
         bgPathField.setText(currentCustomBgPath != null ? currentCustomBgPath : "");
 
-        double opacity = config.getBgScrimOpacity();
+        double opacity = snapBgOpacity(config.getBgScrimOpacity());
         bgOpacitySlider.setValue(opacity);
         bgOpacityValueLabel.setText((int) Math.round(opacity * 100) + "%");
 
@@ -374,7 +400,7 @@ public class SettingsController {
         }
 
         config.setCustomBgPath(currentCustomBgPath);
-        config.setBgScrimOpacity(bgOpacitySlider.getValue());
+        config.setBgScrimOpacity(snapBgOpacity(bgOpacitySlider.getValue()));
 
         if (settingsScrollPane != null && settingsScrollPane.getScene() != null) {
             ThemeManager.applyTheme(settingsScrollPane.getScene(), config);
@@ -410,7 +436,7 @@ public class SettingsController {
 
             config.setAccentColor(selectedAccentColor);
             config.setCustomBgPath(currentCustomBgPath);
-            config.setBgScrimOpacity(bgOpacitySlider.getValue());
+            config.setBgScrimOpacity(snapBgOpacity(bgOpacitySlider.getValue()));
             config.setSavedMonetColor(currentMonetColor != null ? currentMonetColor : "");
 
             double speedFactor = Math.round(scrollSpeedSlider.getValue() * 10.0) / 10.0;
@@ -514,7 +540,7 @@ public class SettingsController {
         config.setThemeMode(defaultConfig.getThemeMode());
         config.setAccentColor(defaultConfig.getAccentColor());
         config.setCustomBgPath(defaultConfig.getCustomBgPath());
-        config.setBgScrimOpacity(defaultConfig.getBgScrimOpacity());
+        config.setBgScrimOpacity(snapBgOpacity(defaultConfig.getBgScrimOpacity()));
         config.setSavedMonetColor(defaultConfig.getSavedMonetColor());
         config.setScrollSpeedFactor(defaultConfig.getScrollSpeedFactor());
         config.setCloseBehavior(defaultConfig.getCloseBehavior());

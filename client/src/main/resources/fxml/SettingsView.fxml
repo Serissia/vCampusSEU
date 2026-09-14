@@ -42,6 +42,8 @@
             </HBox>
         </HBox>
 
+        <Label fx:id="statusMessageLabel" managed="false" visible="false" styleClass="status-message-label" />
+
         <!-- 卡片 1: 外观与个性化 -->
         <VBox spacing="16.0" styleClass="settings-card">
             <Label text="外观与主题" styleClass="card-section-title" />
@@ -90,9 +92,10 @@
                     <HBox alignment="CENTER_LEFT">
                         <Label text="壁纸蒙版浓度 (遮罩不透明度)" styleClass="setting-sub-label" />
                         <Region HBox.hgrow="ALWAYS" />
-                        <Label fx:id="bgOpacityValueLabel" text="25%" styleClass="slider-value-badge" />
+                        <Label fx:id="bgOpacityValueLabel" text="30%" styleClass="slider-value-badge" />
                     </HBox>
-                    <Slider fx:id="bgOpacitySlider" max="0.8" value="0.25" blockIncrement="0.05" />
+                    <Slider fx:id="bgOpacitySlider" max="0.8" value="0.3" blockIncrement="0.1"
+                            majorTickUnit="0.1" minorTickCount="0" showTickMarks="true" snapToTicks="true" />
                 </VBox>
             </VBox>
         </VBox>
@@ -161,8 +164,6 @@
                 <Button onAction="#handleOpenConfigDir" text="打开配置所在目录" styleClass="btn-secondary-action" />
                 <Button onAction="#handleReloadFromDisk" text="重新载入配置" styleClass="btn-secondary-action" />
             </HBox>
-
-            <Label fx:id="statusMessageLabel" managed="false" visible="false" styleClass="status-message-label" />
         </VBox>
         </VBox>
     </VBox>
