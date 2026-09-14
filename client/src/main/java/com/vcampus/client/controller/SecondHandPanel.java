@@ -10,7 +10,9 @@ import com.vcampus.common.vo.ChatMessageVO;
 import com.vcampus.common.vo.SecondHandVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
+import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -32,6 +34,7 @@ import javafx.util.Duration;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -78,6 +81,13 @@ public class SecondHandPanel extends VBox {
     /** 管理员审核入口按钮（仅 ADMIN 可见） */
     private Button reviewBtn;
 
+    /** 列表页专用工具栏（进入聊天等二级页时隐藏） */
+    private VBox headerTitleBox;
+    private VBox headerBalanceBox;
+    private Button myListBtn;
+    private Button publishBtn;
+    private Button refreshBtn;
+
     /** 多页面宿主：listings/review/myList/publish/confirmBuy/confirmOffShelf */
     private StackPane pageHost;
     private VBox listingsPage;
@@ -111,9 +121,18 @@ public class SecondHandPanel extends VBox {
     private VBox chatMessagesContainer;
     private TextField chatInputField;
     private Label chatTitleLabel;
+    private Label chatSubtitleLabel;
+    /** 聊天页在顶部白框中的标题与刷新按钮 */
+    private VBox chatHeaderBox;
+    private Button chatRefreshBtn;
     private SecondHandVO chatItem;
     private String chatOtherUid;
     private String chatOtherName;
+    /** 聊天消息滚动容器与轮询（3 秒）相关状态 */
+    private ScrollPane chatScroll;
+    private Timeline chatPolling;
+    private int renderedChatCount = 0;
+    private Integer renderedLastChatId = null;
     private VBox conversationsContainer;
 
     public SecondHandPanel() {
@@ -148,6 +167,16 @@ public class SecondHandPanel extends VBox {
         setPadding(new Insets(4.0));
         getStyleClass().add("shop-container");
         VBox.setVgrow(this, Priority.ALWAYS);
+        // 面板隐藏时停止聊天轮询，避免后台请求泄漏
+        visibleProperty().addListener((obs, was, is) -> {
+            if (is) {
+                if (currentPage == chatPage) {
+                    startChatPolling();
+                }
+            } else {
+                stopChatPolling();
+            }
+        });
 
         // 顶部消息条（替代 Alert 弹窗）
         toastLabel = new Label();
@@ -207,6 +236,9 @@ public class SecondHandPanel extends VBox {
             child.setVisible(visible);
             child.setManaged(visible);
         }
+        if (page != chatPage) {
+            stopChatPolling();
+        }
         currentPage = page;
         updateBackButton();
     }
@@ -232,10 +264,43 @@ public class SecondHandPanel extends VBox {
         if (backBtn == null) {
             return;
         }
-        boolean inTopLevel = (currentPage == listingsPage);
-        boolean show = !inTopLevel || onBack != null;
-        backBtn.setVisible(show);
-        backBtn.setManaged(show);
+        boolean onListings = (currentPage == listingsPage);
+        boolean showBack = !onListings || onBack != null;
+        backBtn.setVisible(showBack);
+        backBtn.setManaged(showBack);
+        setMarketToolbarVisible(onListings);
+        setChatHeaderVisible(currentPage == chatPage);
+    }
+
+    /**
+     * 仅列表页显示市场工具栏；聊天/发布/审核等二级页只保留返回按钮。
+     */
+    /**
+     * 聊天页：在顶部白框中显示对方名称/商品副标题与刷新按钮。
+     */
+    private void setChatHeaderVisible(boolean visible) {
+        toggleNode(chatHeaderBox, visible);
+        toggleNode(chatRefreshBtn, visible);
+    }
+
+    private void setMarketToolbarVisible(boolean visible) {
+        toggleNode(headerTitleBox, visible);
+        toggleNode(headerBalanceBox, visible);
+        toggleNode(myListBtn, visible);
+        toggleNode(publishBtn, visible);
+        toggleNode(refreshBtn, visible);
+        if (reviewBtn != null) {
+            boolean showReview = visible && isAdmin();
+            reviewBtn.setVisible(showReview);
+            reviewBtn.setManaged(showReview);
+        }
+    }
+
+    private void toggleNode(Node node, boolean visible) {
+        if (node != null) {
+            node.setVisible(visible);
+            node.setManaged(visible);
+        }
     }
 
     /**
@@ -254,25 +319,43 @@ public class SecondHandPanel extends VBox {
         backBtn.setManaged(false);
         backBtn.setOnAction(e -> handleBack());
 
-        VBox titleBox = new VBox(4.0);
+        // 聊天页专用：与「← 返回」同行的白框内标题（对方名称）与刷新按钮
+        chatTitleLabel = new Label();
+        chatTitleLabel.getStyleClass().add("chat-title-large");
+        chatTitleLabel.setWrapText(true);
+        chatSubtitleLabel = new Label();
+        chatSubtitleLabel.getStyleClass().add("chat-title-sub");
+        chatSubtitleLabel.setWrapText(true);
+        chatHeaderBox = new VBox(4.0, chatTitleLabel, chatSubtitleLabel);
+        HBox.setHgrow(chatHeaderBox, Priority.ALWAYS);
+        chatHeaderBox.setVisible(false);
+        chatHeaderBox.setManaged(false);
+
+        chatRefreshBtn = new Button("刷新");
+        chatRefreshBtn.getStyleClass().add("btn-recharge-preset");
+        chatRefreshBtn.setOnAction(e -> loadChatHistory());
+        chatRefreshBtn.setVisible(false);
+        chatRefreshBtn.setManaged(false);
+
+        headerTitleBox = new VBox(4.0);
         Label title = new Label("二手市场");
         title.getStyleClass().add("lib-title");
         Label subtitle = new Label("学生闲置好物，上架你的旧物或淘到心仪宝贝");
         subtitle.getStyleClass().add("lib-subtitle");
-        titleBox.getChildren().addAll(title, subtitle);
+        headerTitleBox.getChildren().addAll(title, subtitle);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        VBox balanceBox = new VBox(2.0);
-        balanceBox.setAlignment(Pos.CENTER_RIGHT);
+        headerBalanceBox = new VBox(2.0);
+        headerBalanceBox.setAlignment(Pos.CENTER_RIGHT);
         Label balanceCaption = new Label("校园卡余额");
         balanceCaption.getStyleClass().add("shop-balance-label");
         balanceValueLabel = new Label("¥ 0.00");
         balanceValueLabel.getStyleClass().add("shop-balance-value");
-        balanceBox.getChildren().addAll(balanceCaption, balanceValueLabel);
+        headerBalanceBox.getChildren().addAll(balanceCaption, balanceValueLabel);
 
-        Button myListBtn = new Button("我的发布");
+        myListBtn = new Button("我的发布");
         myListBtn.getStyleClass().add("btn-recharge-preset");
         myListBtn.setOnAction(e -> openMyListPage());
 
@@ -282,16 +365,16 @@ public class SecondHandPanel extends VBox {
         reviewBtn.setManaged(false);
         reviewBtn.setOnAction(e -> openReviewPage());
 
-        Button publishBtn = new Button("发布闲置");
+        publishBtn = new Button("发布闲置");
         publishBtn.getStyleClass().add("btn-primary-action");
         publishBtn.setGraphic(SvgIconsPlaceholder.plus());
         publishBtn.setOnAction(e -> openPublishPage());
 
-        Button refreshBtn = new Button("刷新");
+        refreshBtn = new Button("刷新");
         refreshBtn.getStyleClass().add("btn-recharge-preset");
         refreshBtn.setOnAction(e -> refresh());
 
-        headerRow.getChildren().addAll(backBtn, titleBox, spacer, balanceBox, myListBtn, reviewBtn, publishBtn, refreshBtn);
+        headerRow.getChildren().addAll(backBtn, headerTitleBox, chatHeaderBox, spacer, headerBalanceBox, myListBtn, reviewBtn, publishBtn, refreshBtn, chatRefreshBtn);
         card.getChildren().add(headerRow);
         return card;
     }
@@ -498,18 +581,15 @@ public class SecondHandPanel extends VBox {
         VBox page = new VBox(12.0);
         page.getStyleClass().add("secondhand-subpage");
 
-        chatTitleLabel = new Label();
-        chatTitleLabel.getStyleClass().add("lib-section-title");
-        chatTitleLabel.setWrapText(true);
 
         chatMessagesContainer = new VBox(8.0);
         chatMessagesContainer.setPadding(new Insets(8.0, 4.0, 8.0, 4.0));
 
-        ScrollPane scroll = new ScrollPane(chatMessagesContainer);
-        scroll.setFitToWidth(true);
-        scroll.getStyleClass().add("shop-card-scroll");
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-        ScrollSpeedUtil.applyCustomScrollSpeed(scroll);
+        chatScroll = new ScrollPane(chatMessagesContainer);
+        chatScroll.setFitToWidth(true);
+        chatScroll.getStyleClass().add("shop-card-scroll");
+        VBox.setVgrow(chatScroll, Priority.ALWAYS);
+        ScrollSpeedUtil.applyCustomScrollSpeed(chatScroll);
 
         chatInputField = new TextField();
         chatInputField.setPromptText("输入消息…");
@@ -522,7 +602,7 @@ public class SecondHandPanel extends VBox {
         inputRow.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(chatInputField, Priority.ALWAYS);
 
-        page.getChildren().addAll(chatTitleLabel, scroll, inputRow);
+        page.getChildren().addAll(chatScroll, inputRow);
         return page;
     }
 
@@ -553,7 +633,10 @@ public class SecondHandPanel extends VBox {
         this.chatOtherUid = otherUid;
         this.chatOtherName = (otherName == null || otherName.isEmpty()) ? otherUid : otherName;
         if (chatTitleLabel != null) {
-            chatTitleLabel.setText("与 " + this.chatOtherName + " 聊聊「" + item.getTitle() + "」");
+            chatTitleLabel.setText(this.chatOtherName);
+        }
+        if (chatSubtitleLabel != null) {
+            chatSubtitleLabel.setText("关于「" + item.getTitle() + "」");
         }
         if (chatMessagesContainer != null) {
             chatMessagesContainer.getChildren().clear();
@@ -564,8 +647,11 @@ public class SecondHandPanel extends VBox {
         if (chatInputField != null) {
             chatInputField.clear();
         }
+        renderedChatCount = 0;
+        renderedLastChatId = null;
         showPage(chatPage);
         loadChatHistory();
+        startChatPolling();
     }
 
     /**
@@ -584,7 +670,7 @@ public class SecondHandPanel extends VBox {
     }
 
     /**
-     * 拉取当前聊天会话的历史消息。
+     * 拉取当前会话历史消息：仅在有新消息时增量追加，避免整表重绘导致闪烁。
      */
     private void loadChatHistory() {
         if (chatItem == null || chatOtherUid == null) {
@@ -601,27 +687,21 @@ public class SecondHandPanel extends VBox {
                     if (chatMessagesContainer == null) {
                         return;
                     }
-                    chatMessagesContainer.getChildren().clear();
-                    if (response != null && response.getCode() == ResponseCode.SUCCESS
-                            && response.getData() instanceof List) {
-                        @SuppressWarnings("unchecked")
-                        List<ChatMessageVO> msgs = (List<ChatMessageVO>) response.getData();
-                        if (msgs == null || msgs.isEmpty()) {
-                            Label empty = new Label("还没有消息，先打个招呼吧～");
-                            empty.getStyleClass().add("lib-subtitle");
-                            chatMessagesContainer.getChildren().add(empty);
-                        } else {
-                            for (ChatMessageVO m : msgs) {
-                                chatMessagesContainer.getChildren().add(renderChatBubble(m));
-                            }
+                    if (response == null || response.getCode() != ResponseCode.SUCCESS
+                            || !(response.getData() instanceof List)) {
+                        if (renderedChatCount == 0) {
+                            chatMessagesContainer.getChildren().clear();
+                            chatMessagesContainer.getChildren().add(new Label(errorText(response, "加载失败")));
                         }
-                    } else {
-                        chatMessagesContainer.getChildren().add(new Label(errorText(response, "加载失败")));
+                        return;
                     }
+                    @SuppressWarnings("unchecked")
+                    List<ChatMessageVO> msgs = (List<ChatMessageVO>) response.getData();
+                    renderChatMessages(msgs);
                 });
             } catch (Exception e) {
                 Platform.runLater(() -> {
-                    if (chatMessagesContainer != null) {
+                    if (renderedChatCount == 0 && chatMessagesContainer != null) {
                         chatMessagesContainer.getChildren().clear();
                         chatMessagesContainer.getChildren().add(new Label("网络错误: " + e.getMessage()));
                     }
@@ -630,6 +710,79 @@ public class SecondHandPanel extends VBox {
         });
     }
 
+    /**
+     * 增量渲染：数量/末条一致则跳过；新增则只追加；末条不一致则整体重绘。
+     */
+    private void renderChatMessages(List<ChatMessageVO> msgs) {
+        int serverCount = msgs == null ? 0 : msgs.size();
+        Integer serverLastId = serverCount == 0 ? null : msgs.get(serverCount - 1).getId();
+
+        if (serverCount == renderedChatCount && Objects.equals(serverLastId, renderedLastChatId)) {
+            return;
+        }
+
+        boolean canAppend = serverCount > renderedChatCount
+                && renderedChatCount > 0
+                && Objects.equals(msgs.get(renderedChatCount - 1).getId(), renderedLastChatId);
+
+        if (canAppend) {
+            for (int i = renderedChatCount; i < serverCount; i++) {
+                chatMessagesContainer.getChildren().add(renderChatBubble(msgs.get(i)));
+            }
+        } else {
+            chatMessagesContainer.getChildren().clear();
+            if (serverCount == 0) {
+                Label empty = new Label("还没有消息，先打个招呼吧～");
+                empty.getStyleClass().add("lib-subtitle");
+                chatMessagesContainer.getChildren().add(empty);
+            } else {
+                for (ChatMessageVO m : msgs) {
+                    chatMessagesContainer.getChildren().add(renderChatBubble(m));
+                }
+            }
+        }
+
+        renderedChatCount = serverCount;
+        renderedLastChatId = serverLastId;
+        scrollChatToBottom();
+    }
+
+    /**
+     * 滚动到聊天底部（显示最新消息）。
+     */
+    private void scrollChatToBottom() {
+        if (chatScroll == null) {
+            return;
+        }
+        chatScroll.applyCss();
+        chatScroll.layout();
+        chatScroll.setVvalue(1.0);
+        Platform.runLater(() -> chatScroll.setVvalue(1.0));
+    }
+
+    /**
+     * 启动聊天轮询（每 3 秒拉取一次历史消息，仅在聊天页且面板可见时执行）。
+     */
+    private void startChatPolling() {
+        stopChatPolling();
+        chatPolling = new Timeline(new KeyFrame(Duration.seconds(3), e -> {
+            if (isVisible() && currentPage == chatPage) {
+                loadChatHistory();
+            }
+        }));
+        chatPolling.setCycleCount(Timeline.INDEFINITE);
+        chatPolling.play();
+    }
+
+    /**
+     * 停止聊天轮询，避免关闭聊天页后继续后台请求。
+     */
+    private void stopChatPolling() {
+        if (chatPolling != null) {
+            chatPolling.stop();
+            chatPolling = null;
+        }
+    }
     /**
      * 发送当前输入框里的消息。
      */

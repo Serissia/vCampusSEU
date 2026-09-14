@@ -603,3 +603,15 @@
 .chat-input-field {
     -fx-font-size: 14px;
 }
+
+/* 聊天页大标题 */
+.chat-title-large {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-main;
+}
+
+.chat-title-sub {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-muted;
+}
