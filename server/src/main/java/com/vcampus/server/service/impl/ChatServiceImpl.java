@@ -109,6 +109,7 @@ public class ChatServiceImpl implements IChatService {
                 ChatMessageVO last = e.getValue();
                 ChatMessageVO summary = new ChatMessageVO();
                 summary.setItemId(itemId);
+                summary.setId(last.getId());
                 summary.setFromUid(other);
                 summary.setFromName(nameByOther.containsKey(other) ? nameByOther.get(other) : other);
                 summary.setToUid(sellerUid);
@@ -116,6 +117,12 @@ public class ChatServiceImpl implements IChatService {
                 summary.setSendTime(last.getSendTime());
                 result.add(summary);
             }
+            // 按最新消息倒序：最近有新消息的会话排前面
+            result.sort((a, b) -> {
+                int ia = a.getId() == null ? 0 : a.getId();
+                int ib = b.getId() == null ? 0 : b.getId();
+                return Integer.compare(ib, ia);
+            });
             return result;
         } catch (SQLException e) {
             e.printStackTrace();
