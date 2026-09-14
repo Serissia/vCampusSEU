@@ -128,7 +128,7 @@ public class SecondHandPanel extends VBox {
     private SecondHandVO chatItem;
     private String chatOtherUid;
     private String chatOtherName;
-    /** 聊天消息滚动容器与轮询（3 秒）相关状态 */
+    /** 聊天消息滚动容器与轮询（1 秒，仅聊天页开启）相关状态 */
     private ScrollPane chatScroll;
     private Timeline chatPolling;
     private int renderedChatCount = 0;
@@ -761,13 +761,19 @@ public class SecondHandPanel extends VBox {
     }
 
     /**
-     * 启动聊天轮询（每 3 秒拉取一次历史消息，仅在聊天页且面板可见时执行）。
+     * 启动聊天轮询（每 1 秒拉取一次历史消息，仅在聊天页且面板可见时执行）。
      */
     private void startChatPolling() {
+        // 仅在聊天页且面板可见时才启动轮询
+        if (!isVisible() || currentPage != chatPage) {
+            return;
+        }
         stopChatPolling();
-        chatPolling = new Timeline(new KeyFrame(Duration.seconds(3), e -> {
+        chatPolling = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             if (isVisible() && currentPage == chatPage) {
                 loadChatHistory();
+            } else {
+                stopChatPolling();
             }
         }));
         chatPolling.setCycleCount(Timeline.INDEFINITE);
