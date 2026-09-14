@@ -376,6 +376,11 @@ public class LoginController {
                         navigateToMainView(currentUser);
                     } else if (responseMsg != null && responseMsg.getCode() == ResponseCode.UNAUTHORIZED) {
                         showError("一卡通号或密码错误");
+                    } else if (responseMsg != null && responseMsg.getCode() == ResponseCode.ALREADY_LOGGED_IN) {
+                        String conflictMsg = responseMsg.getData() instanceof String
+                                ? (String) responseMsg.getData()
+                                : "该账号已在别处登录，请先退出原设备后再试";
+                        showError(conflictMsg);
                     } else {
                         String errMsg = "登录失败";
                         if (responseMsg != null && responseMsg.getData() instanceof String) {

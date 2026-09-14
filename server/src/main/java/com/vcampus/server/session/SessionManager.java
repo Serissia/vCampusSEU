@@ -33,6 +33,16 @@ public class SessionManager {
     private static final int TOKEN_BYTES = 32;
 
     private final Map<String, SessionRecord> sessions = new ConcurrentHashMap<>();
+
+    /**
+     * 在线账号表：一卡通号 → 当前绑定它的活连接数，计数归零即视为已登出。
+     *
+     * <p>与 {@link #sessions 令牌表}的分工：令牌可以<b>脱离连接</b>活到过期为止，
+     * 所以「令牌还在」并不等于「人还在线」——关闭窗口、强杀进程都不会走登出按钮，
+     * 令牌会滞留到自然过期。本表只回答「此刻还有没有活着的连接在用这个账号」，
+     * 登录判重以它为准：连接一断（含空闲超时回收）名额立刻归还，账号马上就能重新登录。</p>
+     */
+    private final Map<String, Integer> onlineConnections = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
     private final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
 
@@ -114,6 +124,49 @@ public class SessionManager {
      */
     public int activeCount() {
         return sessions.size();
+    }
+
+    /**
+     * 登录专用：一步完成「判定 + 占用」，账号已被在线连接持有时返回 false。
+     *
+     * <p>判定与占用必须原子：拆成「先查在线表、再绑身份」两步的话，同一账号在两个连接上
+     * 同时点登录可能双双通过。占用成功后由调用方（{@code SessionContext}）负责在登出或
+     * 断线时调用 {@link #leaveOnline(String)} 归还，两者严格配对。</p>
+     *
+     * @param uid 待登录的一卡通号
+     * @return true 表示占用成功可以登录；false 表示该账号已在别处登录
+     */
+    public synchronized boolean occupyForLogin(String uid) {
+        if (uid == null || onlineConnections.containsKey(uid)) {
+            return false;
+        }
+        onlineConnections.put(uid, 1);
+        return true;
+    }
+
+    /**
+     * 把一条连接计入该账号的在线连接数（令牌认证成功时调用）。
+     *
+     * <p>这里刻意不做判重：凭令牌进来的通常是本人客户端的断线重连，此时旧连接可能还没被
+     * 服务端回收，若一并拒绝反而会把本人挡在门外。单点登录的判重只作用于 LOGIN 入口。</p>
+     *
+     * @param uid 一卡通号
+     */
+    public void joinOnline(String uid) {
+        if (uid != null) {
+            onlineConnections.merge(uid, 1, Integer::sum);
+        }
+    }
+
+    /**
+     * 归还该账号的一个在线名额（登出或连接断开时调用），计数归零即移除。
+     *
+     * @param uid 一卡通号
+     */
+    public void leaveOnline(String uid) {
+        if (uid != null) {
+            onlineConnections.computeIfPresent(uid, (key, count) -> count <= 1 ? null : count - 1);
+        }
     }
 
     private SessionRecord recordOf(String token) {

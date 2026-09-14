@@ -55,6 +55,8 @@ public enum ResponseCode {
     PERMISSION_DENIED,
     /** 账号已冻结 */
     ACCOUNT_FROZEN,
+    /** 该账号已在别处登录且尚未登出，本次登录被拒绝 */
+    ALREADY_LOGGED_IN,
     /** 账号已存在 */
     USER_EXISTS,
     /** 用户不存在 */

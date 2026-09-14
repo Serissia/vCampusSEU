@@ -497,6 +497,13 @@ public class Dispatcher {
 
     /**
      * 登录成功时返回完整用户信息，客户端据此识别角色。
+     *
+     * <p>同一账号同时只允许一条登录连接：账号已被其它在线连接持有时本次登录直接失败，
+     * 返回 {@link ResponseCode#ALREADY_LOGGED_IN}，由客户端弹窗告知。判重放在密码校验之后，
+     * 这样只有掌握密码的人才看得出「该账号在线」，不至于把账号的登录状态泄露给旁人。</p>
+     *
+     * <p>「在线」以活连接为准而非令牌：令牌能脱离连接存活到过期，据此判重会让关掉应用的用户
+     * 在令牌过期前（最长 30 分钟）登不回自己的账号。</p>
      */
     private void handleLogin(Message request, Message response) {
         UserVO loginInfo = (UserVO) request.getData();
@@ -513,8 +520,13 @@ public class Dispatcher {
             response.setData("账号已被冻结，请联系管理员");
             return;
         }
-        // 登录成功即把身份写入本连接的会话，此后该连接上的请求都以这个身份为准
-        session.authenticate(user.getAccountNumber());
+        // 登录成功即把身份写入本连接的会话，此后该连接上的请求都以这个身份为准；
+        // 占用账号与写入身份是一步完成的，失败说明该账号已在线
+        if (!session.tryAuthenticateForLogin(user.getAccountNumber())) {
+            response.setCode(ResponseCode.ALREADY_LOGGED_IN);
+            response.setData("该账号已在别处登录，请先退出原设备后再试");
+            return;
+        }
         // 同时签发令牌：换一条连接（重连或另开专门跑大文件的连接）也能凭它自证身份
         response.setToken(sessionManager.createSession(user.getAccountNumber()));
         response.setUid(user.getAccountNumber());
