@@ -125,10 +125,13 @@ public class SecondHandPanel extends VBox {
     /** 聊天页在顶部白框中的标题与刷新按钮 */
     private VBox chatHeaderBox;
     private Button chatRefreshBtn;
+    /** 卖家会话列表轮询与增量比较状态 */
+    private Timeline conversationsPolling;
+    private String renderedConversationsSignature = null;
     private SecondHandVO chatItem;
     private String chatOtherUid;
     private String chatOtherName;
-    /** 聊天消息滚动容器与轮询（3 秒）相关状态 */
+    /** 聊天消息滚动容器与轮询（1 秒，仅聊天页开启）相关状态 */
     private ScrollPane chatScroll;
     private Timeline chatPolling;
     private int renderedChatCount = 0;
@@ -172,9 +175,12 @@ public class SecondHandPanel extends VBox {
             if (is) {
                 if (currentPage == chatPage) {
                     startChatPolling();
+                } else if (currentPage == conversationsPage) {
+                    startConversationsPolling();
                 }
             } else {
                 stopChatPolling();
+                stopConversationsPolling();
             }
         });
 
@@ -238,6 +244,9 @@ public class SecondHandPanel extends VBox {
         }
         if (page != chatPage) {
             stopChatPolling();
+        }
+        if (page != conversationsPage) {
+            stopConversationsPolling();
         }
         currentPage = page;
         updateBackButton();
@@ -614,6 +623,13 @@ public class SecondHandPanel extends VBox {
         page.getStyleClass().add("secondhand-subpage");
         Label title = new Label("联系买家");
         title.getStyleClass().add("lib-section-title");
+        Region titleSpacer = new Region();
+        HBox.setHgrow(titleSpacer, Priority.ALWAYS);
+        Button refreshConvBtn = new Button("刷新");
+        refreshConvBtn.getStyleClass().add("btn-recharge-preset");
+        refreshConvBtn.setOnAction(e -> loadConversations());
+        HBox titleRow = new HBox(10.0, title, titleSpacer, refreshConvBtn);
+        titleRow.setAlignment(Pos.CENTER_LEFT);
         conversationsContainer = new VBox(8.0);
         conversationsContainer.setPadding(new Insets(8.0, 0, 8.0, 0));
         ScrollPane scroll = new ScrollPane(conversationsContainer);
@@ -621,7 +637,7 @@ public class SecondHandPanel extends VBox {
         scroll.getStyleClass().add("shop-card-scroll");
         VBox.setVgrow(scroll, Priority.ALWAYS);
         ScrollSpeedUtil.applyCustomScrollSpeed(scroll);
-        page.getChildren().addAll(title, scroll);
+        page.getChildren().addAll(titleRow, scroll);
         return page;
     }
 
@@ -665,8 +681,10 @@ public class SecondHandPanel extends VBox {
             loading.getStyleClass().add("lib-subtitle");
             conversationsContainer.getChildren().add(loading);
         }
+        renderedConversationsSignature = null;
         showPage(conversationsPage);
         loadConversations();
+        startConversationsPolling();
     }
 
     /**
@@ -761,13 +779,19 @@ public class SecondHandPanel extends VBox {
     }
 
     /**
-     * 启动聊天轮询（每 3 秒拉取一次历史消息，仅在聊天页且面板可见时执行）。
+     * 启动聊天轮询（每 1 秒拉取一次历史消息，仅在聊天页且面板可见时执行）。
      */
     private void startChatPolling() {
+        // 仅在聊天页且面板可见时才启动轮询
+        if (!isVisible() || currentPage != chatPage) {
+            return;
+        }
         stopChatPolling();
-        chatPolling = new Timeline(new KeyFrame(Duration.seconds(3), e -> {
+        chatPolling = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             if (isVisible() && currentPage == chatPage) {
                 loadChatHistory();
+            } else {
+                stopChatPolling();
             }
         }));
         chatPolling.setCycleCount(Timeline.INDEFINITE);
@@ -781,6 +805,35 @@ public class SecondHandPanel extends VBox {
         if (chatPolling != null) {
             chatPolling.stop();
             chatPolling = null;
+        }
+    }
+
+    /**
+     * 启动卖家会话列表轮询（每 1 秒，仅在会话列表页且面板可见时执行）。
+     */
+    private void startConversationsPolling() {
+        if (!isVisible() || currentPage != conversationsPage) {
+            return;
+        }
+        stopConversationsPolling();
+        conversationsPolling = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+            if (isVisible() && currentPage == conversationsPage) {
+                loadConversations();
+            } else {
+                stopConversationsPolling();
+            }
+        }));
+        conversationsPolling.setCycleCount(Timeline.INDEFINITE);
+        conversationsPolling.play();
+    }
+
+    /**
+     * 停止卖家会话列表轮询。
+     */
+    private void stopConversationsPolling() {
+        if (conversationsPolling != null) {
+            conversationsPolling.stop();
+            conversationsPolling = null;
         }
     }
     /**
@@ -878,27 +931,36 @@ public class SecondHandPanel extends VBox {
                     if (conversationsContainer == null) {
                         return;
                     }
-                    conversationsContainer.getChildren().clear();
-                    if (response != null && response.getCode() == ResponseCode.SUCCESS
-                            && response.getData() instanceof List) {
-                        @SuppressWarnings("unchecked")
-                        List<ChatMessageVO> convs = (List<ChatMessageVO>) response.getData();
-                        if (convs == null || convs.isEmpty()) {
-                            Label empty = new Label("暂无买家咨询");
-                            empty.getStyleClass().add("lib-subtitle");
-                            conversationsContainer.getChildren().add(empty);
-                        } else {
-                            for (ChatMessageVO c : convs) {
-                                conversationsContainer.getChildren().add(renderConversationRow(c));
-                            }
+                    if (response == null || response.getCode() != ResponseCode.SUCCESS
+                            || !(response.getData() instanceof List)) {
+                        if (renderedConversationsSignature == null) {
+                            conversationsContainer.getChildren().clear();
+                            conversationsContainer.getChildren().add(new Label(errorText(response, "加载失败")));
                         }
+                        return;
+                    }
+                    @SuppressWarnings("unchecked")
+                    List<ChatMessageVO> convs = (List<ChatMessageVO>) response.getData();
+                    String signature = buildConversationsSignature(convs);
+                    if (signature.equals(renderedConversationsSignature)) {
+                        return; // 会话列表无变化，跳过重绘
+                    }
+                    renderedConversationsSignature = signature;
+
+                    conversationsContainer.getChildren().clear();
+                    if (convs == null || convs.isEmpty()) {
+                        Label empty = new Label("暂无买家咨询");
+                        empty.getStyleClass().add("lib-subtitle");
+                        conversationsContainer.getChildren().add(empty);
                     } else {
-                        conversationsContainer.getChildren().add(new Label(errorText(response, "加载失败")));
+                        for (ChatMessageVO c : convs) {
+                            conversationsContainer.getChildren().add(renderConversationRow(c));
+                        }
                     }
                 });
             } catch (Exception e) {
                 Platform.runLater(() -> {
-                    if (conversationsContainer != null) {
+                    if (conversationsContainer != null && renderedConversationsSignature == null) {
                         conversationsContainer.getChildren().clear();
                         conversationsContainer.getChildren().add(new Label("网络错误: " + e.getMessage()));
                     }
@@ -907,6 +969,20 @@ public class SecondHandPanel extends VBox {
         });
     }
 
+    /**
+     * 生成会话列表签名（每条会话的最新消息 id + 内容），用于判断是否需要重绘。
+     */
+    private String buildConversationsSignature(List<ChatMessageVO> convs) {
+        StringBuilder sb = new StringBuilder();
+        if (convs != null) {
+            for (ChatMessageVO c : convs) {
+                sb.append(c.getId()).append('|')
+                  .append(c.getFromUid()).append('|')
+                  .append(c.getContent()).append(';');
+            }
+        }
+        return sb.toString();
+    }
     /**
      * 渲染单条咨询会话（卖家视角：显示买家 + 最后一条消息 + 回复按钮）。
      */
