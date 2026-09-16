@@ -141,7 +141,6 @@ public class NoticeViewController {
     /**
      * 网络通信客户端
      */
-    /** 全局共享连接：服务端把身份绑定在连接上，全客户端必须复用同一条 */
     private final SocketClient socketClient = ClientSession.client();
 
     @FXML
@@ -179,6 +178,9 @@ public class NoticeViewController {
         TableColumn<NoticeVO, String> dateCol = new TableColumn<>("发布日期");
         dateCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getPublishDate()));
         dateCol.setPrefWidth(110.0);
+        dateCol.setMinWidth(110.0);
+        dateCol.setMaxWidth(110.0);
+        dateCol.setResizable(false);
 
         TableColumn<NoticeVO, String> categoryCol = new TableColumn<>("栏目");
         categoryCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getCategory()));
@@ -197,15 +199,24 @@ public class NoticeViewController {
                 }
             }
         });
-        categoryCol.setPrefWidth(100.0);
+        categoryCol.setPrefWidth(130.0);
+        categoryCol.setMinWidth(130.0);
+        categoryCol.setMaxWidth(130.0);
+        categoryCol.setResizable(false);
 
         TableColumn<NoticeVO, String> titleCol = new TableColumn<>("公告标题");
         titleCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getTitle()));
         titleCol.setPrefWidth(420.0);
+        titleCol.setMinWidth(260.0);
+        titleCol.setMaxWidth(Double.MAX_VALUE);
+        titleCol.setResizable(true);
 
         TableColumn<NoticeVO, String> crawlTimeCol = new TableColumn<>("抓取时间");
         crawlTimeCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getCrawledTime()));
         crawlTimeCol.setPrefWidth(150.0);
+        crawlTimeCol.setMinWidth(150.0);
+        crawlTimeCol.setMaxWidth(150.0);
+        crawlTimeCol.setResizable(false);
 
         TableColumn<NoticeVO, String> actionCol = new TableColumn<>("操作");
         actionCol.setCellFactory(col -> new TableCell<>() {
@@ -232,6 +243,9 @@ public class NoticeViewController {
             }
         });
         actionCol.setPrefWidth(100.0);
+        actionCol.setMinWidth(100.0);
+        actionCol.setMaxWidth(100.0);
+        actionCol.setResizable(false);
 
         noticeTable.getColumns().addAll(dateCol, categoryCol, titleCol, crawlTimeCol, actionCol);
         noticeTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);

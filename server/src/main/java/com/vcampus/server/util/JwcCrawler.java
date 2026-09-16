@@ -11,9 +11,12 @@ import org.jsoup.select.Elements;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,8 +33,9 @@ import java.util.regex.Pattern;
  *       <li>优先级 0（最高）：从专属日期类标签 {@code .Article_PublishDate} 提取；</li>
  *       <li>优先级 1：从文章 URL 路径提取 {@code /YYYY/MMDD/}，规避标题与摘要中业务日期的干扰；</li>
  *       <li>优先级 2：从专属日期类标签（如 {@code .Article_PublishDate}）提取；</li>
- *       <li>优先级 3：剔除容器内超链接（移除标题干扰）后提取行末最后一个日期，短日期自动补齐当年年份。</li>
- *     </ul>
+     *       <li>优先级 3：剔除容器内超链接（移除标题干扰）后提取行末最后一个日期，短日期自动补齐当年年份。</li>
+     *       <li>优先级 4：访问详情页，从发布时间节点、{@code time} 或元数据标签中提取日期。</li>
+     *     </ul>
  *   </li>
  *   <li><b>动态时间窗口与置顶容错</b>：单条公告早于目标天数窗口时仅标记为“过期跳过”，不阻断同页后续解析（防止置顶旧公告导致当页最新通知漏抓）；非首页整页全过期时终止翻页。</li>
  *   <li><b>栏目细分归一化</b>：优先提取同级容器中的中括号标签（如 {@code [联合培养]}）作为精确分类，缺失时回退为入口默认栏目。</li>
@@ -55,7 +59,8 @@ public final class JwcCrawler {
             {"https://jwc.seu.edu.cn/gj/24753/list.htm", "国际交流-学期交流"},
             {"https://jwc.seu.edu.cn/gj/24754/list.htm", "国际交流-短期交流"},
             {"https://jwc.seu.edu.cn/gj/247551/list.htm", "国际交流-项目资助"},
-            {"https://jwc.seu.edu.cn/gj/24756/list.htm", "国际交流-宣讲活动"}
+            {"https://jwc.seu.edu.cn/gj/24756/list.htm", "国际交流-宣讲活动"},
+            {"https://cse.seu.edu.cn/49343/list.htm", "计软智学生"}
     };
 
     /**
@@ -84,6 +89,15 @@ public final class JwcCrawler {
      * 网络连接超时时间（毫秒）
      */
     private static final int TIMEOUT_MS = 8000;
+
+    /** 详情页发布日期缓存（空字符串表示已确认无法解析） */
+    private static final Map<String, String> DETAIL_DATE_CACHE = Collections.synchronizedMap(
+            new LinkedHashMap<>(32, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
+                    return size() > 256;
+                }
+            });
 
     /**
      * 模拟客户端请求头 User-Agent
@@ -260,25 +274,79 @@ public final class JwcCrawler {
             return urlDate;
         }
 
-        if (container == null) {
-            return null;
-        }
+        if (container != null) {
 
-        // 查找专门的日期展示节点（避免混入标题文本）
-        Element dateEl = container.selectFirst(".Article_PublishDate, [class*='date'], [class*='time'], [class*='days']");
-        if (dateEl != null) {
-            String d = extractDate(dateEl.text());
-            if (d != null) {
-                return d;
+            // 查找专门的日期展示节点（避免混入标题文本）
+            Element dateEl = container.selectFirst(".Article_PublishDate, [class*='date'], [class*='time'], [class*='days']");
+            if (dateEl != null) {
+                String d = extractDate(dateEl.text());
+                if (d != null) {
+                    return d;
+                }
+            }
+
+            // 剔除容器内的超链接文本（移去标题），再搜索最右侧出现的发布日期
+            Element clone = container.clone();
+            clone.select("a").remove();
+            String date = extractLastDate(clone.text().trim());
+            if (date != null) {
+                return date;
             }
         }
 
-        // 剔除容器内的超链接文本（移去标题），再搜索最右侧出现的发布日期
-        Element clone = container.clone();
-        clone.select("a").remove();
-        String pureText = clone.text().trim();
+        // 列表页无日期时，回退到详情页的发布时间节点
+        return fetchDetailPublishDate(href);
+    }
 
-        return extractLastDate(pureText);
+    /**
+     * 从详情页提取发布时间，兼容新站群的 {@code .arti_update} 节点。
+     */
+    private static String fetchDetailPublishDate(String href) {
+        if (href == null || href.trim().isEmpty()) {
+            return null;
+        }
+        String cached = DETAIL_DATE_CACHE.get(href);
+        if (cached != null) {
+            return cached.isEmpty() ? null : cached;
+        }
+
+        String detailDate = null;
+        try {
+            Connection.Response response = Jsoup.connect(href)
+                    .userAgent(USER_AGENT)
+                    .timeout(TIMEOUT_MS)
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                    .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+                    .followRedirects(true)
+                    .execute();
+            if (response.statusCode() == 200) {
+                Document detail = response.parse();
+                Element dateEl = detail.selectFirst(".arti_update, .Article_PublishDate, " +
+                        "[class*='publishdate'], [class*='publishDate'], [class*='publish-date']");
+                if (dateEl != null) {
+                    detailDate = extractDate(dateEl.text());
+                }
+                if (detailDate == null) {
+                    Element timeEl = detail.selectFirst("time[datetime]");
+                    if (timeEl != null) {
+                        detailDate = extractDate(timeEl.attr("datetime"));
+                    }
+                }
+                if (detailDate == null) {
+                    Element meta = detail.selectFirst("meta[name=publishdate], meta[name=PubDate], " +
+                            "meta[property='article:published_time']");
+                    if (meta != null) {
+                        detailDate = extractDate(meta.attr("content"));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[JwcCrawler] 详情页发布日期解析失败: " + href + " - " + e.getMessage());
+            return null;
+        }
+
+        DETAIL_DATE_CACHE.put(href, detailDate == null ? "" : detailDate);
+        return detailDate;
     }
 
     /**
