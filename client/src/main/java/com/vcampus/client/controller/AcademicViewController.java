@@ -12,6 +12,8 @@ import com.vcampus.common.vo.ScoreComponentVO;
 import com.vcampus.common.vo.UserVO;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -38,6 +40,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
@@ -53,10 +56,11 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
-import javafx.util.StringConverter;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -120,10 +124,16 @@ public class AcademicViewController {
     private UserVO currentUser;
     private AcademicController academicController;
     private TilePane courseGrid;
+    private ComboBox<String> selectSemesterBox;
+    private ComboBox<String> selectNatureBox;
+    private ComboBox<String> selectFullBox;
+    private ComboBox<String> selectConflictBox;
+    private TextField selectKeywordField;
     private List<CourseVO> allCourses = new ArrayList<>();
     private List<CourseVO> myCourses = new ArrayList<>();
     private boolean onlyMy;
     private boolean teacherSelectionListenerAdded;
+    private boolean gradeSelectionListenerAdded;
     private boolean academicManageSelectionListenerAdded;
     private CourseVO rosterCourse;
     private List<UserVO> rosterStudents = new ArrayList<>();
@@ -218,46 +228,62 @@ public class AcademicViewController {
             dataCard.getChildren().add(courseGrid);
         }
 
-        ComboBox<String> natureBox = new ComboBox<>(
+        onlyMy = false;
+
+        // 学期选择框：只展示所选学期的课程，默认选中第一个可选学期
+        selectSemesterBox = new ComboBox<>();
+        selectSemesterBox.getStyleClass().add("academic-combo");
+        selectSemesterBox.setPrefWidth(150);
+        selectSemesterBox.setPromptText("选择学期");
+        selectSemesterBox.valueProperty().addListener((obs, oldValue, newValue) -> applySelectFilters());
+        Label semesterPrefix = new Label("第");
+        semesterPrefix.getStyleClass().add("lib-form-label");
+        Label semesterSuffix = new Label("学期");
+        semesterSuffix.getStyleClass().add("lib-form-label");
+        HBox semesterGroup = new HBox(4, semesterPrefix, selectSemesterBox, semesterSuffix);
+        semesterGroup.setAlignment(Pos.CENTER_LEFT);
+
+        selectNatureBox = new ComboBox<>(
                 FXCollections.observableArrayList("全部", "必修", "选修"));
-        natureBox.setValue("全部");
-        natureBox.getStyleClass().add("academic-combo");
-        natureBox.setPrefWidth(100);
-        natureBox.setPromptText("课程性质");
+        selectNatureBox.setValue("全部");
+        selectNatureBox.getStyleClass().add("academic-combo");
+        selectNatureBox.setPrefWidth(100);
+        selectNatureBox.setPromptText("课程性质");
 
-        ComboBox<String> fullBox = new ComboBox<>(
+        selectFullBox = new ComboBox<>(
                 FXCollections.observableArrayList("全部", "未满", "已满"));
-        fullBox.setValue("全部");
-        fullBox.getStyleClass().add("academic-combo");
-        fullBox.setPrefWidth(100);
-        fullBox.setPromptText("是否已满");
+        selectFullBox.setValue("全部");
+        selectFullBox.getStyleClass().add("academic-combo");
+        selectFullBox.setPrefWidth(100);
+        selectFullBox.setPromptText("是否已满");
 
-        ComboBox<String> conflictBox = new ComboBox<>(
+        selectConflictBox = new ComboBox<>(
                 FXCollections.observableArrayList("全部", "冲突", "不冲突"));
-        conflictBox.setValue("全部");
-        conflictBox.getStyleClass().add("academic-combo");
-        conflictBox.setPrefWidth(100);
-        conflictBox.setPromptText("是否冲突");
+        selectConflictBox.setValue("全部");
+        selectConflictBox.getStyleClass().add("academic-combo");
+        selectConflictBox.setPrefWidth(100);
+        selectConflictBox.setPromptText("是否冲突");
 
-        TextField keywordField = new TextField();
-        keywordField.setPromptText("请输入搜索关键词");
-        keywordField.getStyleClass().add("modern-input-field");
-        keywordField.setPrefWidth(220);
-        keywordField.setOnAction(e -> applyFiltersAndRender(natureBox, fullBox, conflictBox, keywordField));
+        selectKeywordField = new TextField();
+        selectKeywordField.setPromptText("请输入搜索关键词");
+        selectKeywordField.getStyleClass().add("modern-input-field");
+        selectKeywordField.setPrefWidth(220);
+        selectKeywordField.setOnAction(e -> applySelectFilters());
 
         Button searchBtn = button("搜索", "btn-primary-action");
-        searchBtn.setOnAction(e -> applyFiltersAndRender(natureBox, fullBox, conflictBox, keywordField));
+        searchBtn.setOnAction(e -> applySelectFilters());
 
         Button myBtn = button("我的已选课程", "btn-recharge-preset");
         myBtn.setOnAction(e -> {
             onlyMy = !onlyMy;
             myBtn.getStyleClass().removeAll("btn-primary-action", "btn-recharge-preset");
             myBtn.getStyleClass().add(onlyMy ? "btn-primary-action" : "btn-recharge-preset");
-            applyFiltersAndRender(natureBox, fullBox, conflictBox, keywordField);
+            applySelectFilters();
         });
 
         headerControls.getChildren().addAll(
-                natureBox, fullBox, conflictBox, keywordField, searchBtn, myBtn);
+                semesterGroup, selectNatureBox, selectFullBox, selectConflictBox,
+                selectKeywordField, searchBtn, myBtn);
 
         loadStudentCourses();
     }
@@ -273,7 +299,8 @@ public class AcademicViewController {
                 Platform.runLater(() -> {
                     allCourses = all;
                     myCourses = mine;
-                    renderCourseGrid();
+                    refreshSelectSemesters();
+                    applySelectFilters();
                 });
             } catch (Exception e) {
                 Platform.runLater(() -> showError("加载课程失败：" + e.getMessage()));
@@ -282,20 +309,45 @@ public class AcademicViewController {
     }
 
     /**
-     * 根据过滤条件重新渲染课程卡片网格。
+     * 根据全部课程刷新学期下拉框的可选项，并尽量保持用户当前选中的学期。
      */
-    private void applyFiltersAndRender(ComboBox<String> natureBox,
-                                       ComboBox<String> fullBox,
-                                       ComboBox<String> conflictBox,
-                                       TextField keywordField) {
+    private void refreshSelectSemesters() {
+        if (selectSemesterBox == null) {
+            return;
+        }
+        List<String> semesters = collectSemesters(allCourses);
+        String previous = selectSemesterBox.getValue();
+        selectSemesterBox.setItems(FXCollections.observableArrayList(semesters));
+        if (previous != null && semesters.contains(previous)) {
+            selectSemesterBox.setValue(previous);
+        } else {
+            selectSemesterBox.setValue(semesters.isEmpty() ? null : semesters.get(0));
+        }
+    }
+
+    /**
+     * 判断课程是否属于当前选中的学期。
+     */
+    private boolean matchesSelectedSemester(CourseVO course) {
+        if (selectSemesterBox == null || selectSemesterBox.getValue() == null) {
+            return true;
+        }
+        return selectSemesterBox.getValue().equals(course.getSemester());
+    }
+
+    /**
+     * 根据学期、课程性质、容量、冲突状态与关键词重新渲染课程卡片网格。
+     */
+    private void applySelectFilters() {
         if (courseGrid == null) {
             return;
         }
         courseGrid.getChildren().clear();
-        String keyword = keywordField.getText() == null ? "" : keywordField.getText().trim();
-        String natureFilter = natureBox.getValue() == null ? "全部" : natureBox.getValue();
-        String fullFilter = fullBox.getValue() == null ? "全部" : fullBox.getValue();
-        String conflictFilter = conflictBox.getValue() == null ? "全部" : conflictBox.getValue();
+        String keyword = selectKeywordField == null || selectKeywordField.getText() == null
+                ? "" : selectKeywordField.getText().trim();
+        String natureFilter = filterValue(selectNatureBox);
+        String fullFilter = filterValue(selectFullBox);
+        String conflictFilter = filterValue(selectConflictBox);
 
         List<CourseVO> filtered = new ArrayList<>();
         for (CourseVO course : allCourses) {
@@ -315,29 +367,19 @@ public class AcademicViewController {
     }
 
     /**
-     * 重新根据当前已选与全部课程渲染卡片。
+     * 读取下拉框当前值，未选择时按“全部”处理。
      */
-    private void renderCourseGrid() {
-        if (courseGrid == null) {
-            return;
-        }
-        courseGrid.getChildren().clear();
-        for (CourseVO course : allCourses) {
-            if (passCourseFilter(course, "", "全部", "全部", "全部")) {
-                courseGrid.getChildren().add(createCourseCard(course));
-            }
-        }
-        if (courseGrid.getChildren().isEmpty()) {
-            Label empty = new Label("暂无课程");
-            empty.getStyleClass().add("lib-subtitle");
-            courseGrid.getChildren().add(empty);
-        }
+    private String filterValue(ComboBox<String> box) {
+        return box == null || box.getValue() == null ? "全部" : box.getValue();
     }
 
     private boolean passCourseFilter(CourseVO course, String keyword,
                                      String natureFilter, String fullFilter,
                                      String conflictFilter) {
         if (!CourseVO.STATUS_ACTIVE.equals(course.getStatus())) {
+            return false;
+        }
+        if (!matchesSelectedSemester(course)) {
             return false;
         }
         List<CourseTimeSlotVO> slots = effectiveSlots(course);
@@ -1439,79 +1481,188 @@ public class AcademicViewController {
     }
 
     /**
-     * 教师成绩登记。
+     * 教师成绩登记：选中课程后点击“成绩登记”按钮进入列表式登记二级页面。
      */
     private void configureGradeSubmit() {
         titleLabel.setText("成绩登记");
-        subtitleLabel.setText("选择课程后，按该课程已审批的成绩组成录入学生成绩");
+        subtitleLabel.setText("选择课程后点击“成绩登记”，按成绩组成逐项录入学生成绩");
         sectionLabel.setText("我的课程");
         buildCourseColumns();
 
         Button loadBtn = button("加载我的课程", "btn-primary-action");
         loadBtn.setOnAction(e -> fetchCourses(() -> academicController.queryByTeacher(currentUser.getUid())));
 
-        ComboBox<UserVO> studentBox = new ComboBox<>();
-        studentBox.getStyleClass().add("academic-combo");
-        studentBox.setPrefWidth(220);
-        studentBox.setPromptText("选择学生");
-        studentBox.setConverter(new StringConverter<>() {
-            @Override
-            public String toString(UserVO user) {
-                return user == null ? "" : user.getUid() + " - " + user.getName();
-            }
-
-            @Override
-            public UserVO fromString(String string) {
-                return null;
-            }
-        });
-        VBox scoreInputs = new VBox(6);
-        Label calcLabel = new Label("实时计算：等待输入");
-        calcLabel.getStyleClass().addAll("lib-msg-label", "success");
-        calcLabel.setWrapText(true);
-        calcLabel.setMaxWidth(Double.MAX_VALUE);
-
-        dataTable.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> {
+        Button entryBtn = button("成绩登记", "btn-primary-action");
+        entryBtn.setOnAction(e -> {
             CourseVO course = selectedCourse();
-            loadStudentOptionsForCourse(studentBox, course);
-            rebuildScoreInputs(scoreInputs, calcLabel);
+            if (course == null) {
+                showInfo("请先在课程列表中选择一门课程");
+                return;
+            }
+            showGradeEntryPage(course);
         });
 
-        Button submitBtn = button("提交成绩", "btn-primary-action");
-        submitBtn.setOnAction(e -> submitGrade(studentBox, scoreInputs));
+        Label hint = new Label(
+                "操作说明：在上方课程列表中选择自己教授的课程，再点击“成绩登记”进入登记页；"
+                        + "登记页按“一卡通号 / 学生姓名 / 各成绩组成 / 最终成绩”逐列展示，"
+                        + "成绩组成列可直接填写分数，最终成绩由各组成实时计算得出。");
+        hint.getStyleClass().add("academic-hint");
+        hint.setWrapText(true);
+        hint.setMaxWidth(Double.MAX_VALUE);
 
         headerControls.getChildren().add(loadBtn);
+        if (!gradeSelectionListenerAdded) {
+            dataTable.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> {
+                // 仅在本模块内响应选中变化，避免把按钮加到其他教务页面的工具栏上
+                if (!"ACADEMIC_GRADE_SUBMIT".equals(moduleKey)) {
+                    return;
+                }
+                headerControls.getChildren().remove(entryBtn);
+                if (selectedCourse() != null) {
+                    headerControls.getChildren().add(entryBtn);
+                }
+            });
+            gradeSelectionListenerAdded = true;
+        }
+
         formCard.setVisible(true);
         formCard.setManaged(true);
-        formContent.getChildren().addAll(
-                formRow(labeledField("学生", studentBox)),
-                scoreInputs,
-                calcLabel,
-                submitBtn);
+        formContent.getChildren().add(hint);
 
         fetchCourses(() -> academicController.queryByTeacher(currentUser.getUid()));
     }
 
     /**
-     * 异步加载学生选项到下拉框。
+     * 成绩登记二级页面：按学生列表登记各成绩组成，最终成绩实时计算。
      */
-    private void loadStudentOptionsForCourse(ComboBox<UserVO> studentBox, CourseVO course) {
+    private void showGradeEntryPage(CourseVO course) {
+        formContent.getChildren().clear();
+
+        Label title = new Label(course.getDisplayCode() + " " + course.getCourseName() + " - 成绩登记");
+        title.getStyleClass().add("lib-title");
+
+        Button backBtn = button("返回课程列表", "btn-recharge-preset");
+        backBtn.setOnAction(e -> {
+            headerControls.getChildren().clear();
+            formContent.getChildren().clear();
+            dataCard.setVisible(true);
+            dataCard.setManaged(true);
+            configureView();
+        });
+
+        Button saveBtn = button("保存全部成绩", "btn-primary-action");
+        saveBtn.setDisable(true);
+
+        Label hint = new Label(
+                "填写说明：每行对应一名选了本课程的学生，可直接在各成绩组成列填写 0-100 的分数（支持小数）；"
+                        + "最终成绩由各组成按比例实时计算并四舍五入取整；"
+                        + "已登记过的学生显示原有分数，保存后覆盖原成绩。");
+        hint.getStyleClass().add("academic-hint");
+        hint.setWrapText(true);
+        hint.setMaxWidth(Double.MAX_VALUE);
+
+        Label statusLabel = new Label("正在加载学生名单...");
+        statusLabel.getStyleClass().add("lib-msg-label");
+        statusLabel.setWrapText(true);
+        statusLabel.setMaxWidth(Double.MAX_VALUE);
+
+        TableView<GradeEntryRow> entryTable = new TableView<>();
+        entryTable.getStyleClass().add("lib-table");
+        entryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        entryTable.setEditable(true);
+        entryTable.setPrefHeight(420);
+        entryTable.setPlaceholder(new Label("该课程暂无学生选课"));
+
+        formContent.getChildren().addAll(backBtn, saveBtn, title, hint, statusLabel, entryTable);
+
+        dataCard.setVisible(false);
+        dataCard.setManaged(false);
+
         THREAD_POOL.execute(() -> {
             try {
-                List<UserVO> students;
-                if (course == null) {
-                    students = new ArrayList<>();
-                } else {
-                    students = academicController.listStudentsByCourse(course.getCourseCode());
-                }
+                List<UserVO> students = academicController.listStudentsByCourse(course.getCourseCode());
+                List<GradeVO> grades = academicController.queryCourseGrades(course.getCourseCode());
                 Platform.runLater(() -> {
-                    studentBox.setItems(FXCollections.observableArrayList(students));
-                    studentBox.setValue(null);
+                    renderGradeEntryTable(entryTable, course, students, grades, statusLabel);
+                    saveBtn.setOnAction(e -> saveGradeEntries(entryTable, course, statusLabel));
+                    saveBtn.setDisable(students.isEmpty());
                 });
             } catch (Exception e) {
-                Platform.runLater(() -> showError("加载学生列表失败：" + e.getMessage()));
+                Platform.runLater(() -> showError("加载成绩登记名单失败：" + e.getMessage()));
             }
         });
+    }
+
+    /**
+     * 渲染成绩登记表格：一卡通号、学生姓名、各成绩组成（可填写）与最终成绩。
+     */
+    private void renderGradeEntryTable(TableView<GradeEntryRow> table,
+                                       CourseVO course,
+                                       List<UserVO> students,
+                                       List<GradeVO> grades,
+                                       Label statusLabel) {
+        table.getColumns().clear();
+        List<ScoreComponentVO> components = course.getScoreComponents() == null
+                ? new ArrayList<ScoreComponentVO>() : course.getScoreComponents();
+
+        List<GradeEntryRow> rows = new ArrayList<>();
+        for (UserVO student : students) {
+            GradeEntryRow row = new GradeEntryRow(student);
+            GradeVO existing = findGradeRecord(grades, student.getUid());
+            if (existing != null && existing.getComponentScores() != null) {
+                for (GradeScoreVO score : existing.getComponentScores()) {
+                    row.valueProperty(score.getComponentName())
+                            .set(formatScoreValue(score.getScore()));
+                }
+            }
+            rows.add(row);
+        }
+
+        TableColumn<GradeEntryRow, String> uidCol = new TableColumn<>("一卡通号");
+        uidCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getStudent().getUid()));
+        uidCol.setPrefWidth(150);
+
+        TableColumn<GradeEntryRow, String> nameCol = new TableColumn<>("学生姓名");
+        nameCol.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getStudent().getName()));
+        nameCol.setPrefWidth(150);
+
+        table.getColumns().add(uidCol);
+        table.getColumns().add(nameCol);
+
+        for (ScoreComponentVO component : components) {
+            TableColumn<GradeEntryRow, String> col = new TableColumn<>(
+                    component.getComponentName() + "（" + formatWeightValue(component.getWeight()) + "）");
+            col.setPrefWidth(130);
+            col.setSortable(false);
+            col.setCellValueFactory(data -> data.getValue().valueProperty(component.getComponentName()));
+            col.setCellFactory(ignored -> new ScoreInputCell(component.getComponentName()));
+            table.getColumns().add(col);
+        }
+
+        TableColumn<GradeEntryRow, String> finalCol = new TableColumn<>("最终成绩");
+        finalCol.setPrefWidth(110);
+        finalCol.setSortable(false);
+        finalCol.setCellValueFactory(data -> data.getValue().finalScoreProperty());
+        finalCol.setCellFactory(ignored -> new FinalScoreCell());
+        table.getColumns().add(finalCol);
+
+        for (GradeEntryRow row : rows) {
+            for (ScoreComponentVO component : components) {
+                row.valueProperty(component.getComponentName()).addListener((obs, oldValue, newValue) -> {
+                    refreshGradeEntryRow(components, row);
+                    refreshGradeEntryStatus(rows, components, statusLabel);
+                });
+            }
+            refreshGradeEntryRow(components, row);
+        }
+
+        table.setItems(FXCollections.observableArrayList(rows));
+        refreshGradeEntryStatus(rows, components, statusLabel);
+        if (components.isEmpty()) {
+            statusLabel.setText("该课程尚未配置成绩组成，无法登记成绩");
+            statusLabel.getStyleClass().removeAll("error", "success");
+            statusLabel.getStyleClass().add("error");
+        }
     }
 
     /**
@@ -1963,162 +2114,337 @@ public class AcademicViewController {
     }
 
     /**
-     * 根据选中课程动态生成成绩组成输入行。
+     * 在成绩列表中按学号查找已有成绩记录。
      */
-    private void rebuildScoreInputs(VBox scoreInputs, Label calcLabel) {
-        scoreInputs.getChildren().clear();
-        CourseVO course = selectedCourse();
-        if (course == null || course.getScoreComponents() == null || course.getScoreComponents().isEmpty()) {
-            Label emptyLabel = new Label("该课程暂无可登记的成绩组成");
-            emptyLabel.getStyleClass().add("lib-subtitle");
-            scoreInputs.getChildren().add(emptyLabel);
-            calcLabel.setText("实时计算：等待输入");
-            return;
+    private GradeVO findGradeRecord(List<GradeVO> grades, String studentId) {
+        if (grades == null || studentId == null) {
+            return null;
         }
-
-        for (ScoreComponentVO component : course.getScoreComponents()) {
-            Label label = new Label(component.getComponentName() + " (" + component.getWeight() + ")");
-            label.getStyleClass().add("lib-form-label");
-            label.setMinWidth(130);
-
-            TextField scoreField = new TextField();
-            scoreField.setUserData(component);
-            scoreField.setPromptText("请输入" + component.getComponentName() + "成绩");
-            scoreField.getStyleClass().add("modern-input-field");
-            scoreField.textProperty().addListener((obs, oldValue, newValue) ->
-                    updateLiveGrade(scoreInputs, calcLabel));
-            HBox.setHgrow(scoreField, Priority.ALWAYS);
-
-            HBox row = new HBox(8, label, scoreField);
-            row.setAlignment(Pos.CENTER_LEFT);
-            scoreInputs.getChildren().add(row);
+        for (GradeVO grade : grades) {
+            if (studentId.equals(grade.getStudentId())) {
+                return grade;
+            }
         }
-        updateLiveGrade(scoreInputs, calcLabel);
+        return null;
     }
 
     /**
-     * 提交学生成绩。
+     * 解析成绩输入，空值或非法值返回 null。
      */
-    private void updateLiveGrade(VBox scoreInputs, Label calcLabel) {
-        double total = 0.0;
-        boolean complete = true;
-        boolean negative = false;
-        boolean over = false;
-        StringBuilder formula = new StringBuilder();
-
-        for (var node : scoreInputs.getChildren()) {
-            if (!(node instanceof HBox row)) {
-                continue;
-            }
-            if (row.getChildren().size() < 2 || !(row.getChildren().get(1) instanceof TextField)) {
-                continue;
-            }
-            TextField scoreField = (TextField) row.getChildren().get(1);
-            if (!(scoreField.getUserData() instanceof ScoreComponentVO)) {
-                continue;
-            }
-            ScoreComponentVO component = (ScoreComponentVO) scoreField.getUserData();
-            String text = scoreField.getText() == null ? "" : scoreField.getText().trim();
-            if (text.isEmpty()) {
-                complete = false;
-                continue;
-            }
-            try {
-                double score = Double.parseDouble(text);
-                if (score < 0) {
-                    negative = true;
-                    complete = false;
-                    continue;
-                }
-                if (score > 100) {
-                    over = true;
-                    complete = false;
-                    continue;
-                }
-                double weight = component.getWeight();
-                total += score * weight;
-                if (!formula.isEmpty()) {
-                    formula.append(" + ");
-                }
-                formula.append(score).append("*").append(weight);
-            } catch (NumberFormatException e) {
-                complete = false;
-            }
+    private Double parseScoreValue(String text) {
+        if (text == null) {
+            return null;
         }
-
-        if (!complete || formula.isEmpty()) {
-            calcLabel.getStyleClass().removeAll("error", "success");
-            calcLabel.getStyleClass().add((negative || over) ? "error" : "success");
-            if (negative) {
-                calcLabel.setText("实时计算：成绩不能为负");
-            } else if (over) {
-                calcLabel.setText("实时计算：成绩不能超过100");
-            } else {
-                calcLabel.setText("实时计算：请完整输入各项成绩（可包含小数）");
-            }
-            return;
+        String trimmed = text.trim();
+        if (trimmed.isEmpty()) {
+            return null;
         }
-
-        long roundedFinal = Math.round(total);
-        calcLabel.getStyleClass().removeAll("error", "success");
-        if (total > 100) {
-            calcLabel.getStyleClass().add("error");
-            calcLabel.setText("实时计算：" + formula + " = " + roundedFinal
-                    + "（提示：计算分数超过 100，请检查各组成分数）");
-        } else {
-            calcLabel.getStyleClass().add("success");
-            calcLabel.setText("实时计算：" + formula + " = " + roundedFinal);
-        }
-    }
-
-    /**
-     * 提交学生成绩。
-     */
-    private void submitGrade(ComboBox<UserVO> studentBox, VBox scoreInputs) {
-        CourseVO course = selectedCourse();
-        if (course == null || studentBox.getValue() == null) {
-            showInfo("请选择课程和学生");
-            return;
-        }
-
-        GradeVO grade = new GradeVO();
-        grade.setStudentId(studentBox.getValue().getUid());
-        grade.setCourseCode(course.getCourseCode());
-        grade.setCourseName(course.getCourseName());
-
-        List<GradeScoreVO> scores = new ArrayList<>();
         try {
-            for (var node : scoreInputs.getChildren()) {
-                if (!(node instanceof HBox)) {
-                    continue;
-                }
-                HBox row = (HBox) node;
-                if (row.getChildren().size() < 2 || !(row.getChildren().get(1) instanceof TextField)) {
-                    continue;
-                }
-                TextField scoreField = (TextField) row.getChildren().get(1);
-                if (!(scoreField.getUserData() instanceof ScoreComponentVO)) {
-                    continue;
-                }
-                String name = ((ScoreComponentVO) scoreField.getUserData()).getComponentName();
-                double score = Double.parseDouble(scoreField.getText().trim());
-                if (score < 0) {
-                    showInfo("成绩不能为负");
-                    return;
-                }
-                if (score > 100) {
-                    showInfo("成绩不能超过100");
-                    return;
-                }
-                scores.add(new GradeScoreVO(name, score));
+            double value = Double.parseDouble(trimmed);
+            if (Double.isNaN(value) || Double.isInfinite(value)) {
+                return null;
             }
-        } catch (Exception ex) {
-            showInfo("成绩格式错误：" + ex.getMessage());
+            return value;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 以不含多余小数的形式展示成绩。
+     */
+    private String formatScoreValue(double score) {
+        if (score == Math.rint(score)) {
+            return String.valueOf((long) score);
+        }
+        return String.valueOf(score);
+    }
+
+    /**
+     * 以不含多余小数的形式展示成绩组成比例。
+     */
+    private String formatWeightValue(double weight) {
+        return String.valueOf(Math.round(weight * 100) / 100.0);
+    }
+
+    /**
+     * 评估一行的填写情况：已填项数量、是否非法，以及实时折算出的最终成绩。
+     */
+    private GradeEntryState evaluateGradeEntryRow(List<ScoreComponentVO> components, GradeEntryRow row) {
+        GradeEntryState state = new GradeEntryState(components.size());
+        double total = 0.0;
+        double weightSum = 0.0;
+        for (ScoreComponentVO component : components) {
+            String text = row.valueProperty(component.getComponentName()).get();
+            if (text == null || text.trim().isEmpty()) {
+                continue;
+            }
+            Double score = parseScoreValue(text);
+            if (score == null || score < 0 || score > 100) {
+                state.invalid = true;
+                continue;
+            }
+            state.filled++;
+            total += score * component.getWeight();
+            weightSum += component.getWeight();
+        }
+        if (!state.invalid && state.total > 0 && state.filled == state.total && weightSum > 0) {
+            double weighted = total / weightSum;
+            state.finalScore = (double) Math.round(weighted);
+            state.overLimit = weighted > 100.0;
+        }
+        return state;
+    }
+
+    /**
+     * 刷新某一行最终成绩的实时显示。
+     */
+    private void refreshGradeEntryRow(List<ScoreComponentVO> components, GradeEntryRow row) {
+        GradeEntryState state = evaluateGradeEntryRow(components, row);
+        row.setOverLimit(state.overLimit);
+        row.finalScoreProperty().set(state.finalScore == null
+                ? "" : String.valueOf((long) (double) state.finalScore));
+    }
+
+    /**
+     * 刷新底部的填写进度与输入提示。
+     */
+    private void refreshGradeEntryStatus(List<GradeEntryRow> rows,
+                                         List<ScoreComponentVO> components,
+                                         Label statusLabel) {
+        int complete = 0;
+        int partial = 0;
+        int invalid = 0;
+        int over = 0;
+        for (GradeEntryRow row : rows) {
+            GradeEntryState state = evaluateGradeEntryRow(components, row);
+            if (state.invalid) {
+                invalid++;
+            }
+            if (state.overLimit) {
+                over++;
+            }
+            if (state.finalScore != null) {
+                complete++;
+            } else if (state.filled > 0 || state.invalid) {
+                partial++;
+            }
+        }
+        StringBuilder text = new StringBuilder("共 " + rows.size() + " 名学生：已填写完整 "
+                + complete + " 人，填写中 " + partial + " 人，待填写 "
+                + Math.max(0, rows.size() - complete - partial) + " 人");
+        if (invalid > 0) {
+            text.append("；").append(invalid).append(" 处输入不合法（只能填写 0-100 之间的数字）");
+        }
+        if (over > 0) {
+            text.append("；").append(over).append(" 处折算总分超过 100，请检查各组成分数");
+        }
+        statusLabel.setText(text.toString());
+        statusLabel.getStyleClass().removeAll("error", "success");
+        statusLabel.getStyleClass().add(invalid > 0 || over > 0 ? "error" : "success");
+    }
+
+    /**
+     * 保存登记页中所有填写完整的学生成绩，未填写或不合法的行会被跳过。
+     */
+    private void saveGradeEntries(TableView<GradeEntryRow> table, CourseVO course, Label statusLabel) {
+        List<ScoreComponentVO> components = course.getScoreComponents() == null
+                ? new ArrayList<ScoreComponentVO>() : course.getScoreComponents();
+        if (components.isEmpty()) {
+            showInfo("该课程尚未配置成绩组成，无法登记成绩");
             return;
         }
 
-        grade.setComponentScores(scores);
-        runAction("成绩登记", () -> academicController.submitGrade(grade), null);
+        List<GradeVO> pendingGrades = new ArrayList<>();
+        List<String> skippedNames = new ArrayList<>();
+        for (GradeEntryRow row : table.getItems()) {
+            GradeEntryState state = evaluateGradeEntryRow(components, row);
+            if (state.filled == 0 && !state.invalid) {
+                // 完全没有填写的学生直接跳过，不影响其他学生登记
+                continue;
+            }
+            if (state.finalScore == null || state.invalid) {
+                skippedNames.add(row.getStudent().getName() + "（" + row.getStudent().getUid() + "）");
+                continue;
+            }
+            GradeVO grade = new GradeVO();
+            grade.setStudentId(row.getStudent().getUid());
+            grade.setCourseCode(course.getCourseCode());
+            grade.setCourseName(course.getCourseName());
+            List<GradeScoreVO> scores = new ArrayList<>();
+            for (ScoreComponentVO component : components) {
+                Double score = parseScoreValue(row.valueProperty(component.getComponentName()).get());
+                scores.add(new GradeScoreVO(component.getComponentName(), score == null ? 0.0 : score));
+            }
+            grade.setComponentScores(scores);
+            pendingGrades.add(grade);
+        }
+
+        if (pendingGrades.isEmpty()) {
+            showInfo(skippedNames.isEmpty()
+                    ? "请先填写学生成绩"
+                    : "没有可提交的成绩，以下学生填写不完整或输入不合法："
+                            + String.join("、", skippedNames));
+            return;
+        }
+
+        statusLabel.getStyleClass().removeAll("error", "success");
+        statusLabel.setText("正在提交 " + pendingGrades.size() + " 名学生的成绩...");
+
+        THREAD_POOL.execute(() -> {
+            int success = 0;
+            int failed = 0;
+            for (GradeVO grade : pendingGrades) {
+                try {
+                    if (academicController.submitGrade(grade) == ResponseCode.SUCCESS) {
+                        success++;
+                    } else {
+                        failed++;
+                    }
+                } catch (Exception e) {
+                    failed++;
+                }
+            }
+            final int successCount = success;
+            final int failedCount = failed;
+            Platform.runLater(() -> {
+                if (failedCount == 0) {
+                    showToast("成绩登记成功：" + successCount + " 名学生", true);
+                } else {
+                    showToast("成绩登记完成：成功 " + successCount + " 人，失败 " + failedCount + " 人", false);
+                }
+                if (!skippedNames.isEmpty()) {
+                    showInfoToast("未提交的学生（填写不完整或输入不合法）："
+                            + String.join("、", skippedNames));
+                }
+                reloadGradeEntry(table, course, statusLabel);
+            });
+        });
+    }
+
+    /**
+     * 保存后重新拉取学生名单与成绩，保持停留在登记页面。
+     */
+    private void reloadGradeEntry(TableView<GradeEntryRow> table, CourseVO course, Label statusLabel) {
+        THREAD_POOL.execute(() -> {
+            try {
+                List<UserVO> students = academicController.listStudentsByCourse(course.getCourseCode());
+                List<GradeVO> grades = academicController.queryCourseGrades(course.getCourseCode());
+                Platform.runLater(() -> renderGradeEntryTable(table, course, students, grades, statusLabel));
+            } catch (Exception e) {
+                Platform.runLater(() -> showError("刷新成绩登记失败：" + e.getMessage()));
+            }
+        });
+    }
+
+    /**
+     * 成绩登记表格中的一行：一名学生的各成绩组成输入值。
+     */
+    private static class GradeEntryRow {
+        private final UserVO student;
+        private final Map<String, StringProperty> values = new LinkedHashMap<>();
+        private final StringProperty finalScore = new SimpleStringProperty("");
+        private boolean overLimit;
+
+        GradeEntryRow(UserVO student) {
+            this.student = student;
+        }
+
+        UserVO getStudent() {
+            return student;
+        }
+
+        /**
+         * 取得某个成绩组成对应的可写属性，首次访问时按空值初始化。
+         */
+        StringProperty valueProperty(String componentName) {
+            return values.computeIfAbsent(componentName, key -> new SimpleStringProperty(""));
+        }
+
+        StringProperty finalScoreProperty() {
+            return finalScore;
+        }
+
+        void setOverLimit(boolean overLimit) {
+            this.overLimit = overLimit;
+        }
+    }
+
+    /**
+     * 一行成绩的填写状态：已填项数量、是否非法、折算后的最终成绩。
+     */
+    private static class GradeEntryState {
+        private final int total;
+        private int filled;
+        private boolean invalid;
+        private boolean overLimit;
+        private Double finalScore;
+
+        GradeEntryState(int total) {
+            this.total = total;
+        }
+    }
+
+    /**
+     * 成绩组成输入单元格：常驻文本框，与行模型属性双向绑定，输入即触发实时计算。
+     */
+    private class ScoreInputCell extends TableCell<GradeEntryRow, String> {
+        private final String componentName;
+        private final TextField field = new TextField();
+        private StringProperty boundProperty;
+
+        ScoreInputCell(String componentName) {
+            this.componentName = componentName;
+            field.getStyleClass().add("grade-entry-input");
+            field.setPrefWidth(100);
+        }
+
+        @Override
+        protected void updateItem(String item, boolean empty) {
+            super.updateItem(item, empty);
+            GradeEntryRow row = empty || getTableRow() == null ? null : getTableRow().getItem();
+            if (row == null) {
+                if (boundProperty != null) {
+                    field.textProperty().unbindBidirectional(boundProperty);
+                    boundProperty = null;
+                }
+                setGraphic(null);
+                return;
+            }
+            StringProperty property = row.valueProperty(componentName);
+            if (boundProperty != property) {
+                if (boundProperty != null) {
+                    field.textProperty().unbindBidirectional(boundProperty);
+                }
+                boundProperty = property;
+                field.textProperty().bindBidirectional(property);
+            }
+            setGraphic(field);
+        }
+    }
+
+    /**
+     * 最终成绩单元格：显示实时计算结果，折算总分超过 100 时标红。
+     */
+    private class FinalScoreCell extends TableCell<GradeEntryRow, String> {
+        FinalScoreCell() {
+            getStyleClass().add("grade-entry-final");
+        }
+
+        @Override
+        protected void updateItem(String item, boolean empty) {
+            super.updateItem(item, empty);
+            getStyleClass().remove("error");
+            if (empty) {
+                setText(null);
+                return;
+            }
+            setText(item);
+            GradeEntryRow row = getTableRow() == null ? null : getTableRow().getItem();
+            if (row != null && row.overLimit) {
+                getStyleClass().add("error");
+            }
+        }
     }
 
     /**

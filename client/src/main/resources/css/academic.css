@@ -231,4 +231,30 @@
     -fx-text-fill: -fx-text-disabled;
 }
 
+/* 成绩登记表格：成绩组成输入框与实时计算的最终成绩列 */
+.grade-entry-input {
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-main;
+    -fx-padding: 2px 6px;
+}
+
+.grade-entry-input:focused {
+    -fx-border-color: -fx-primary;
+}
+
+.grade-entry-final {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-primary;
+    -fx-alignment: center;
+}
+
+.grade-entry-final.error {
+    -fx-text-fill: -fx-danger;
+}
+
 /* 顶部滑入通知横幅 */
