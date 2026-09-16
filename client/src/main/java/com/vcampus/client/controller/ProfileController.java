@@ -4,16 +4,19 @@ import com.vcampus.client.net.ClientSession;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.common.vo.UserVO;
 import com.vcampus.client.util.ScrollSpeedUtil;
+import com.vcampus.client.util.ToastBannerUtil;
 import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
 import javafx.application.Platform;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.util.Duration;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -85,11 +88,20 @@ public class ProfileController {
     @FXML
     private ScrollPane rootScrollPane;
 
+    private Timeline balancePolling;
+
     @FXML
     public void initialize() {
         // 为当前个人信息面板的滚动容器启用加速
         if (rootScrollPane != null) {
             ScrollSpeedUtil.applyCustomScrollSpeed(rootScrollPane);
+            rootScrollPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
+                if (newScene != null) {
+                    startBalancePolling();
+                } else {
+                    stopBalancePolling();
+                }
+            });
         }
     }
 
@@ -108,6 +120,53 @@ public class ProfileController {
         this.currentUser = user;
         this.mainController = mainController;
         refreshUserData();
+    }
+
+    /**
+     * 启动余额轮询任务，每秒向服务端请求最新余额并更新界面显示
+     * 仅在当前用户已登录时启动，未登录状态下不进行轮询
+     */
+    private void startBalancePolling() {
+        stopBalancePolling();
+        if (currentUser == null) {
+            return;
+        }
+        balancePolling = new Timeline(new KeyFrame(Duration.seconds(1), e -> refreshBalance()));
+        balancePolling.setCycleCount(Timeline.INDEFINITE);
+        balancePolling.play();
+    }
+
+    /**
+     * 停止余额轮询任务，释放资源
+     * 当前用户退出登录或界面被销毁时调用，避免内存泄漏和无效网络请求
+     */
+    private void stopBalancePolling() {
+        if (balancePolling != null) {
+            balancePolling.stop();
+            balancePolling = null;
+        }
+    }
+
+    private void refreshBalance() {
+        THREAD_POOL.execute(() -> {
+            try {
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.PAYMENT_BALANCE, null, null);
+                Message response = socketClient.send(request);
+                Platform.runLater(() -> {
+                    if (response != null && response.getCode() == ResponseCode.SUCCESS
+                            && response.getData() instanceof UserVO fresh) {
+                        currentUser.setBalance(fresh.getBalance());
+                        updateBalanceDisplay();
+                        if (mainController != null) {
+                            BigDecimal balance = fresh.getBalance() == null ? BigDecimal.ZERO : fresh.getBalance();
+                            mainController.updateBalance(balance);
+                        }
+                    }
+                });
+            } catch (Exception ignored) {
+                // 后台余额轮询失败不打断当前操作
+            }
+        });
     }
 
     /**
@@ -160,20 +219,20 @@ public class ProfileController {
     private void handleCustomRecharge() {
         String amountStr = customRechargeField.getText().trim();
         if (amountStr.isEmpty()) {
-            showAlert("提示", "请输入充值金额", Alert.AlertType.WARNING);
+            ToastBannerUtil.showToastBanner(rootScrollPane, "请输入充值金额", 2);
             return;
         }
 
         try {
             BigDecimal amount = new BigDecimal(amountStr);
             if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                showAlert("提示", "充值金额必须大于 0", Alert.AlertType.WARNING);
+                ToastBannerUtil.showToastBanner(rootScrollPane, "充值金额必须大于 0", 2);
                 return;
             }
             executeRecharge(amount);
             customRechargeField.clear();
         } catch (NumberFormatException e) {
-            showAlert("错误", "请输入合法的数字金额", Alert.AlertType.ERROR);
+            ToastBannerUtil.showToastBanner(rootScrollPane, "请输入合法的数字金额", 1);
         }
     }
 
@@ -200,15 +259,19 @@ public class ProfileController {
                         if (mainController != null) {
                             mainController.updateBalance(targetBalance);
                         }
-                        showAlert("充值成功", "成功充值 ¥ " + amount.setScale(2, RoundingMode.HALF_UP).toPlainString() + "，服务端余额已更新为 ¥ " + targetBalance.setScale(2, RoundingMode.HALF_UP).toPlainString(), Alert.AlertType.INFORMATION);
+                        ToastBannerUtil.showToastBanner(rootScrollPane,
+                                "成功充值 ¥ " + amount.setScale(2, RoundingMode.HALF_UP).toPlainString()
+                                        + "，服务端余额已更新为 ¥ " + targetBalance.setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                                0);
                     } else {
                         String errMsg = (responseMsg != null && responseMsg.getData() instanceof String)
                                 ? (String) responseMsg.getData() : "充值请求被服务器拒绝";
-                        showAlert("充值失败", errMsg, Alert.AlertType.ERROR);
+                        ToastBannerUtil.showToastBanner(rootScrollPane, "充值失败：" + errMsg, 1);
                     }
                 });
             } catch (Exception e) {
-                Platform.runLater(() -> showAlert("网络错误", "无法连接服务器，充值失败: " + e.getMessage(), Alert.AlertType.ERROR));
+                Platform.runLater(() -> ToastBannerUtil.showToastBanner(rootScrollPane,
+                        "无法连接服务器，充值失败：" + e.getMessage(), 1));
             }
         });
     }
@@ -284,20 +347,5 @@ public class ProfileController {
         securityMsgLabel.getStyleClass().add(isSuccess ? "success" : "error");
         securityMsgLabel.setVisible(true);
         securityMsgLabel.setManaged(true);
-    }
-
-    /**
-     * 显示充值的提示弹窗
-     *
-     * @param title 弹窗标题
-     * @param content 弹窗内容
-     * @param type 弹窗类型，包含 INFORMATION, WARNING, ERROR 等
-     */
-    private void showAlert(String title, String content, Alert.AlertType type) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
     }
 }

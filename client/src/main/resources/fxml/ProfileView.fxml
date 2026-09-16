@@ -8,6 +8,7 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
@@ -48,6 +49,10 @@
 
         <!-- 中部网格卡片区 (2列并排) -->
         <GridPane hgap="20.0" vgap="20.0">
+            <columnConstraints>
+                <ColumnConstraints hgrow="ALWAYS" percentWidth="50.0" />
+                <ColumnConstraints hgrow="ALWAYS" percentWidth="50.0" />
+            </columnConstraints>
             <!-- 左列：一卡通账户与资产 -->
             <VBox spacing="16.0" styleClass="profile-card" GridPane.columnIndex="0" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0">
                 <HBox alignment="CENTER_LEFT" spacing="10.0">
@@ -97,7 +102,7 @@
                         <PasswordField fx:id="confirmPasswordField" promptText="请再次输入新密码" styleClass="modern-input-field" />
                     </VBox>
 
-                    <Label fx:id="securityMsgLabel" managed="false" visible="false" styleClass="security-msg-label" />
+                    <Label fx:id="securityMsgLabel" managed="false" visible="false" wrapText="true" styleClass="security-msg-label" />
 
                     <HBox alignment="CENTER_RIGHT">
                         <Button onAction="#handleChangePassword" text="更新密码" styleClass="btn-primary-action" />

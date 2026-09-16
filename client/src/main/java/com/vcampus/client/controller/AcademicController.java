@@ -8,7 +8,6 @@ import com.vcampus.common.vo.CourseVO;
 import com.vcampus.common.vo.CourseReviewVO;
 import com.vcampus.common.vo.GradeStatisticsVO;
 import com.vcampus.common.vo.GradeVO;
-import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
 
 import java.io.IOException;

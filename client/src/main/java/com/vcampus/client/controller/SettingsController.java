@@ -454,7 +454,7 @@ public class SettingsController {
                 previewTheme();
                 showStatusMessage(endpointChanged
                         ? "已保存。服务器地址已变更，请在重新登录后继续操作。"
-                        : "偏好设置与个性化壁纸已成功保存！");
+                        : "偏好设置已成功保存！");
             } else {
                 showAlert("保存受限", "保存失败，请检查运行目录写权限。", Alert.AlertType.ERROR);
             }

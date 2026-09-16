@@ -127,6 +127,8 @@ public class SecondHandPanel extends VBox {
     private Button chatRefreshBtn;
     /** 卖家会话列表轮询与增量比较状态 */
     private Timeline conversationsPolling;
+    /** 二手市场可见期间的余额轮询，确保卖家及时看到收款结果 */
+    private Timeline balancePolling;
     private String renderedConversationsSignature = null;
     private SecondHandVO chatItem;
     private String chatOtherUid;
@@ -173,12 +175,14 @@ public class SecondHandPanel extends VBox {
         // 面板隐藏时停止聊天轮询，避免后台请求泄漏
         visibleProperty().addListener((obs, was, is) -> {
             if (is) {
+                startBalancePolling();
                 if (currentPage == chatPage) {
                     startChatPolling();
                 } else if (currentPage == conversationsPage) {
                     startConversationsPolling();
                 }
             } else {
+                stopBalancePolling();
                 stopChatPolling();
                 stopConversationsPolling();
             }
@@ -282,9 +286,6 @@ public class SecondHandPanel extends VBox {
     }
 
     /**
-     * 仅列表页显示市场工具栏；聊天/发布/审核等二级页只保留返回按钮。
-     */
-    /**
      * 聊天页：在顶部白框中显示对方名称/商品副标题与刷新按钮。
      */
     private void setChatHeaderVisible(boolean visible) {
@@ -292,6 +293,9 @@ public class SecondHandPanel extends VBox {
         toggleNode(chatRefreshBtn, visible);
     }
 
+    /**
+     * 仅列表页显示市场工具栏；聊天/发布/审核等二级页只保留返回按钮。
+     */
     private void setMarketToolbarVisible(boolean visible) {
         toggleNode(headerTitleBox, visible);
         toggleNode(headerBalanceBox, visible);
@@ -836,6 +840,29 @@ public class SecondHandPanel extends VBox {
             conversationsPolling = null;
         }
     }
+
+    /**
+     * 二手市场可见时每秒刷新一次余额，使其他实例完成交易后卖家页面能及时更新。
+     */
+    private void startBalancePolling() {
+        stopBalancePolling();
+        balancePolling = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+            if (isVisible() && getScene() != null) {
+                refreshBalance();
+            } else {
+                stopBalancePolling();
+            }
+        }));
+        balancePolling.setCycleCount(Timeline.INDEFINITE);
+        balancePolling.play();
+    }
+
+    private void stopBalancePolling() {
+        if (balancePolling != null) {
+            balancePolling.stop();
+            balancePolling = null;
+        }
+    }
     /**
      * 发送当前输入框里的消息。
      */
@@ -1018,9 +1045,6 @@ public class SecondHandPanel extends VBox {
     }
 
     /**
-     * 刷新在售列表与余额。
-     */
-    /**
      * 设置返回回调（被校园超市当作二级页嵌入时调用）。
      */
     public void setOnBack(Runnable onBack) {
@@ -1028,6 +1052,9 @@ public class SecondHandPanel extends VBox {
         updateBackButton();
     }
 
+    /**
+     * 仅刷新在售列表与余额。
+     */
     public void refresh() {
         refreshListings();
         refreshBalance();
@@ -1473,35 +1500,25 @@ public class SecondHandPanel extends VBox {
         if (status == null) {
             return "未知";
         }
-        switch (status) {
-            case "PENDING":
-                return "待审核";
-            case "ON_SALE":
-                return "在售";
-            case "SOLD":
-                return "已售/已下架";
-            case "REJECTED":
-                return "审核未通过";
-            default:
-                return status;
-        }
+        return switch (status) {
+            case "PENDING" -> "待审核";
+            case "ON_SALE" -> "在售";
+            case "SOLD" -> "已售/已下架";
+            case "REJECTED" -> "审核未通过";
+            default -> status;
+        };
     }
 
     /**
      * 根据状态返回徽标样式类。
      */
     private String statusBadgeClass(String status) {
-        switch (status == null ? "" : status) {
-            case "ON_SALE":
-                return "shop-card-badge-on";
-            case "PENDING":
-                return "shop-card-badge-pending";
-            case "REJECTED":
-                return "shop-card-badge-rejected";
-            case "SOLD":
-            default:
-                return "shop-card-badge-off";
-        }
+        return switch (status == null ? "" : status) {
+            case "ON_SALE" -> "shop-card-badge-on";
+            case "PENDING" -> "shop-card-badge-pending";
+            case "REJECTED" -> "shop-card-badge-rejected";
+            default -> "shop-card-badge-off";
+        };
     }
 
     /**
@@ -1721,7 +1738,14 @@ public class SecondHandPanel extends VBox {
      * 消息条类型（颜色与图标）。
      */
     public enum ToastType {
-        SUCCESS, INFO, WARNING, ERROR
+        /** 绿色：成功/提示 */
+        SUCCESS,
+        /** 蓝色：信息/通知 */
+        INFO,
+        /** 黄色：警告/注意 */
+        WARNING,
+        /** 红色：错误/失败 */
+        ERROR
     }
 
     /**
@@ -1738,13 +1762,12 @@ public class SecondHandPanel extends VBox {
         toastBar.getStyleClass().removeAll(
                 "secondhand-toast-success", "secondhand-toast-info",
                 "secondhand-toast-warning", "secondhand-toast-error");
-        String styleClass;
-        switch (type) {
-            case SUCCESS: styleClass = "secondhand-toast-success"; break;
-            case WARNING: styleClass = "secondhand-toast-warning"; break;
-            case ERROR:   styleClass = "secondhand-toast-error";   break;
-            default:      styleClass = "secondhand-toast-info";    break;
-        }
+        String styleClass = switch (type) {
+            case SUCCESS -> "secondhand-toast-success";
+            case WARNING -> "secondhand-toast-warning";
+            case ERROR -> "secondhand-toast-error";
+            default -> "secondhand-toast-info";
+        };
         toastBar.getStyleClass().add(styleClass);
         toastBar.setVisible(true);
         toastBar.setManaged(true);
