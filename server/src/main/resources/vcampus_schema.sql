@@ -314,10 +314,32 @@ INSERT INTO `tbl_book` (`isbn`, `title`, `author`, `publisher`, `location`, `res
 ('9787302520322', '计算机网络（第7版）', '谢希仁', '电子工业出版社', '九龙湖馆四楼 TN 区', NULL, 6, 6),
 ('9787115426799', '深入理解计算机系统', 'Randal E. Bryant', '机械工业出版社', '九龙湖馆三楼 TP303 区', NULL, 4, 4);
 
-INSERT INTO `tbl_goods` (`goods_id`, `goods_name`, `price`, `stock`, `description`, `image_path`) VALUES
-('G001', '东大纪念笔记本', 15.00, 100, '精装校徽文创笔记本', 'G001.jpg'),
-('G002', '晨光中性笔(黑)', 2.50, 200, '0.5mm 顺滑签字笔', 'G002.jpg'),
-('G003', '校园咖啡兑换券', 12.00, 50, '校内咖啡厅通用券', 'G003.jpg');
+INSERT INTO `tbl_goods` (`goods_id`, `goods_name`, `price`, `stock`, `description`) VALUES
+('G001', '东大纪念笔记本', 15.00, 100, '精装校徽文创笔记本'),
+('G002', '晨光中性笔(黑)', 2.50, 200, '0.5mm 顺滑签字笔'),
+('G003', '校园咖啡兑换券', 12.00, 50, '校内咖啡厅通用券');
+INSERT INTO `tbl_goods` (`goods_id`, `goods_name`, `price`, `stock`, `description`) VALUES
+('G004', '东南大学纪念帆布袋', 25.00, 80, '校徽图案环保帆布手提袋'),
+('G005', '东大校徽金属书签', 9.90, 150, '镂空校徽书签'),
+('G006', '校园文创保温杯', 45.00, 60, '不锈钢保温杯 350ml'),
+('G007', '东大风景明信片套装', 18.00, 120, '校园风景明信片 6 张'),
+('G008', '校徽钥匙扣', 12.00, 180, '合金校徽钥匙扣'),
+('G009', '宿舍护眼台灯', 59.00, 40, '三档调光 LED 台灯'),
+('G010', '便携折叠雨伞', 35.00, 70, '晴雨两用折叠伞'),
+('G011', '校园文具套装', 22.00, 100, '含笔记本、中性笔和便签');
+
+UPDATE `tbl_goods` SET `image_path` = 'g001_notebook.jpeg' WHERE `goods_id` = 'G001';
+UPDATE `tbl_goods` SET `image_path` = 'g002_pen.jpeg' WHERE `goods_id` = 'G002';
+UPDATE `tbl_goods` SET `image_path` = 'g003_coffee_voucher.jpeg' WHERE `goods_id` = 'G003';
+UPDATE `tbl_goods` SET `image_path` = 'g004_tote_bag.jpg' WHERE `goods_id` = 'G004';
+UPDATE `tbl_goods` SET `image_path` = 'g005_bookmark.jpg' WHERE `goods_id` = 'G005';
+UPDATE `tbl_goods` SET `image_path` = 'g006_thermos.jpeg' WHERE `goods_id` = 'G006';
+UPDATE `tbl_goods` SET `image_path` = 'g007_postcards.jpg' WHERE `goods_id` = 'G007';
+UPDATE `tbl_goods` SET `image_path` = 'g008_keychain.jpeg' WHERE `goods_id` = 'G008';
+UPDATE `tbl_goods` SET `image_path` = 'g009_lamp.jpeg' WHERE `goods_id` = 'G009';
+UPDATE `tbl_goods` SET `image_path` = 'g010_umbrella.jpeg' WHERE `goods_id` = 'G010';
+UPDATE `tbl_goods` SET `image_path` = 'g011_stationery_set.jpg' WHERE `goods_id` = 'G011';
+
 INSERT INTO `tbl_second_hand` (`seller_id`, `seller_name`, `title`, `description`, `price`, `status`, `created_time`) VALUES
 ('213000002', '李四', '计算机组成原理（任国林版）二手书', '笔记齐全九成新，考试重点已标注', 999.00, 'ON_SALE', '2026-09-01 10:00:00'),
 ('213000002', '李四', '99新置物架', '宿舍用三层小置物架，99新', 20.00, 'ON_SALE', '2026-09-01 11:00:00');

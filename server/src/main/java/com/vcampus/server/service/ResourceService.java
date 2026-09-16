@@ -19,7 +19,7 @@ public class ResourceService {
     private static final String RESOURCE_DIR = "ebooks";
 
     /** 商品图片存放目录（相对于服务端运行目录） */
-    private static final String GOODS_IMAGE_DIR = "goods_images";
+    private static final String GOODS_IMAGE_DIR = "server/src/main/resources/goods_images";
 
     
     private final Path baseDir;
