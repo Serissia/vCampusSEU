@@ -181,6 +181,12 @@ public final class PermissionTable {
                 MessageType.SECOND_HAND_UPDATE_PRICE,
                 MessageType.SECOND_HAND_BUY,
                 MessageType.SECOND_HAND_MY_LIST,
+                // 二手商品图片：任意登录用户可浏览；上传与换图和发布同级，
+                // 服务端还会校验「只能改自己发布的商品」
+                MessageType.SECOND_HAND_IMAGE_UPLOAD,
+                MessageType.SECOND_HAND_IMAGE_DOWNLOAD,
+                MessageType.SECOND_HAND_IMAGE_DELETE,
+                MessageType.SECOND_HAND_UPDATE_IMAGE,
                 MessageType.CHAT_SEND,
                 MessageType.CHAT_HISTORY,
                 MessageType.CHAT_CONVERSATIONS);

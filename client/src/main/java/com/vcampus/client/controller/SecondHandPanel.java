@@ -7,6 +7,7 @@ import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.ChatMessageVO;
+import com.vcampus.common.vo.ResourceFileVO;
 import com.vcampus.common.vo.SecondHandVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
@@ -22,6 +23,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextArea;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -29,12 +33,19 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.util.Duration;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.file.Files;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -111,6 +122,18 @@ public class SecondHandPanel extends VBox {
     private TextField publishPriceField;
     private TextArea publishDescField;
     private SecondHandVO pendingItem;
+
+    /** 二手商品图片卡片尺寸（与校园超市保持一致） */
+    private static final double IMAGE_W = 172.0;
+    private static final double IMAGE_H = 120.0;
+    /** 已解码图片缓存（服务端文件名 -> 图片），避免同一张图重复下载解码 */
+    private final Map<String, Image> imageCache = new ConcurrentHashMap<>();
+    /** “暂无图片”占位图，懒加载 */
+    private Image placeholderImage;
+    /** 发布页中本次待上传的新图片（null 表示未选择） */
+    private ResourceFileVO publishPendingImage;
+    private ImageView publishImagePreview;
+    private Label publishImageStatus;
     /** 审核页/我的发布页 的列表容器（异步填充） */
     private VBox reviewListContainer;
     private VBox myListContainer;
@@ -513,6 +536,51 @@ public class SecondHandPanel extends VBox {
         publishDescField.setPrefRowCount(4);
         publishDescField.getStyleClass().add("modern-input-field");
 
+        // 商品图片：可选，未选择时展示“暂无图片”占位图
+        publishImagePreview = new ImageView(getPlaceholderImage());
+        publishImagePreview.setFitWidth(120.0);
+        publishImagePreview.setFitHeight(80.0);
+        publishImagePreview.setPreserveRatio(true);
+        publishImagePreview.setSmooth(true);
+        publishImagePreview.getStyleClass().add("shop-dialog-image-preview");
+
+        publishImageStatus = new Label("未选择（商品将显示“暂无图片”）");
+        publishImageStatus.getStyleClass().add("lib-subtitle");
+
+        Button publishChooseImageBtn = new Button("选择图片…");
+        publishChooseImageBtn.getStyleClass().add("btn-recharge-preset");
+        Button publishClearImageBtn = new Button("清除");
+        publishClearImageBtn.getStyleClass().add("lib-btn-danger");
+        publishClearImageBtn.setDisable(true);
+
+        Runnable syncPublishImage = () -> {
+            if (publishPendingImage != null && publishPendingImage.getData() != null) {
+                publishImagePreview.setImage(new Image(new ByteArrayInputStream(publishPendingImage.getData())));
+                publishImageStatus.setText("已选择：" + publishPendingImage.getFileName());
+                publishClearImageBtn.setDisable(false);
+            } else {
+                publishImagePreview.setImage(getPlaceholderImage());
+                publishImageStatus.setText("未选择（商品将显示“暂无图片”）");
+                publishClearImageBtn.setDisable(true);
+            }
+        };
+        publishChooseImageBtn.setOnAction(e -> {
+            ResourceFileVO picked = pickImageFile();
+            if (picked != null) {
+                publishPendingImage = picked;
+                syncPublishImage.run();
+            }
+        });
+        publishClearImageBtn.setOnAction(e -> {
+            publishPendingImage = null;
+            syncPublishImage.run();
+        });
+
+        HBox publishImageControls = new HBox(8.0, publishChooseImageBtn, publishClearImageBtn);
+        publishImageControls.setAlignment(Pos.CENTER_LEFT);
+        VBox publishImageCell = new VBox(6.0, publishImagePreview, publishImageControls, publishImageStatus);
+        publishImageCell.setAlignment(Pos.CENTER_LEFT);
+
         GridPane grid = new GridPane();
         grid.setHgap(10.0);
         grid.setVgap(10.0);
@@ -523,6 +591,8 @@ public class SecondHandPanel extends VBox {
         grid.add(publishPriceField, 1, 1);
         grid.add(new Label("描述"), 0, 2);
         grid.add(publishDescField, 1, 2);
+        grid.add(new Label("图片"), 0, 3);
+        grid.add(publishImageCell, 1, 3);
         GridPane.setHgrow(publishTitleField, Priority.ALWAYS);
         GridPane.setHgrow(publishPriceField, Priority.ALWAYS);
         GridPane.setHgrow(publishDescField, Priority.ALWAYS);
@@ -572,7 +642,39 @@ public class SecondHandPanel extends VBox {
         vo.setTitle(title);
         vo.setPrice(price);
         vo.setDescription(publishDescField.getText() == null ? "" : publishDescField.getText().trim());
-        publish(vo);
+        vo.setImage("");
+        publishWithImage(vo);
+    }
+
+    /**
+     * 发布前若有选择的图片则先上传，拿到服务端文件名后再提交商品。
+     */
+    private void publishWithImage(SecondHandVO vo) {
+        final ResourceFileVO pending = publishPendingImage;
+        if (pending == null || pending.getData() == null) {
+            publish(vo);
+            return;
+        }
+        showToast("正在上传图片…", ToastType.INFO);
+        THREAD_POOL.execute(() -> {
+            try {
+                Message upload = new Message(currentUser.getAccountNumber(),
+                        MessageType.SECOND_HAND_IMAGE_UPLOAD, null, pending);
+                Message response = socketClient.send(upload);
+                if (response != null && response.getCode() == ResponseCode.SUCCESS
+                        && response.getData() instanceof String) {
+                    String name = String.valueOf(response.getData());
+                    if (!name.isEmpty() && !"null".equals(name)) {
+                        vo.setImage(name);
+                        Platform.runLater(() -> publish(vo));
+                        return;
+                    }
+                }
+                Platform.runLater(() -> showToast("图片上传失败，请稍后重试", ToastType.ERROR));
+            } catch (Exception e) {
+                Platform.runLater(() -> showToast("网络错误：" + e.getMessage(), ToastType.ERROR));
+            }
+        });
     }
 
     private void clearPublishForm() {
@@ -584,6 +686,13 @@ public class SecondHandPanel extends VBox {
         }
         if (publishDescField != null) {
             publishDescField.clear();
+        }
+        publishPendingImage = null;
+        if (publishImagePreview != null) {
+            publishImagePreview.setImage(getPlaceholderImage());
+        }
+        if (publishImageStatus != null) {
+            publishImageStatus.setText("未选择（商品将显示“暂无图片”）");
         }
     }
 
@@ -1130,6 +1239,14 @@ public class SecondHandPanel extends VBox {
         boolean mine = currentUser != null && currentUser.getAccountNumber() != null
                 && currentUser.getAccountNumber().equals(item.getSellerId());
 
+        // 商品图片（无图时显示“暂无图片”占位图）
+        StackPane imageBox = new StackPane();
+        imageBox.setPrefSize(IMAGE_W, IMAGE_H);
+        imageBox.setMinSize(IMAGE_W, IMAGE_H);
+        imageBox.setMaxSize(IMAGE_W, IMAGE_H);
+        imageBox.getStyleClass().add("shop-card-image-box");
+        imageBox.getChildren().add(createItemImageView(item));
+
         // 顶部：状态徽标 + 右上角"联系卖家/咨询"按钮
         HBox topRow = new HBox(6.0);
         topRow.setAlignment(Pos.CENTER_LEFT);
@@ -1163,23 +1280,25 @@ public class SecondHandPanel extends VBox {
         Label price = new Label(formatPrice(item.getPrice()));
         price.getStyleClass().add("shop-card-price");
 
-        card.getChildren().addAll(topRow, title, seller, desc, price);
+        card.getChildren().addAll(imageBox, topRow, title, seller, desc, price);
 
         boolean available = "ON_SALE".equals(item.getStatus());
         if (mine && available) {
             Button editPriceBtn = new Button("修改价格");
             editPriceBtn.getStyleClass().add("btn-recharge-preset");
-            editPriceBtn.setMaxWidth(Double.MAX_VALUE);
-            HBox.setHgrow(editPriceBtn, Priority.ALWAYS);
             editPriceBtn.setOnAction(e -> openEditPricePage(item));
+
+            Button changeImageBtn = new Button("更换图片");
+            changeImageBtn.getStyleClass().add("btn-recharge-preset");
+            changeImageBtn.setOnAction(e -> chooseAndUpdateImage(item));
 
             Button offShelfBtn = new Button("下架");
             offShelfBtn.getStyleClass().add("lib-btn-danger");
             offShelfBtn.setOnAction(e -> confirmOffShelf(item));
 
-            HBox actions = new HBox(8.0, editPriceBtn, offShelfBtn);
-            actions.setAlignment(Pos.CENTER_LEFT);
-            actions.setMaxWidth(Double.MAX_VALUE);
+            // 三个按钮在 220px 宽卡片内自动换行，避免横向溢出
+            FlowPane actions = new FlowPane(6.0, 6.0, editPriceBtn, changeImageBtn, offShelfBtn);
+            actions.setPrefWrapLength(192.0);
             card.getChildren().add(actions);
         } else {
             Button actionBtn = new Button(mine ? "下架" : "购买");
@@ -1195,6 +1314,289 @@ public class SecondHandPanel extends VBox {
             card.getChildren().add(actionBtn);
         }
         return card;
+    }
+
+    // ===================== 二手商品图片 =====================
+
+    /**
+     * 卡片图片视图：有商品图则异步下载展示，否则显示“暂无图片”占位图。
+     */
+    private ImageView createItemImageView(SecondHandVO item) {
+        return createItemThumbnail(item, IMAGE_W, IMAGE_H);
+    }
+
+    /**
+     * 生成指定尺寸的商品图片视图（列表行 / 详情页复用）。
+     */
+    private ImageView createItemThumbnail(SecondHandVO item, double width, double height) {
+        ImageView view = new ImageView(getPlaceholderImage());
+        view.setFitWidth(width);
+        view.setFitHeight(height);
+        view.setPreserveRatio(true);
+        view.setSmooth(true);
+        view.getStyleClass().add("shop-card-image");
+
+        String name = item == null ? null : item.getImage();
+        if (name != null && !name.isEmpty()) {
+            Image cached = imageCache.get(name);
+            if (cached != null) {
+                view.setImage(cached);
+            } else {
+                requestItemImage(name, view);
+            }
+        }
+        return view;
+    }
+
+    /**
+     * 把图片视图包进固定尺寸的圆角容器，保证列表中各缩略图外观一致。
+     */
+    private StackPane wrapThumbnail(ImageView view, double width, double height) {
+        StackPane box = new StackPane(view);
+        // 预留 2px 内边距，避免图片贴边
+        box.setPrefSize(width + 4.0, height + 4.0);
+        box.setMinSize(width + 4.0, height + 4.0);
+        box.setMaxSize(width + 4.0, height + 4.0);
+        box.getStyleClass().add("secondhand-thumb-box");
+        return box;
+    }
+
+    /**
+     * 异步下载二手商品图片，成功后写入缓存并刷新目标 ImageView。
+     */
+    private void requestItemImage(String name, ImageView target) {
+        THREAD_POOL.execute(() -> {
+            try {
+                Message request = new Message(currentUser.getAccountNumber(),
+                        MessageType.SECOND_HAND_IMAGE_DOWNLOAD, null, name);
+                Message response = socketClient.send(request);
+                if (response == null || response.getCode() != ResponseCode.SUCCESS
+                        || !(response.getData() instanceof ResourceFileVO)) {
+                    return; // 保持占位图
+                }
+                byte[] data = ((ResourceFileVO) response.getData()).getData();
+                if (data == null || data.length == 0) {
+                    return;
+                }
+                Image img = new Image(new ByteArrayInputStream(data));
+                if (img.isError() || img.getWidth() <= 0) {
+                    return; // 解码失败保持占位图
+                }
+                imageCache.put(name, img);
+                Platform.runLater(() -> {
+                    if (target != null) {
+                        target.setImage(img);
+                    }
+                });
+            } catch (Exception ignored) {
+                // 下载失败时静默保持占位图，不打扰用户
+            }
+        });
+    }
+
+    /**
+     * 懒加载“暂无图片”占位图（与校园超市共用同一张图）。
+     */
+    private Image getPlaceholderImage() {
+        if (placeholderImage == null) {
+            try (InputStream is = getClass().getResourceAsStream("/images/goods-no-image.png")) {
+                placeholderImage = is != null ? new Image(is) : new WritableImage(1, 1);
+            } catch (Exception e) {
+                placeholderImage = new WritableImage(1, 1);
+            }
+        }
+        return placeholderImage;
+    }
+
+    /**
+     * 读取本地文件并上传到服务端，成功返回服务端文件名；失败返回 null。
+     *
+     * <p>阻塞方法，必须在工作线程调用。</p>
+     */
+    private String uploadImageBlocking(File file) throws Exception {
+        byte[] data = Files.readAllBytes(file.toPath());
+        if (data.length == 0) {
+            return null;
+        }
+        ResourceFileVO payload = new ResourceFileVO();
+        payload.setFileName(file.getName());
+        payload.setData(data);
+        Message request = new Message(currentUser.getAccountNumber(),
+                MessageType.SECOND_HAND_IMAGE_UPLOAD, null, payload);
+        Message response = socketClient.send(request);
+        if (response == null || response.getCode() != ResponseCode.SUCCESS
+                || !(response.getData() instanceof String)) {
+            return null;
+        }
+        String name = String.valueOf(response.getData());
+        if (name.isEmpty() || "null".equals(name)) {
+            return null;
+        }
+        // 顺手缓存，换图成功后无需重新下载即可显示
+        Image img = new Image(new ByteArrayInputStream(data));
+        if (!img.isError() && img.getWidth() > 0) {
+            imageCache.put(name, img);
+        }
+        return name;
+    }
+
+    /**
+     * 尽力而为地删除服务端图片（不阻塞、不打扰用户）。
+     */
+    private void deleteImageQuietly(String imageName) {
+        if (imageName == null || imageName.trim().isEmpty()) {
+            return;
+        }
+        String name = imageName.trim();
+        THREAD_POOL.execute(() -> {
+            try {
+                Message request = new Message(currentUser.getAccountNumber(),
+                        MessageType.SECOND_HAND_IMAGE_DELETE, null, name);
+                socketClient.send(request);
+                imageCache.remove(name);
+            } catch (Exception ignored) {
+                // 删除失败不影响主流程
+            }
+        });
+    }
+
+    /**
+     * 弹出文件选择框，读取图片字节。取消选择或读取失败返回 null。
+     */
+    private ResourceFileVO pickImageFile() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("选择商品图片");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("图片文件", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"),
+                new FileChooser.ExtensionFilter("所有文件", "*.*"));
+        File file = chooser.showOpenDialog(getScene() == null ? null : getScene().getWindow());
+        if (file == null) {
+            return null;
+        }
+        try {
+            byte[] data = Files.readAllBytes(file.toPath());
+            if (data.length == 0) {
+                showToast("图片内容为空", ToastType.WARNING);
+                return null;
+            }
+            ResourceFileVO vo = new ResourceFileVO();
+            vo.setFileName(file.getName());
+            vo.setData(data);
+            return vo;
+        } catch (Exception e) {
+            showToast("读取图片失败：" + e.getMessage(), ToastType.ERROR);
+            return null;
+        }
+    }
+
+    /**
+     * 卖家为自己发布的商品更换图片：先上传新图，再回填到商品。
+     *
+     * <p>若回填失败会尽力删除刚上传的新图，避免留下孤儿文件。</p>
+     */
+    private void chooseAndUpdateImage(SecondHandVO item) {
+        if (item == null || item.getId() == null) {
+            return;
+        }
+        ResourceFileVO picked = pickImageFile();
+        if (picked == null) {
+            return;
+        }
+        showToast("正在上传图片…", ToastType.INFO);
+        final String oldImage = item.getImage();
+        THREAD_POOL.execute(() -> {
+            try {
+                ResourceFileVO payload = new ResourceFileVO();
+                payload.setFileName(picked.getFileName());
+                payload.setData(picked.getData());
+                Message upload = new Message(currentUser.getAccountNumber(),
+                        MessageType.SECOND_HAND_IMAGE_UPLOAD, null, payload);
+                Message uploadResp = socketClient.send(upload);
+                if (uploadResp == null || uploadResp.getCode() != ResponseCode.SUCCESS
+                        || !(uploadResp.getData() instanceof String)) {
+                    Platform.runLater(() -> showToast("图片上传失败，请稍后重试", ToastType.ERROR));
+                    return;
+                }
+                String newName = String.valueOf(uploadResp.getData());
+                if (newName.isEmpty() || "null".equals(newName)) {
+                    Platform.runLater(() -> showToast("图片上传失败，请稍后重试", ToastType.ERROR));
+                    return;
+                }
+
+                SecondHandVO payload2 = new SecondHandVO();
+                payload2.setId(item.getId());
+                payload2.setImage(newName);
+                Message update = new Message(currentUser.getAccountNumber(),
+                        MessageType.SECOND_HAND_UPDATE_IMAGE, null, payload2);
+                Message updateResp = socketClient.send(update);
+                boolean ok = updateResp != null && updateResp.getCode() == ResponseCode.SUCCESS;
+
+                Platform.runLater(() -> {
+                    if (ok) {
+                        item.setImage(newName);
+                        imageCache.put(newName, new Image(new ByteArrayInputStream(picked.getData())));
+                        showToast("商品图片已更新", ToastType.SUCCESS);
+                        // 替换成功后再清理旧图
+                        if (oldImage != null && !oldImage.isEmpty() && !oldImage.equals(newName)) {
+                            deleteImageQuietly(oldImage);
+                        }
+                        refreshAfterImageChange();
+                    } else {
+                        showToast("修改图片失败：" + errorText(updateResp, "修改图片失败"), ToastType.ERROR);
+                        deleteImageQuietly(newName);
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> showToast("网络错误：" + e.getMessage(), ToastType.ERROR));
+            }
+        });
+    }
+
+    /**
+     * 卖家清除自己商品的图片，恢复“暂无图片”。
+     */
+    private void clearItemImage(SecondHandVO item) {
+        if (item == null || item.getId() == null) {
+            return;
+        }
+        final String oldImage = item.getImage();
+        showToast("正在移除图片…", ToastType.INFO);
+        THREAD_POOL.execute(() -> {
+            try {
+                SecondHandVO payload = new SecondHandVO();
+                payload.setId(item.getId());
+                payload.setImage("");
+                Message request = new Message(currentUser.getAccountNumber(),
+                        MessageType.SECOND_HAND_UPDATE_IMAGE, null, payload);
+                Message response = socketClient.send(request);
+                boolean ok = response != null && response.getCode() == ResponseCode.SUCCESS;
+                Platform.runLater(() -> {
+                    if (ok) {
+                        item.setImage("");
+                        showToast("已移除商品图片", ToastType.SUCCESS);
+                        if (oldImage != null && !oldImage.isEmpty()) {
+                            deleteImageQuietly(oldImage);
+                        }
+                        refreshAfterImageChange();
+                    } else {
+                        showToast("移除图片失败：" + errorText(response, "移除图片失败"), ToastType.ERROR);
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> showToast("网络错误：" + e.getMessage(), ToastType.ERROR));
+            }
+        });
+    }
+
+    /**
+     * 换图 / 移除图片成功后刷新视图：停留在「我的发布」页则重载该页，否则刷新在售列表。
+     */
+    private void refreshAfterImageChange() {
+        if (currentPage == myListPage) {
+            openMyListPage();
+        } else {
+            refresh();
+        }
     }
 
     /**
@@ -1218,6 +1620,12 @@ public class SecondHandPanel extends VBox {
                         refresh();
                     } else {
                         showToast("发布失败：" + errorText(response, "发布失败"), ToastType.ERROR);
+                        // 发布未成功时清理刚上传的图片，避免服务端留下孤儿文件
+                        String uploaded = vo.getImage();
+                        if (uploaded != null && !uploaded.isEmpty()) {
+                            deleteImageQuietly(uploaded);
+                            vo.setImage("");
+                        }
                     }
                 });
             } catch (Exception e) {
@@ -1251,7 +1659,14 @@ public class SecondHandPanel extends VBox {
         tSeller.getStyleClass().add("lib-subtitle");
         Label tPrice = new Label("应付金额：" + formatPrice(item.getPrice()));
         tPrice.getStyleClass().addAll("lib-subtitle", "secondhand-confirm-price");
-        summary.getChildren().addAll(tName, tSeller, tPrice);
+
+        // 商品图片预览（无图时显示占位图）
+        StackPane confirmImageBox = wrapThumbnail(createItemThumbnail(item, 150.0, 105.0), 150.0, 105.0);
+        VBox confirmInfoBox = new VBox(8.0, tName, tSeller, tPrice);
+        HBox.setHgrow(confirmInfoBox, Priority.ALWAYS);
+        HBox confirmBody = new HBox(14.0, confirmImageBox, confirmInfoBox);
+        confirmBody.setAlignment(Pos.CENTER_LEFT);
+        summary.getChildren().add(confirmBody);
 
         Label tip = new Label("货款将直接转入卖家账户；买下后该商品立即下架。");
         tip.getStyleClass().add("lib-subtitle");
@@ -1570,10 +1985,13 @@ public class SecondHandPanel extends VBox {
      * 构建单条待审核商品行（含通过/拒绝按钮）。
      */
     private Node buildReviewRow(SecondHandVO item) {
-        HBox row = new HBox(10.0);
+        HBox row = new HBox(12.0);
         row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("profile-card");
         row.setPadding(new Insets(10.0));
+
+        // 缩略图（无图时显示占位图），便于管理员结合图片审核
+        StackPane thumbBox = wrapThumbnail(createItemThumbnail(item, 100.0, 72.0), 100.0, 72.0);
 
         VBox infoBox = new VBox(3.0);
         Label title = new Label(item.getTitle() == null ? "" : item.getTitle());
@@ -1599,7 +2017,7 @@ public class SecondHandPanel extends VBox {
         rejectBtn.getStyleClass().add("lib-btn-danger");
         rejectBtn.setOnAction(e -> doReview(item.getId(), false, row));
 
-        row.getChildren().addAll(infoBox, spacer, approveBtn, rejectBtn);
+        row.getChildren().addAll(thumbBox, infoBox, spacer, approveBtn, rejectBtn);
         return row;
     }
 
@@ -1685,10 +2103,13 @@ public class SecondHandPanel extends VBox {
      * 构建单条“我的发布”行（含状态徽标）。
      */
     private Node buildMyListRow(SecondHandVO item) {
-        HBox row = new HBox(10.0);
+        HBox row = new HBox(12.0);
         row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("profile-card");
         row.setPadding(new Insets(10.0));
+
+        // 缩略图（无图时显示占位图）
+        StackPane thumbBox = wrapThumbnail(createItemThumbnail(item, 88.0, 62.0), 88.0, 62.0);
 
         VBox infoBox = new VBox(3.0);
         Label title = new Label(item.getTitle() == null ? "" : item.getTitle());
@@ -1697,14 +2118,32 @@ public class SecondHandPanel extends VBox {
                 + " · 发布于 " + (item.getCreatedTime() == null ? "" : item.getCreatedTime()));
         meta.getStyleClass().add("lib-subtitle");
         infoBox.getChildren().addAll(title, meta);
+        HBox.setHgrow(infoBox, Priority.ALWAYS);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
+        // 待审核 / 在售状态才允许换图（已售出、被拒绝的商品保留成交快照）
+        boolean editable = "ON_SALE".equals(item.getStatus()) || "PENDING".equals(item.getStatus());
+        boolean hasImage = item.getImage() != null && !item.getImage().isEmpty();
+
+        Button changeImageBtn = new Button("更换图片");
+        changeImageBtn.getStyleClass().add("btn-recharge-preset");
+        changeImageBtn.setDisable(!editable);
+        changeImageBtn.setOnAction(e -> chooseAndUpdateImage(item));
+
+        Button removeImageBtn = new Button("移除图片");
+        removeImageBtn.getStyleClass().add("lib-btn-danger");
+        removeImageBtn.setDisable(!editable || !hasImage);
+        removeImageBtn.setOnAction(e -> clearItemImage(item));
+
+        HBox imageActions = new HBox(6.0, changeImageBtn, removeImageBtn);
+        imageActions.setAlignment(Pos.CENTER_RIGHT);
+
         Label statusBadge = new Label(statusLabel(item.getStatus()));
         statusBadge.getStyleClass().addAll("shop-card-badge", statusBadgeClass(item.getStatus()));
 
-        row.getChildren().addAll(infoBox, spacer, statusBadge);
+        row.getChildren().addAll(thumbBox, infoBox, spacer, imageActions, statusBadge);
         return row;
     }
 

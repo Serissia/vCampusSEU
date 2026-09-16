@@ -336,13 +336,16 @@ public class Dispatcher {
                     handleGoodsOffShelf(request, response);
                     break;
                 case GOODS_IMAGE_UPLOAD:
-                    handleGoodsImageUpload(request, response);
+                case SECOND_HAND_IMAGE_UPLOAD:
+                    handleImageUpload(request, response);
                     break;
                 case GOODS_IMAGE_DOWNLOAD:
-                    handleGoodsImageDownload(request, response);
+                case SECOND_HAND_IMAGE_DOWNLOAD:
+                    handleImageDownload(request, response);
                     break;
                 case GOODS_IMAGE_DELETE:
-                    handleGoodsImageDelete(request, response);
+                case SECOND_HAND_IMAGE_DELETE:
+                    handleImageDelete(request, response);
                     break;
                 case ORDER_CREATE:
                     OrderVO orderPayload = (OrderVO) request.getData();
@@ -414,6 +417,9 @@ public class Dispatcher {
                     break;
                 case SECOND_HAND_UPDATE_PRICE:
                     handleSecondHandUpdatePrice(request, response);
+                    break;
+                case SECOND_HAND_UPDATE_IMAGE:
+                    handleSecondHandUpdateImage(request, response);
                     break;
                 case CHAT_SEND:
                     handleChatSend(request, response);
@@ -1062,9 +1068,12 @@ public class Dispatcher {
     }
 
     /**
-     * 处理商品图片上传：仅管理员或卖家允许（权限由 PermissionTable 统一校验），保存后返回服务端文件名。
+     * 处理商品图片上传：超市商品与二手商品共用同一套图片存储。
+     *
+     * <p>权限由 PermissionTable 统一校验，保存成功返回服务端文件名，由客户端在后续
+     * 提交商品（或换图）时回填。</p>
      */
-    private void handleGoodsImageUpload(Message request, Message response) {
+    private void handleImageUpload(Message request, Message response) {
         if (!(request.getData() instanceof ResourceFileVO)) {
             response.setCode(ResponseCode.INVALID_REQUEST);
             response.setData("图片参数不合法");
@@ -1084,7 +1093,7 @@ public class Dispatcher {
     /**
      * 处理商品图片下载：按文件名读取图片字节并返回。所有登录用户均可浏览商品图片。
      */
-    private void handleGoodsImageDownload(Message request, Message response) {
+    private void handleImageDownload(Message request, Message response) {
         String name = request.getData() == null ? "" : String.valueOf(request.getData());
         if (name.isEmpty() || "null".equals(name)) {
             response.setCode(ResponseCode.INVALID_REQUEST);
@@ -1100,9 +1109,9 @@ public class Dispatcher {
     }
 
     /**
-     * 处理商品图片删除：仅管理员或卖家允许。
+     * 处理商品图片删除：超市商品与二手商品共用，权限由 PermissionTable 统一校验。
      */
-    private void handleGoodsImageDelete(Message request, Message response) {
+    private void handleImageDelete(Message request, Message response) {
         String name = request.getData() == null ? "" : String.valueOf(request.getData());
         if (name.isEmpty() || "null".equals(name)) {
             response.setCode(ResponseCode.INVALID_REQUEST);
@@ -1370,6 +1379,33 @@ public class Dispatcher {
             response.setData("改价失败，请稍后重试");
         }
     }
+    /**
+     * 处理卖家更换/清除二手商品图片：负载为 SecondHandVO（id 为商品 ID，image 为服务端
+     * 图片文件名；image 为空表示清除图片恢复“暂无图片”）。
+     */
+    private void handleSecondHandUpdateImage(Message request, Message response) {
+        if (!(request.getData() instanceof SecondHandVO)) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("参数不合法");
+            return;
+        }
+        SecondHandVO vo = (SecondHandVO) request.getData();
+        if (vo.getId() == null) {
+            response.setCode(ResponseCode.INVALID_REQUEST);
+            response.setData("商品编号不合法");
+            return;
+        }
+        ResponseCode code = secondHandService.updateImage(session.getUid(), vo.getId(), vo.getImage());
+        response.setCode(code);
+        if (code == ResponseCode.UNAUTHORIZED) {
+            response.setData("只能修改自己发布的商品图片");
+        } else if (code == ResponseCode.SECOND_HAND_SOLD) {
+            response.setData("商品已售出或已下架，无法修改图片");
+        } else if (code == ResponseCode.FAIL) {
+            response.setData("修改图片失败，商品可能已不存在");
+        }
+    }
+
     /**
      * 处理管理员审核二手商品：负载为 SecondHandVO（id 为商品 ID，status 为审核结果
      * APPROVE 通过 / REJECT 拒绝）。

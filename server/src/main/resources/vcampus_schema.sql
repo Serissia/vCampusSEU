@@ -206,6 +206,7 @@ CREATE TABLE `tbl_second_hand` (
     `price` DECIMAL(10, 2) NOT NULL COMMENT '定价',
     `status` VARCHAR(16) NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING 待审核, ON_SALE 在售, SOLD 已售/已下架, REJECTED 审核拒绝',
     `created_time` VARCHAR(32) NOT NULL COMMENT '发布时间 (yyyy-MM-dd HH:mm:ss)',
+    `image_path` VARCHAR(255) DEFAULT NULL COMMENT '商品图片文件名（服务器本地存储索引），为空表示暂无图片',
     PRIMARY KEY (`id`),
     KEY `idx_sh_status` (`status`),
     CONSTRAINT `fk_sh_seller` FOREIGN KEY (`seller_id`) REFERENCES `tbl_user`(`uid`) ON DELETE CASCADE

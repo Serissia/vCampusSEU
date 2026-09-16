@@ -52,4 +52,11 @@ public interface ISecondHandService {
      * 卖家修改自己商品的定价（仅在售且本人可改），写入调价日志。
      */
     ResponseCode updatePrice(String uid, Integer id, BigDecimal newPrice);
+
+    /**
+     * 卖家更换或清除自己发布商品的图片（仅待审核 / 在售状态可改）。
+     *
+     * @param image 服务端图片文件名；传空字符串表示清除图片，恢复“暂无图片”
+     */
+    ResponseCode updateImage(String uid, Integer id, String image);
 }

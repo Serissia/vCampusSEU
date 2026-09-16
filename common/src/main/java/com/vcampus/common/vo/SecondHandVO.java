@@ -28,6 +28,8 @@ public class SecondHandVO implements Serializable {
     private String status;
     /** 发布时间 (yyyy-MM-dd HH:mm:ss) */
     private String createdTime;
+    /** 商品图片文件名（服务端本地存储索引，为空表示未上传，展示“暂无图片”占位图） */
+    private String image;
 
     public SecondHandVO() {
     }
@@ -48,4 +50,6 @@ public class SecondHandVO implements Serializable {
     public void setStatus(String status) { this.status = status; }
     public String getCreatedTime() { return createdTime; }
     public void setCreatedTime(String createdTime) { this.createdTime = createdTime; }
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
 }

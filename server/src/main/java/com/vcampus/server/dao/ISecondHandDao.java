@@ -36,6 +36,11 @@ public interface ISecondHandDao {
     SecondHandVO findByIdForUpdate(Connection conn, int id) throws SQLException;
 
     /**
+     * 按 id 查询商品（不限状态，用于换图等归属校验）。
+     */
+    SecondHandVO findById(int id) throws SQLException;
+
+    /**
      * 发布二手商品（状态默认待审核）。
      */
     boolean insert(SecondHandVO vo) throws SQLException;
@@ -70,4 +75,11 @@ public interface ISecondHandDao {
      * 在同一事务内写入一条二手交易订单（购买流程使用）。
      */
     boolean insertOrder(Connection conn, OrderVO order) throws SQLException;
+
+    /**
+     * 卖家更换（或清空）自己发布的商品图片，图片不存在时传空字符串表示恢复“暂无图片”。
+     *
+     * <p>仅允许在待审核 / 在售状态修改，避免已售出商品的成交快照被篡改。</p>
+     */
+    boolean updateImage(String sellerId, int id, String image) throws SQLException;
 }
