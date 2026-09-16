@@ -195,10 +195,6 @@ public class MainController {
             case LIBRARIAN:
                 menus.add(new MenuItem("虚拟图书馆", "library", "LIBRARY"));
                 break;
-            case STORE_MANAGER:
-                menus.add(new MenuItem("商品库存", "boxes", "SHOP_MANAGE"));
-                menus.add(new MenuItem("流水订单", "receipt", "SHOP_ORDER_MANAGE"));
-                break;
             case SELLER:
                 menus.add(new MenuItem("校园超市", "store", "SHOP"));
                 break;

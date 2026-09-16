@@ -106,6 +106,36 @@
     -fx-padding: 0 18px 18px 18px;
 }
 
+.server-address-dialog .button-bar .button {
+    -fx-min-width: 88px;
+    -fx-background-color: -fx-bg-base;
+    -fx-border-color: -fx-border-base;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-main;
+    -fx-padding: 8px 20px;
+    -fx-cursor: hand;
+}
+
+.server-address-dialog .button-bar .button:hover {
+    -fx-background-color: -fx-primary-light;
+    -fx-border-color: -fx-primary;
+    -fx-text-fill: -fx-primary;
+}
+
+.server-address-dialog .button-bar .button:default {
+    -fx-background-color: -fx-primary;
+    -fx-border-color: -fx-primary;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: bold;
+}
+
+.server-address-dialog .button-bar .button:default:hover {
+    -fx-background-color: -fx-primary-hover;
+    -fx-border-color: -fx-primary-hover;
+}
+
 .server-dialog-hint {
     -fx-font-size: 12px;
     -fx-text-fill: -fx-text-muted;

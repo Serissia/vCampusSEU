@@ -471,8 +471,10 @@ public class LoginController {
         dialog.getDialogPane().getButtonTypes().addAll(cancelType, saveType);
 
         Button cancelButton = (Button) dialog.getDialogPane().lookupButton(cancelType);
+        cancelButton.setCancelButton(true);
         cancelButton.getStyleClass().add("btn-secondary-action");
         Button saveButton = (Button) dialog.getDialogPane().lookupButton(saveType);
+        saveButton.setDefaultButton(true);
         saveButton.getStyleClass().add("btn-primary-action");
         // 在保存按钮点击时进行输入验证和配置保存
         saveButton.addEventFilter(ActionEvent.ACTION, event -> {

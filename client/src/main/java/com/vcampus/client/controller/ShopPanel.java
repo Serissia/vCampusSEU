@@ -14,6 +14,7 @@ import com.vcampus.common.vo.ResourceFileVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
 import javafx.application.Platform;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -45,6 +46,8 @@ import java.io.File;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
@@ -153,8 +156,19 @@ public class ShopPanel extends VBox {
     /** 手动追踪的当前选中商品 */
     private GoodsVO selectedGoods;
 
-    /** 商品图片内存缓存（服务端文件名 -> 已下载图片） */
-    private final Map<String, Image> imageCache = new ConcurrentHashMap<>();
+    /** 商品图片缓存上限，避免长期浏览后无限制占用内存 */
+    private static final int IMAGE_CACHE_LIMIT = 60;
+    /** 跨页面复用的有界商品图片缓存（服务端文件名 -> 已下载图片） */
+    private static final Map<String, Image> IMAGE_CACHE = Collections.synchronizedMap(
+            new LinkedHashMap<>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, Image> eldest) {
+                    return size() > IMAGE_CACHE_LIMIT;
+                }
+            });
+    /** 待进入可视区域后再下载的图片视图（仅 JavaFX 线程访问） */
+    private final Map<ImageView, String> pendingImageViews = new LinkedHashMap<>();
+    private boolean imageLoadScheduled;
     /** 商品图片占位图（暂无图片），懒加载缓存 */
     private Image placeholderImage;
     /** 商品编辑弹窗中本次待上传的新图片（null 表示未选择新图） */
@@ -377,6 +391,9 @@ public class ShopPanel extends VBox {
         cardScrollPane.setFitToWidth(true);
         cardScrollPane.setFitToHeight(false);
         VBox.setVgrow(cardScrollPane, Priority.ALWAYS);
+        cardScrollPane.vvalueProperty().addListener((obs, oldValue, newValue) -> scheduleVisibleImageLoad());
+        cardScrollPane.hvalueProperty().addListener((obs, oldValue, newValue) -> scheduleVisibleImageLoad());
+        cardScrollPane.viewportBoundsProperty().addListener((obs, oldValue, newValue) -> scheduleVisibleImageLoad());
         // 应用偏好设置中的滚轮速度
         ScrollSpeedUtil.applyCustomScrollSpeed(cardScrollPane);
 
@@ -489,14 +506,61 @@ public class ShopPanel extends VBox {
 
         String name = goods.getImage();
         if (name != null && !name.isEmpty()) {
-            Image cached = imageCache.get(name);
+            Image cached = IMAGE_CACHE.get(name);
+            if (cached != null) {
+                view.setImage(cached);
+            } else {
+                pendingImageViews.put(view, name);
+            }
+        }
+        return view;
+    }
+
+    private void scheduleVisibleImageLoad() {
+        if (imageLoadScheduled) {
+            return;
+        }
+        imageLoadScheduled = true;
+        Platform.runLater(() -> {
+            imageLoadScheduled = false;
+            loadVisibleImages();
+        });
+    }
+
+    /**
+     * 仅下载进入商品列表视口或其附近区域的图片。
+     */
+    private void loadVisibleImages() {
+        if (pendingImageViews.isEmpty() || cardScrollPane == null || cardScrollPane.getScene() == null) {
+            return;
+        }
+        Bounds viewportBounds = cardScrollPane.getViewportBounds();
+        if (viewportBounds.getWidth() <= 0 || viewportBounds.getHeight() <= 0) {
+            return;
+        }
+        Bounds viewportInScene = cardScrollPane.localToScene(viewportBounds);
+        if (viewportInScene == null) {
+            return;
+        }
+
+        pendingImageViews.entrySet().removeIf(entry -> {
+            ImageView view = entry.getKey();
+            if (view.getScene() == null) {
+                return false;
+            }
+            Bounds imageInScene = view.localToScene(view.getBoundsInLocal());
+            if (imageInScene == null || !imageInScene.intersects(viewportInScene)) {
+                return false;
+            }
+            String name = entry.getValue();
+            Image cached = IMAGE_CACHE.get(name);
             if (cached != null) {
                 view.setImage(cached);
             } else {
                 requestGoodsImage(name, view);
             }
-        }
-        return view;
+            return true;
+        });
     }
 
     /**
@@ -515,11 +579,12 @@ public class ShopPanel extends VBox {
                 if (data == null || data.length == 0) {
                     return;
                 }
-                Image img = new Image(new ByteArrayInputStream(data));
+                Image img = new Image(
+                        new ByteArrayInputStream(data), IMAGE_W * 2, IMAGE_H * 2, true, true);
                 if (img.isError() || img.getWidth() <= 0) {
                     return; // 解码失败保持占位图
                 }
-                imageCache.put(name, img);
+                IMAGE_CACHE.put(name, img);
                 Platform.runLater(() -> {
                     if (target != null) {
                         target.setImage(img);
@@ -556,6 +621,7 @@ public class ShopPanel extends VBox {
             try {
                 Message request = new Message(currentUser.getAccountNumber(), MessageType.GOODS_IMAGE_DELETE, null, imageName.trim());
                 socketClient.send(request);
+                IMAGE_CACHE.remove(imageName.trim());
             } catch (Exception ignored) {
                 // 删除失败不影响主流程
             }
@@ -706,6 +772,7 @@ public class ShopPanel extends VBox {
     private void rebuildCards(List<GoodsVO> goods) {
         GoodsVO keepSelection = selectedGoods;
         cardFlowPane.getChildren().clear();
+        pendingImageViews.clear();
         cardQtyStates.clear();
         selectedGoods = null;
 
@@ -724,6 +791,7 @@ public class ShopPanel extends VBox {
 
             }
         }
+        scheduleVisibleImageLoad();
         updateBottomAddEnable();
     }
 
@@ -906,8 +974,8 @@ public class ShopPanel extends VBox {
                 imagePreview.setImage(getPlaceholderImage());
                 imageStatus.setText("未上传（将显示“暂无图片”）");
                 clearImageBtn.setDisable(true);
-            } else if (existingImage != null && !existingImage.isEmpty() && imageCache.containsKey(existingImage)) {
-                imagePreview.setImage(imageCache.get(existingImage));
+        } else if (existingImage != null && !existingImage.isEmpty() && IMAGE_CACHE.containsKey(existingImage)) {
+            imagePreview.setImage(IMAGE_CACHE.get(existingImage));
                 imageStatus.setText("当前图片：" + existingImage);
                 clearImageBtn.setDisable(false);
             } else if (existingImage != null && !existingImage.isEmpty()) {
@@ -1435,6 +1503,7 @@ public class ShopPanel extends VBox {
         if (mainPage != null) {
             mainPage.setVisible(true);
             mainPage.setManaged(true);
+            scheduleVisibleImageLoad();
         }
     }
 
