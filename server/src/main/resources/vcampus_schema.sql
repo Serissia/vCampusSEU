@@ -354,6 +354,12 @@ INSERT INTO `tbl_goods` (`goods_id`, `goods_name`, `price`, `stock`, `descriptio
 ('G009', '宿舍护眼台灯', 59.00, 40, '三档调光 LED 台灯'),
 ('G010', '便携折叠雨伞', 35.00, 70, '晴雨两用折叠伞'),
 ('G011', '校园文具套装', 22.00, 100, '含笔记本、中性笔和便签');
+INSERT INTO `tbl_goods` (`goods_id`, `goods_name`, `price`, `stock`, `description`) VALUES
+('G012', '大礼堂毛绒玩偶', 49.00, 60, '大礼堂造型毛绒纪念玩偶'),
+('G013', '校园洗漱收纳包', 29.90, 80, '防泼水旅行洗漱收纳包'),
+('G014', '校景校徽建筑卡套', 15.00, 120, '校景校徽主题建筑卡套'),
+('G015', '校史留念徽章套盒', 39.90, 50, '校史纪念徽章套装礼盒'),
+('G016', '东大字绘冰箱贴', 12.00, 150, '东大字绘校园冰箱贴');
 
 UPDATE `tbl_goods` SET `image_path` = 'g001_notebook.jpeg' WHERE `goods_id` = 'G001';
 UPDATE `tbl_goods` SET `image_path` = 'g002_pen.jpeg' WHERE `goods_id` = 'G002';
@@ -366,7 +372,22 @@ UPDATE `tbl_goods` SET `image_path` = 'g008_keychain.jpeg' WHERE `goods_id` = 'G
 UPDATE `tbl_goods` SET `image_path` = 'g009_lamp.jpeg' WHERE `goods_id` = 'G009';
 UPDATE `tbl_goods` SET `image_path` = 'g010_umbrella.jpeg' WHERE `goods_id` = 'G010';
 UPDATE `tbl_goods` SET `image_path` = 'g011_stationery_set.jpg' WHERE `goods_id` = 'G011';
+UPDATE `tbl_goods` SET `image_path` = 'g012_hall_plush.jpg' WHERE `goods_id` = 'G012';
+UPDATE `tbl_goods` SET `image_path` = 'g013_toiletry_bag.jpg' WHERE `goods_id` = 'G013';
+UPDATE `tbl_goods` SET `image_path` = 'g014_card_holder.jpg' WHERE `goods_id` = 'G014';
+UPDATE `tbl_goods` SET `image_path` = 'g015_badge_box.jpg' WHERE `goods_id` = 'G015';
+UPDATE `tbl_goods` SET `image_path` = 'g016_fridge_magnet.jpg' WHERE `goods_id` = 'G016';
 
-INSERT INTO `tbl_second_hand` (`seller_id`, `seller_name`, `title`, `description`, `price`, `status`, `created_time`) VALUES
-('213000002', '李四', '计算机组成原理（任国林版）二手书', '笔记齐全九成新，考试重点已标注', 999.00, 'ON_SALE', '2026-09-01 10:00:00'),
-('213000002', '李四', '99新置物架', '宿舍用三层小置物架，99新', 20.00, 'ON_SALE', '2026-09-01 11:00:00');
+INSERT INTO `tbl_second_hand` (`seller_id`, `seller_name`, `title`, `description`, `price`, `status`, `created_time`, `image_path`) VALUES
+('213000002', '李四', '计算机组成原理（任国林版）二手书', '笔记齐全九成新，考试重点已标注', 999.00, 'ON_SALE', '2026-09-01 10:00:00', 'sh005_computer_organization_book.jpg'),
+('213000002', '李四', '99新置物架', '宿舍用三层小置物架，99新', 20.00, 'ON_SALE', '2026-09-01 10:30:00', 'sh001_storage_rack.jpg'),
+('213000002', '李四', '雅思真题书两本', '雅思备考书两本，成色良好，打包出', 15.00, 'ON_SALE', '2026-09-01 11:00:00', 'sh002_ielts_books.jpg'),
+('213000002', '李四', '宿舍用小功率吹风机', '小功率宿舍可用，买来没用过几次', 25.00, 'ON_SALE', '2026-09-01 11:30:00', 'sh003_hair_dryer.png'),
+('213000002', '李四', '法学大二专业书籍', '均为一手官方渠道购买，笔记勾画较少，多买可送电子版期末资料', 15.00, 'ON_SALE', '2026-09-01 12:00:00', 'sh004_law_books.jpg'),
+('213000002', '李四', '胶卷相机', '复古胶卷相机，功能正常，适合日常拍照', 199.00, 'ON_SALE', '2026-09-01 12:30:00', 'sh006_film_camera.jpg'),
+('213000002', '李四', '景德镇陶瓷工艺品', '景德镇陶瓷工艺品，可作桌面摆件', 20.00, 'ON_SALE', '2026-09-01 13:00:00', 'sh007_jingdezhen_ceramic.jpg'),
+('213000002', '李四', '蓝虎鲸毛绒挂件', '蓝虎鲸毛绒挂件，柔软可爱，适合挂包', 15.00, 'ON_SALE', '2026-09-01 13:30:00', 'sh008_blue_whale_keychain.jpg'),
+('213000002', '李四', '暑校智能机器人课程套件', '暑校课程智能机器人，配套齐全', 600.00, 'ON_SALE', '2026-09-01 14:00:00', 'sh009_summer_school_robot.jpg'),
+('213000002', '李四', '全新瑜伽垫', '全新未使用，轻便易收纳', 30.00, 'ON_SALE', '2026-09-01 14:30:00', 'sh010_yoga_mat.png'),
+('213000002', '李四', '九成新羽毛球拍', '只用过一次，轻盈好用，九成新', 35.00, 'ON_SALE', '2026-09-01 15:00:00', 'sh011_badminton_racket.png'),
+('213000002', '李四', '智能车C车模摄像头组全套', '智能车C车模摄像头组全套，适合课程实践', 260.00, 'ON_SALE', '2026-09-01 15:30:00', 'sh012_smart_car_camera_set.jpg');
