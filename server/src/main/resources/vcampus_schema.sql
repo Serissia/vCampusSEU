@@ -360,6 +360,46 @@ INSERT INTO `tbl_goods` (`goods_id`, `goods_name`, `price`, `stock`, `descriptio
 ('G014', '校景校徽建筑卡套', 15.00, 120, '校景校徽主题建筑卡套'),
 ('G015', '校史留念徽章套盒', 39.90, 50, '校史纪念徽章套装礼盒'),
 ('G016', '东大字绘冰箱贴', 12.00, 150, '东大字绘校园冰箱贴');
+INSERT INTO `tbl_goods` (`goods_id`, `goods_name`, `price`, `stock`, `description`) VALUES
+('G017', '百醇', 6.50, 120, '巧克力味注心饼干，休闲零食'),
+('G018', '背包', 89.00, 40, '校园风双肩背包，轻便耐装'),
+('G019', '草稿纸', 5.00, 200, '日常学习用草稿纸'),
+('G020', '脆香米', 5.50, 120, '牛奶巧克力脆米零食'),
+('G021', '订书机', 12.00, 60, '办公学习两用订书机'),
+('G022', '东大彩绘明信片', 15.00, 100, '东南大学主题彩绘明信片'),
+('G023', '东大建筑四季徽章', 39.90, 80, '东大建筑四季主题徽章'),
+('G024', '东大领带', 49.00, 30, '校徽元素正式领带'),
+('G025', '东大松鼠练习本', 8.00, 150, '松鼠主题校园练习本'),
+('G026', '东南大学可爱风雨伞', 35.00, 60, '晴雨两用校园主题雨伞'),
+('G027', '东南大学练习本', 7.00, 160, '东南大学主题学习练习本'),
+('G028', '固体胶', 3.50, 200, '日常手工与学习用固体胶'),
+('G029', '果酱饼干', 6.00, 100, '果酱夹心酥脆饼干'),
+('G030', '好丽友呀土豆', 5.50, 120, '香脆土豆膨化零食'),
+('G031', '建筑雕塑模型', 69.00, 30, '校园地标建筑雕塑摆件'),
+('G032', '劲仔小鱼', 4.50, 150, '香辣小鱼休闲零食'),
+('G033', '乐事薯片', 6.50, 120, '经典香脆薯片'),
+('G034', '六朝松手账本', 18.00, 80, '六朝松主题校园手账本'),
+('G035', '绿箭口香糖', 5.00, 160, '清新薄荷口香糖'),
+('G036', '麻辣王子辣条', 3.50, 160, '麻辣风味面筋零食'),
+('G037', '美好时光海苔', 5.50, 120, '即食海苔休闲零食'),
+('G038', '亲嘴烧辣条', 3.50, 160, '香辣面筋零食'),
+('G039', '雀巢脆脆鲨', 6.00, 120, '巧克力威化饼干'),
+('G040', '鼠标垫', 12.00, 100, '简洁校园风桌面鼠标垫'),
+('G041', '双面胶', 3.00, 180, '手工与学习用双面胶'),
+('G042', '四季主题笔记本', 16.00, 100, '校园四季主题记录本'),
+('G043', '陶瓷马克杯', 29.90, 60, '校园文创陶瓷马克杯'),
+('G044', '透光明信片', 10.00, 120, '校园风景透光明信片'),
+('G045', '旺旺小小酥', 5.00, 120, '香脆米果休闲零食'),
+('G046', '小米聚能写中性笔', 3.00, 200, '顺滑速干学生中性笔'),
+('G047', '小松鼠折叠灯', 45.00, 50, '松鼠造型可折叠桌面灯'),
+('G048', '心相印纸巾', 7.00, 150, '便携抽取式面巾纸'),
+('G049', '修正带', 4.50, 180, '顺滑覆盖学生修正带'),
+('G050', '盐津铺子鱼豆腐', 5.00, 140, '香辣味即食鱼豆腐'),
+('G051', '樱花橡皮', 3.00, 180, '樱花造型学生橡皮'),
+('G052', '云可柔卷纸', 10.00, 100, '柔软亲肤家用卷纸'),
+('G053', '掌心脆', 3.00, 160, '香脆即食干脆面'),
+('G054', '主题杯垫', 8.00, 120, '校园建筑主题桌面杯垫'),
+('G055', '主题木尺', 6.00, 150, '校园主题木质直尺');
 
 UPDATE `tbl_goods` SET `image_path` = 'g001_notebook.jpeg' WHERE `goods_id` = 'G001';
 UPDATE `tbl_goods` SET `image_path` = 'g002_pen.jpeg' WHERE `goods_id` = 'G002';
@@ -377,6 +417,45 @@ UPDATE `tbl_goods` SET `image_path` = 'g013_toiletry_bag.jpg' WHERE `goods_id` =
 UPDATE `tbl_goods` SET `image_path` = 'g014_card_holder.jpg' WHERE `goods_id` = 'G014';
 UPDATE `tbl_goods` SET `image_path` = 'g015_badge_box.jpg' WHERE `goods_id` = 'G015';
 UPDATE `tbl_goods` SET `image_path` = 'g016_fridge_magnet.jpg' WHERE `goods_id` = 'G016';
+UPDATE `tbl_goods` SET `image_path` = 'g017_bai_chun.jpg' WHERE `goods_id` = 'G017';
+UPDATE `tbl_goods` SET `image_path` = 'g018_backpack.jpg' WHERE `goods_id` = 'G018';
+UPDATE `tbl_goods` SET `image_path` = 'g019_draft_paper.jpg' WHERE `goods_id` = 'G019';
+UPDATE `tbl_goods` SET `image_path` = 'g020_crispy_rice.jpg' WHERE `goods_id` = 'G020';
+UPDATE `tbl_goods` SET `image_path` = 'g021_stapler.jpg' WHERE `goods_id` = 'G021';
+UPDATE `tbl_goods` SET `image_path` = 'g022_seu_postcards.jpg' WHERE `goods_id` = 'G022';
+UPDATE `tbl_goods` SET `image_path` = 'g023_seu_season_badges.jpg' WHERE `goods_id` = 'G023';
+UPDATE `tbl_goods` SET `image_path` = 'g024_seu_tie.jpg' WHERE `goods_id` = 'G024';
+UPDATE `tbl_goods` SET `image_path` = 'g025_squirrel_notebook.png' WHERE `goods_id` = 'G025';
+UPDATE `tbl_goods` SET `image_path` = 'g026_seu_umbrella.jpg' WHERE `goods_id` = 'G026';
+UPDATE `tbl_goods` SET `image_path` = 'g027_seu_notebook.jpg' WHERE `goods_id` = 'G027';
+UPDATE `tbl_goods` SET `image_path` = 'g028_glue_stick.jpg' WHERE `goods_id` = 'G028';
+UPDATE `tbl_goods` SET `image_path` = 'g029_jam_biscuits.jpg' WHERE `goods_id` = 'G029';
+UPDATE `tbl_goods` SET `image_path` = 'g030_orion_potato.jpg' WHERE `goods_id` = 'G030';
+UPDATE `tbl_goods` SET `image_path` = 'g031_architecture_model.jpg' WHERE `goods_id` = 'G031';
+UPDATE `tbl_goods` SET `image_path` = 'g032_jinzai_small_fish.jpg' WHERE `goods_id` = 'G032';
+UPDATE `tbl_goods` SET `image_path` = 'g033_lays_chips.jpg' WHERE `goods_id` = 'G033';
+UPDATE `tbl_goods` SET `image_path` = 'g034_liuchao_pine_journal.png' WHERE `goods_id` = 'G034';
+UPDATE `tbl_goods` SET `image_path` = 'g035_green_chewing_gum.jpg' WHERE `goods_id` = 'G035';
+UPDATE `tbl_goods` SET `image_path` = 'g036_spicy_prince.jpg' WHERE `goods_id` = 'G036';
+UPDATE `tbl_goods` SET `image_path` = 'g037_haitai_seaweed.jpg' WHERE `goods_id` = 'G037';
+UPDATE `tbl_goods` SET `image_path` = 'g038_qinzui_shao.jpg' WHERE `goods_id` = 'G038';
+UPDATE `tbl_goods` SET `image_path` = 'g039_nestle_crispy_wafer.jpg' WHERE `goods_id` = 'G039';
+UPDATE `tbl_goods` SET `image_path` = 'g040_mouse_pad.jpg' WHERE `goods_id` = 'G040';
+UPDATE `tbl_goods` SET `image_path` = 'g041_double_sided_tape.jpg' WHERE `goods_id` = 'G041';
+UPDATE `tbl_goods` SET `image_path` = 'g042_four_seasons_notebook.jpg' WHERE `goods_id` = 'G042';
+UPDATE `tbl_goods` SET `image_path` = 'g043_ceramic_mug.jpg' WHERE `goods_id` = 'G043';
+UPDATE `tbl_goods` SET `image_path` = 'g044_transparent_postcard.png' WHERE `goods_id` = 'G044';
+UPDATE `tbl_goods` SET `image_path` = 'g045_want_want_crispy.jpg' WHERE `goods_id` = 'G045';
+UPDATE `tbl_goods` SET `image_path` = 'g046_xiaomi_pen.jpg' WHERE `goods_id` = 'G046';
+UPDATE `tbl_goods` SET `image_path` = 'g047_squirrel_folding_lamp.png' WHERE `goods_id` = 'G047';
+UPDATE `tbl_goods` SET `image_path` = 'g048_xinxiangyin_tissue.jpg' WHERE `goods_id` = 'G048';
+UPDATE `tbl_goods` SET `image_path` = 'g049_correction_tape.jpg' WHERE `goods_id` = 'G049';
+UPDATE `tbl_goods` SET `image_path` = 'g050_yanjin_potato_tofu.jpg' WHERE `goods_id` = 'G050';
+UPDATE `tbl_goods` SET `image_path` = 'g051_sakura_eraser.jpg' WHERE `goods_id` = 'G051';
+UPDATE `tbl_goods` SET `image_path` = 'g052_yunkerou_toilet_paper.jpg' WHERE `goods_id` = 'G052';
+UPDATE `tbl_goods` SET `image_path` = 'g053_zhangxin_crispy.jpg' WHERE `goods_id` = 'G053';
+UPDATE `tbl_goods` SET `image_path` = 'g054_theme_coaster.jpg' WHERE `goods_id` = 'G054';
+UPDATE `tbl_goods` SET `image_path` = 'g055_wooden_ruler.png' WHERE `goods_id` = 'G055';
 
 INSERT INTO `tbl_second_hand` (`seller_id`, `seller_name`, `title`, `description`, `price`, `status`, `created_time`, `image_path`) VALUES
 ('213000002', '李四', '计算机组成原理（任国林版）二手书', '笔记齐全九成新，考试重点已标注', 999.00, 'ON_SALE', '2026-09-01 10:00:00', 'sh005_computer_organization_book.jpg'),
