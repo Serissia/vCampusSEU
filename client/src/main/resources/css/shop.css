@@ -557,6 +557,18 @@
     -fx-text-fill: -fx-primary;
 }
 
+/* ===================== 二手市场：商品图片 ===================== */
+/* 我的发布 / 待审核列表以及确认购买页中的商品缩略图容器 */
+.secondhand-thumb-box {
+    -fx-alignment: CENTER;
+    -fx-background-color: -fx-bg-nav;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-color: -fx-border-base;
+    -fx-border-width: 1px;
+    -fx-padding: 2px;
+}
+
 /* ===================== 二手市场：聊天与咨询 ===================== */
 /* 卡片右上角「联系卖家 / 咨询」按钮 */
 .secondhand-chat-btn {

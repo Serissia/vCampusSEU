@@ -21,7 +21,7 @@ import java.util.List;
 public class SecondHandDaoImpl implements ISecondHandDao {
 
     private static final String COLUMNS =
-            "id, seller_id, seller_name, title, description, price, status, created_time";
+            "id, seller_id, seller_name, title, description, price, status, created_time, image_path";
 
     @Override
     public List<SecondHandVO> listOnSale() throws SQLException {
@@ -82,9 +82,21 @@ public class SecondHandDaoImpl implements ISecondHandDao {
     }
 
     @Override
+    public SecondHandVO findById(int id) throws SQLException {
+        String sql = "SELECT " + COLUMNS + " FROM tbl_second_hand WHERE id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapRow(rs) : null;
+            }
+        }
+    }
+
+    @Override
     public boolean insert(SecondHandVO vo) throws SQLException {
-        String sql = "INSERT INTO tbl_second_hand(seller_id, seller_name, title, description, price, status, created_time) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO tbl_second_hand(seller_id, seller_name, title, description, price, status, created_time, image_path) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, vo.getSellerId());
@@ -94,6 +106,7 @@ public class SecondHandDaoImpl implements ISecondHandDao {
             ps.setBigDecimal(5, vo.getPrice());
             ps.setString(6, vo.getStatus() == null ? "PENDING" : vo.getStatus());
             ps.setString(7, vo.getCreatedTime());
+            ps.setString(8, vo.getImage() == null ? "" : vo.getImage());
             return ps.executeUpdate() > 0;
         }
     }
@@ -170,6 +183,19 @@ public class SecondHandDaoImpl implements ISecondHandDao {
             return ps.executeUpdate() > 0;
         }
     }
+    @Override
+    public boolean updateImage(String sellerId, int id, String image) throws SQLException {
+        String sql = "UPDATE tbl_second_hand SET image_path = ? "
+                + "WHERE id = ? AND seller_id = ? AND status IN ('PENDING', 'ON_SALE')";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, image == null ? "" : image);
+            ps.setInt(2, id);
+            ps.setString(3, sellerId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
     private SecondHandVO mapRow(ResultSet rs) throws SQLException {
         SecondHandVO vo = new SecondHandVO();
         vo.setId(rs.getInt("id"));
@@ -180,6 +206,7 @@ public class SecondHandDaoImpl implements ISecondHandDao {
         vo.setPrice(rs.getBigDecimal("price"));
         vo.setStatus(rs.getString("status"));
         vo.setCreatedTime(rs.getString("created_time"));
+        vo.setImage(rs.getString("image_path"));
         return vo;
     }
 }

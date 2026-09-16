@@ -146,6 +146,13 @@ public enum MessageType implements Serializable {
     SECOND_HAND_REVIEW,
     SECOND_HAND_UPDATE_PRICE,
 
+    /** 二手商品图片上传、下载与删除（与超市商品共用图片存储目录） */
+    SECOND_HAND_IMAGE_UPLOAD,
+    SECOND_HAND_IMAGE_DOWNLOAD,
+    SECOND_HAND_IMAGE_DELETE,
+    /** 卖家为自己发布的二手商品更换或清除图片 */
+    SECOND_HAND_UPDATE_IMAGE,
+
     /** 二手商品买卖双方聊天：发送消息 */
     CHAT_SEND,
     /** 拉取某商品 + 某对方的聊天记录 */

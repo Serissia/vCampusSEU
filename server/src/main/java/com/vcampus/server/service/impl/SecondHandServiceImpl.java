@@ -223,10 +223,36 @@ public class SecondHandServiceImpl implements ISecondHandService {
             closeQuietly(conn);
         }
     }
+    @Override
+    public ResponseCode updateImage(String uid, Integer id, String image) {
+        try {
+            if (uid == null || id == null) {
+                return ResponseCode.INVALID_REQUEST;
+            }
+            String sellerId = uid.trim();
+            SecondHandVO item = secondHandDao.findById(id);
+            if (item == null) {
+                return ResponseCode.FAIL;
+            }
+            // 只能改自己发布的商品
+            if (!sellerId.equals(item.getSellerId())) {
+                return ResponseCode.UNAUTHORIZED;
+            }
+            // 已售出 / 已拒绝的商品不再允许改图
+            if (!"PENDING".equals(item.getStatus()) && !"ON_SALE".equals(item.getStatus())) {
+                return ResponseCode.SECOND_HAND_SOLD;
+            }
+            String target = image == null ? "" : image.trim();
+            return secondHandDao.updateImage(sellerId, id, target) ? ResponseCode.SUCCESS : ResponseCode.FAIL;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return ResponseCode.FAIL;
+        }
+    }
+
     /**
      * 生成二手订单流水号（时间戳 + 随机后缀）。
-     */
-    private String generateOrderId() {
+     */    private String generateOrderId() {
         return "SHO" + System.currentTimeMillis() + ThreadLocalRandom.current().nextInt(100, 1000);
     }
 
