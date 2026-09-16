@@ -24,6 +24,7 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
@@ -153,6 +154,10 @@ public class ShopPanel extends VBox {
     private FlowPane cardFlowPane;
     /** 卡片区域的外部 ScrollPane */
     private ScrollPane cardScrollPane;
+    /** 商品列表与加载提示的叠放容器 */
+    private StackPane goodsListStack;
+    /** 商品加载提示层 */
+    private VBox goodsLoadingOverlay;
     /** 手动追踪的当前选中商品 */
     private GoodsVO selectedGoods;
 
@@ -390,14 +395,28 @@ public class ShopPanel extends VBox {
         cardScrollPane.getStyleClass().add("shop-card-scroll");
         cardScrollPane.setFitToWidth(true);
         cardScrollPane.setFitToHeight(false);
-        VBox.setVgrow(cardScrollPane, Priority.ALWAYS);
         cardScrollPane.vvalueProperty().addListener((obs, oldValue, newValue) -> scheduleVisibleImageLoad());
         cardScrollPane.hvalueProperty().addListener((obs, oldValue, newValue) -> scheduleVisibleImageLoad());
         cardScrollPane.viewportBoundsProperty().addListener((obs, oldValue, newValue) -> scheduleVisibleImageLoad());
         // 应用偏好设置中的滚轮速度
         ScrollSpeedUtil.applyCustomScrollSpeed(cardScrollPane);
 
-        card.getChildren().addAll(header, cardScrollPane);
+        ProgressIndicator loadingIndicator = new ProgressIndicator();
+        loadingIndicator.setMaxSize(42.0, 42.0);
+        loadingIndicator.getStyleClass().add("shop-loading-spinner");
+        Label loadingText = new Label("正在加载商品...");
+        loadingText.getStyleClass().add("shop-loading-text");
+        goodsLoadingOverlay = new VBox(10.0, loadingIndicator, loadingText);
+        goodsLoadingOverlay.setAlignment(Pos.CENTER);
+        goodsLoadingOverlay.getStyleClass().add("shop-loading-overlay");
+        goodsLoadingOverlay.setVisible(false);
+        goodsLoadingOverlay.setManaged(false);
+
+        goodsListStack = new StackPane(cardScrollPane, goodsLoadingOverlay);
+        StackPane.setAlignment(goodsLoadingOverlay, Pos.CENTER);
+        VBox.setVgrow(goodsListStack, Priority.ALWAYS);
+
+        card.getChildren().addAll(header, goodsListStack);
         return card;
     }
 
@@ -747,11 +766,13 @@ public class ShopPanel extends VBox {
      * 异步检索商品，刷新卡片网格。
      */
     private void refreshGoods(String keyword) {
+        setGoodsLoading(true);
         THREAD_POOL.execute(() -> {
             try {
                 Message request = new Message(currentUser.getAccountNumber(), MessageType.GOODS_QUERY, null, keyword);
                 Message response = socketClient.send(request);
                 Platform.runLater(() -> {
+                    setGoodsLoading(false);
                     if (response != null && response.getCode() == ResponseCode.SUCCESS
                             && response.getData() instanceof List) {
                         @SuppressWarnings("unchecked")
@@ -761,9 +782,23 @@ public class ShopPanel extends VBox {
                     }
                 });
             } catch (Exception e) {
-                Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
+                Platform.runLater(() -> {
+                    setGoodsLoading(false);
+                    showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR);
+                });
             }
         });
+    }
+
+    /**
+     * 显示或隐藏商品加载提示层。
+     */
+    private void setGoodsLoading(boolean loading) {
+        if (goodsLoadingOverlay == null) {
+            return;
+        }
+        goodsLoadingOverlay.setVisible(loading);
+        goodsLoadingOverlay.setManaged(loading);
     }
 
     /**

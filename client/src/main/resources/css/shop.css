@@ -99,6 +99,20 @@
     -fx-background-color: transparent;
 }
 
+.shop-loading-overlay {
+    -fx-background-color: -fx-bg-surface;
+    -fx-background-radius: 8px;
+}
+
+.shop-loading-spinner {
+    -fx-progress-color: -fx-primary;
+}
+
+.shop-loading-text {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-muted;
+}
+
 /* 滚动条美化 */
 .shop-card-scroll .scroll-bar:vertical {
     -fx-background-color: transparent;
