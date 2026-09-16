@@ -117,14 +117,22 @@ public class ResourceService {
         Path dir = goodsImageDir();
         String safeName = Paths.get(name).getFileName().toString();
         Path target = dir.resolve(safeName).normalize();
-        if (!target.startsWith(dir) || !Files.exists(target)) {
-            throw new RuntimeException("商品图片不存在");
+        if (target.startsWith(dir) && Files.exists(target)) {
+            try {
+                return Files.readAllBytes(target);
+            } catch (IOException e) {
+                throw new RuntimeException("读取商品图片失败", e);
+            }
         }
-        try {
-            return Files.readAllBytes(target);
+        // 回退：读取随程序打包的默认商品图片（server/src/main/resources/goods_images）
+        try (java.io.InputStream in = getClass().getResourceAsStream("/goods_images/" + safeName)) {
+            if (in != null) {
+                return in.readAllBytes();
+            }
         } catch (IOException e) {
             throw new RuntimeException("读取商品图片失败", e);
         }
+        throw new RuntimeException("商品图片不存在");
     }
 
     /**
