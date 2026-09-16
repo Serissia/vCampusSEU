@@ -1408,7 +1408,7 @@ public class Dispatcher {
         ResponseCode code = chatService.send(session.getUid(), vo.getItemId(), vo.getToUid(), vo.getContent());
         response.setCode(code);
         if (code != ResponseCode.SUCCESS) {
-            response.setData("发送失败，请检查消息内容");
+            response.setData("请检查消息内容");
         }
     }
 

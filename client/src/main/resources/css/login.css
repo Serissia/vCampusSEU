@@ -86,6 +86,36 @@
     -fx-underline: true;
 }
 
+.server-settings-link {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-primary;
+    -fx-underline: false;
+    -fx-padding: 0;
+}
+
+.server-settings-link:hover {
+    -fx-underline: true;
+}
+
+.server-address-dialog {
+    -fx-background-color: -fx-bg-surface;
+}
+
+.server-address-dialog > .button-bar > .container {
+    -fx-background-color: transparent;
+    -fx-padding: 0 18px 18px 18px;
+}
+
+.server-dialog-hint {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-muted;
+}
+
+.server-dialog-error {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-danger;
+}
+
 .error-message-label {
     -fx-text-fill: -fx-danger;
     -fx-font-size: 12px;

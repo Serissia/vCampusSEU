@@ -84,5 +84,10 @@
             <ProgressIndicator fx:id="loadingIndicator" maxHeight="24.0" maxWidth="24.0"
                                visible="false" styleClass="login-spinner" />
         </StackPane>
+
+        <HBox alignment="CENTER_RIGHT">
+            <Hyperlink fx:id="changeServerLink" onAction="#handleChangeServerAddress"
+                       text="更改服务器 IP 地址" styleClass="server-settings-link" />
+        </HBox>
     </VBox>
 </HBox>

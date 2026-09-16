@@ -13,6 +13,7 @@ import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -22,18 +23,24 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
@@ -78,12 +85,6 @@ public class LoginController {
             new ThreadPoolExecutor.CallerRunsPolicy()
     );
 
-    /**
-     * 底层 Socket 通信客户端
-     */
-    /** 全局共享连接：服务端把身份绑定在连接上，全客户端必须复用同一条 */
-    private final SocketClient socketClient = ClientSession.client();
-
     @FXML
     private ImageView bgImageView;
 
@@ -111,6 +112,9 @@ public class LoginController {
     @FXML
     private HBox carouselDots;
 
+    @FXML
+    private Hyperlink changeServerLink;
+
     /** 左侧背景轮播图资源路径（按顺序循环） */
     private static final String[] LOGIN_BG_IMAGES = {
             "/images/login_bg1.JPG",
@@ -130,11 +134,14 @@ public class LoginController {
 
     @FXML
     public void initialize() {
+        AppConfigManager.getInstance().switchUser(null);
+
         // 启动左侧背景轮播
         startBackgroundCarousel();
 
         setupAccountComboBox();
         loadSavedAccounts();
+        updateServerLinkHint();
 
         // 绑定输入框回车触发逻辑
         passwordField.setOnAction(event -> handleLogin());
@@ -301,9 +308,7 @@ public class LoginController {
         }
 
         // 本地文件删除放入后台线程池，避免主线程 I/O 阻塞 UI 刷新
-        THREAD_POOL.execute(() -> {
-            AppConfigManager.getInstance().deleteUserConfig(deleteCard);
-        });
+        THREAD_POOL.execute(() -> AppConfigManager.getInstance().deleteUserConfig(deleteCard));
     }
 
     /**
@@ -350,6 +355,7 @@ public class LoginController {
 
                 // 构造登录认证请求消息
                 Message requestMsg = new Message(username, MessageType.LOGIN, null, loginUser);
+                SocketClient socketClient = ClientSession.client();
                 Message responseMsg = socketClient.send(requestMsg);
 
                 Platform.runLater(() -> {
@@ -362,8 +368,14 @@ public class LoginController {
 
                         // 登录成功时统一委托给 AppConfigManager 更新保存对应用户的配置
                         AppConfigManager configManager = AppConfigManager.getInstance();
+                        String loginHost = configManager.getConfig().getServerHost();
+                        int loginPort = configManager.getConfig().getServerPort();
+                        int loginTimeout = configManager.getConfig().getConnectTimeoutMs();
                         configManager.switchUser(currentUser.getAccountNumber());
                         AppConfig config = configManager.getConfig();
+                        config.setServerHost(loginHost);
+                        config.setServerPort(loginPort);
+                        config.setConnectTimeoutMs(loginTimeout);
                         config.setCardNum(currentUser.getAccountNumber());
                         if (currentUser.getRole() != null) {
                             config.setRole(currentUser.getRole().getLabel());
@@ -392,7 +404,7 @@ public class LoginController {
             } catch (Exception e) {
                 Platform.runLater(() -> {
                     setLoading(false);
-                    showError("无法连接至服务器，请检查服务端是否启动 (8888)");
+                    showError("无法连接至服务器，请检查服务器地址与网络连接");
                 });
             }
         });
@@ -401,6 +413,124 @@ public class LoginController {
     @FXML
     public void handleForgotPassword() {
         showError("请联系各院系教务老师或网络中心重置密码");
+    }
+
+    @FXML
+    private void handleChangeServerAddress() {
+        AppConfig config = AppConfigManager.getInstance().getConfig();
+
+        // 构建自定义对话框内容
+        TextField hostField = new TextField(config.getServerHost());
+        hostField.setPromptText("服务器 IP 或域名");
+        hostField.getStyleClass().add("modern-input-field");
+
+        TextField portField = new TextField(String.valueOf(config.getServerPort()));
+        portField.setPromptText("端口");
+        portField.getStyleClass().add("modern-input-field");
+        portField.setPrefWidth(110.0);
+
+        Label hostLabel = new Label("服务器地址");
+        hostLabel.getStyleClass().add("input-label");
+        Label portLabel = new Label("端口");
+        portLabel.getStyleClass().add("input-label");
+
+        VBox hostBox = new VBox(6.0, hostLabel, hostField);
+        HBox.setHgrow(hostBox, Priority.ALWAYS);
+
+        VBox portBox = new VBox(6.0, portLabel, portField);
+
+        HBox fields = new HBox(12.0, hostBox, portBox);
+        fields.setAlignment(Pos.CENTER_LEFT);
+
+        Label hint = new Label("保存后，后续登录请求将连接到新的服务器。");
+        hint.setWrapText(true);
+        hint.getStyleClass().add("server-dialog-hint");
+
+        Label dialogError = new Label();
+        dialogError.setWrapText(true);
+        dialogError.setVisible(false);
+        dialogError.setManaged(false);
+        dialogError.getStyleClass().add("server-dialog-error");
+
+        VBox content = new VBox(12.0, fields, hint, dialogError);
+        content.setPadding(new Insets(6.0, 18.0, 6.0, 18.0));
+        content.setPrefWidth(380.0);
+
+        ButtonType cancelType = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType saveType = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("更改服务器地址");
+        dialog.setHeaderText(null);
+        if (loginButton.getScene() != null) {
+            dialog.initOwner(loginButton.getScene().getWindow());
+            dialog.getDialogPane().getStylesheets().addAll(loginButton.getScene().getRoot().getStylesheets());
+            dialog.getDialogPane().getStylesheets().addAll(loginButton.getScene().getStylesheets());
+        }
+        dialog.getDialogPane().getStyleClass().add("server-address-dialog");
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().addAll(cancelType, saveType);
+
+        Button cancelButton = (Button) dialog.getDialogPane().lookupButton(cancelType);
+        cancelButton.getStyleClass().add("btn-secondary-action");
+        Button saveButton = (Button) dialog.getDialogPane().lookupButton(saveType);
+        saveButton.getStyleClass().add("btn-primary-action");
+        // 在保存按钮点击时进行输入验证和配置保存
+        saveButton.addEventFilter(ActionEvent.ACTION, event -> {
+            String host = hostField.getText() == null ? "" : hostField.getText().trim();
+            if (host.isEmpty()) {
+                showDialogError(dialogError, "服务器地址不能为空");
+                event.consume();
+                return;
+            }
+
+            int port;
+            try {
+                port = Integer.parseInt(portField.getText() == null ? "" : portField.getText().trim());
+            } catch (NumberFormatException e) {
+                showDialogError(dialogError, "端口必须是有效整数");
+                event.consume();
+                return;
+            }
+            if (port <= 0 || port > 65535) {
+                showDialogError(dialogError, "端口范围应为 1 到 65535");
+                event.consume();
+                return;
+            }
+
+            String oldHost = config.getServerHost();
+            int oldPort = config.getServerPort();
+            config.setServerHost(host);
+            config.setServerPort(port);
+            if (!AppConfigManager.getInstance().saveConfig()) {
+                config.setServerHost(oldHost);
+                config.setServerPort(oldPort);
+                showDialogError(dialogError, "保存失败，请检查运行目录写权限");
+                event.consume();
+                return;
+            }
+
+            ClientSession.getInstance().reset();
+            updateServerLinkHint();
+        });
+
+        dialog.showAndWait();
+    }
+
+    /**
+     * 更新“更改服务器地址”超链接的悬停提示，显示当前服务器地址和端口
+     */
+    private void updateServerLinkHint() {
+        if (changeServerLink == null) {
+            return;
+        }
+        AppConfig config = AppConfigManager.getInstance().getConfig();
+        changeServerLink.setTooltip(new Tooltip("当前服务器：" + config.getServerHost() + ":" + config.getServerPort()));
+    }
+
+    private void showDialogError(Label label, String message) {
+        label.setText(message);
+        label.setVisible(true);
+        label.setManaged(true);
     }
 
     private void navigateToMainView(UserVO user) {
@@ -438,6 +568,7 @@ public class LoginController {
         loadingIndicator.setVisible(isLoading);
         accountComboBox.setDisable(isLoading);
         passwordField.setDisable(isLoading);
+        changeServerLink.setDisable(isLoading);
     }
 
     private void showError(String message) {
