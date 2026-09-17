@@ -10,8 +10,8 @@
 保证分到至少 --min-original 门课，避免被随机结果漏掉。
 
 输出：
-  1. scripts/assign_course_teachers.sql —— 可直接执行的 UPDATE 语句；
-  2. 就地同步 scripts/bulk_courses.sql 中每门课的教师工号，保证重新导入后一致。
+  1. scripts/003_assign_course_teachers.sql —— 可直接执行的 UPDATE 语句；
+  2. 就地同步 scripts/002_bulk_courses.sql 中每门课的教师工号，保证重新导入后一致。
 
 用法（需要能访问数据库，密码通过 MYSQL_PWD 环境变量传入）：
     python scripts/assign_course_teachers.py
@@ -140,7 +140,7 @@ def assign(courses, pool, busy_by_teacher, original_teachers, max_load,
 
 
 def sync_bulk_file(path, assigned):
-    """把新分配结果写回 bulk_courses.sql，保证重新导入后一致。"""
+    """把新分配结果写回 002_bulk_courses.sql，保证重新导入后一致。"""
     if not os.path.exists(path):
         return 0
     with open(path, "r", encoding="utf-8") as handle:
@@ -180,9 +180,9 @@ def main():
     parser.add_argument("--host", default="127.0.0.1", help="数据库地址")
     parser.add_argument("--port", type=int, default=3306, help="数据库端口")
     parser.add_argument("--mysql", default=DEFAULT_MYSQL, help="mysql 客户端路径")
-    parser.add_argument("--out", default="scripts/assign_course_teachers.sql",
+    parser.add_argument("--out", default="scripts/003_assign_course_teachers.sql",
                         help="输出的 UPDATE 语句文件")
-    parser.add_argument("--bulk-file", default="scripts/bulk_courses.sql",
+    parser.add_argument("--bulk-file", default="scripts/002_bulk_courses.sql",
                         help="需要同步教师工号的批量课程文件")
     parser.add_argument("--max-load", type=int, default=3, help="每位教师最多承担的课程数")
     parser.add_argument("--min-original", type=int, default=2,

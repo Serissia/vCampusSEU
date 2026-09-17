@@ -13,7 +13,7 @@
 用法：
     python scripts/generate_bulk_courses.py
     python scripts/generate_bulk_courses.py --count 50 --semesters 2026-2027-2,2026-2027-3
-    python scripts/generate_bulk_courses.py --out scripts/bulk_courses.sql --seed 2026
+    python scripts/generate_bulk_courses.py --out scripts/002_bulk_courses.sql --seed 2026
 """
 
 import argparse
@@ -288,7 +288,7 @@ def main():
     parser.add_argument("--teachers", default=",".join(DEFAULT_TEACHER_UIDS),
                         help="可分配的教师工号，多个用逗号分隔")
     parser.add_argument("--seed", type=int, default=20260916, help="随机种子，保证可复现")
-    parser.add_argument("--out", default="scripts/bulk_courses.sql", help="输出的 SQL 文件路径")
+    parser.add_argument("--out", default="scripts/002_bulk_courses.sql", help="输出的 SQL 文件路径")
     args = parser.parse_args()
 
     semesters = [item.strip() for item in args.semesters.split(",") if item.strip()]

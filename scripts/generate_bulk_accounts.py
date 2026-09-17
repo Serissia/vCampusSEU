@@ -14,7 +14,7 @@
 用法：
     python scripts/generate_bulk_accounts.py
     python scripts/generate_bulk_accounts.py --students 2000 --teachers 100
-    python scripts/generate_bulk_accounts.py --out scripts/bulk_accounts.sql --seed 2026
+    python scripts/generate_bulk_accounts.py --out scripts/001_bulk_accounts.sql --seed 2026
 """
 
 import argparse
@@ -137,7 +137,7 @@ def main():
     parser.add_argument("--teacher-uid-start", type=int, default=100003,
                         help="教师 uid 起始值")
     parser.add_argument("--seed", type=int, default=20260916, help="随机种子，保证可复现")
-    parser.add_argument("--out", default="scripts/bulk_accounts.sql",
+    parser.add_argument("--out", default="scripts/001_bulk_accounts.sql",
                         help="输出的 SQL 文件路径")
     args = parser.parse_args()
 
