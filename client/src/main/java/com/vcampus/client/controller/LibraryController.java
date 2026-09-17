@@ -7,12 +7,15 @@ import com.vcampus.client.util.SvgIcons;
 import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
+import com.vcampus.common.vo.BookPageVO;
+import com.vcampus.common.vo.BookQueryVO;
 import com.vcampus.common.vo.BookVO;
 import com.vcampus.common.vo.BorrowRecordVO;
 import com.vcampus.common.vo.UserRole;
 import com.vcampus.common.vo.UserVO;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -21,7 +24,9 @@ import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -54,6 +59,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class LibraryController {
 
+    private static final int BOOK_PAGE_SIZE = 20;
+
     private static final ExecutorService THREAD_POOL = new ThreadPoolExecutor(
             2,
             4,
@@ -82,6 +89,8 @@ public class LibraryController {
     @FXML
     private TextField searchField;
     @FXML
+    private ComboBox<String> categoryComboBox;
+    @FXML
     private TableView<BookVO> bookTable;
     @FXML
     private TableView<BorrowRecordVO> borrowTable;
@@ -97,6 +106,12 @@ public class LibraryController {
     /** 导航历史栈，用于返回时恢复上一层视图 */
     private final Deque<Node> navStack = new ArrayDeque<>();
 
+    private String currentBookKeyword = "";
+    private String currentBookCategory;
+    private int currentBookPage = 0;
+    private boolean bookLoading;
+    private boolean bookHasMore = true;
+
     @FXML
     private void initialize() {
         if (rootScrollPane != null) {
@@ -104,6 +119,8 @@ public class LibraryController {
         }
         setupBookTable();
         setupBorrowTable();
+        setupCategoryFilter();
+        setupBookLazyLoading();
         // 双击书目条目进入详情页
         bookTable.setRowFactory(tv -> {
             TableRow<BookVO> row = new TableRow<>();
@@ -145,7 +162,8 @@ public class LibraryController {
                     : "检索馆藏图书与存放位置信息");
         }
 
-        refreshBooks(searchField.getText() == null ? "" : searchField.getText().trim());
+        resetAndLoadBooks(searchField.getText() == null ? "" : searchField.getText().trim(),
+                categoryComboBox.getValue());
         if (isRegularUser) {
             refreshMyBorrows();
         }
@@ -171,6 +189,11 @@ public class LibraryController {
         publisherCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getPublisher()));
         publisherCol.setPrefWidth(150);
 
+        TableColumn<BookVO, String> categoryCol = new TableColumn<>("分类");
+        categoryCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(
+                cd.getValue().getCategory() == null ? "未分类" : cd.getValue().getCategory()));
+        categoryCol.setPrefWidth(100);
+
         TableColumn<BookVO, String> locationCol = new TableColumn<>("存放位置");
         locationCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getLocation()));
         locationCol.setPrefWidth(160);
@@ -180,7 +203,7 @@ public class LibraryController {
                 cd.getValue().getTotalNum() + " / " + cd.getValue().getCurrentNum()));
         stockCol.setPrefWidth(90);
 
-        bookTable.getColumns().addAll(isbnCol, titleCol, authorCol, publisherCol, locationCol, stockCol);
+        bookTable.getColumns().addAll(isbnCol, titleCol, authorCol, publisherCol, categoryCol, locationCol, stockCol);
         bookTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         for (TableColumn<BookVO, ?> col : bookTable.getColumns()) {
             col.setMinWidth(80.0);
@@ -324,27 +347,86 @@ public class LibraryController {
     @FXML
     private void handleSearch() {
         String keyword = searchField.getText() == null ? "" : searchField.getText().trim();
-        refreshBooks(keyword);
+        resetAndLoadBooks(keyword, categoryComboBox.getValue());
     }
 
     /**
-     * 异步检索图书。
+     * 初始化分类筛选下拉框。
      */
-    private void refreshBooks(String keyword) {
+    private void setupCategoryFilter() {
+        categoryComboBox.setItems(FXCollections.observableArrayList(
+                "全部类别", "未分类", "计算机", "数学", "外语", "经济管理", "人文社科", "文学艺术", "工程技术"));
+        categoryComboBox.setValue("全部类别");
+    }
+
+    /**
+     * 监听馆藏表格的垂直滚动条，滚到底部时继续加载下一页。
+     */
+    private void setupBookLazyLoading() {
+        bookTable.skinProperty().addListener((obs, oldSkin, newSkin) -> {
+            if (newSkin != null) {
+                Platform.runLater(() -> {
+                    ScrollBar scrollBar = (ScrollBar) bookTable.lookup(".scroll-bar:vertical");
+                    if (scrollBar != null) {
+                        scrollBar.valueProperty().addListener((o, oldValue, newValue) -> {
+                            if (newValue.doubleValue() >= scrollBar.maxProperty().doubleValue() - 0.05) {
+                                loadNextBookPage();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 清空当前列表并重新加载第一页。
+     */
+    private void resetAndLoadBooks(String keyword, String selectedCategory) {
+        currentBookKeyword = keyword;
+        currentBookCategory = "全部类别".equals(selectedCategory) || selectedCategory == null
+                ? null : selectedCategory;
+        currentBookPage = 0;
+        bookHasMore = true;
+        bookLoading = false;
+        bookTable.getItems().clear();
+        loadNextBookPage();
+    }
+
+    /**
+     * 加载下一页馆藏数据，滚动到底部时只加载当前可见列表的后续一页。
+     */
+    private void loadNextBookPage() {
+        if (bookLoading || !bookHasMore) {
+            return;
+        }
+        bookLoading = true;
+        BookQueryVO query = new BookQueryVO(currentBookKeyword, currentBookCategory,
+                currentBookPage + 1, BOOK_PAGE_SIZE);
         THREAD_POOL.execute(() -> {
             try {
-                Message request = new Message(currentUser.getAccountNumber(), MessageType.BOOK_QUERY, null, keyword);
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.BOOK_QUERY, null, query);
                 Message response = socketClient.send(request);
                 Platform.runLater(() -> {
-                    if (response != null && response.getCode() == ResponseCode.SUCCESS
-                            && response.getData() instanceof List) {
-                        @SuppressWarnings("unchecked")
-                        List<BookVO> books = (List<BookVO>) response.getData();
-                        bookTable.getItems().setAll(books);
+                    try {
+                        if (response != null && response.getCode() == ResponseCode.SUCCESS
+                                && response.getData() instanceof BookPageVO) {
+                            BookPageVO page = (BookPageVO) response.getData();
+                            bookTable.getItems().addAll(page.getItems());
+                            currentBookPage = page.getPage();
+                            bookHasMore = page.isHasMore();
+                        } else {
+                            bookHasMore = false;
+                        }
+                    } finally {
+                        bookLoading = false;
                     }
                 });
             } catch (Exception e) {
-                Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
+                Platform.runLater(() -> {
+                    bookLoading = false;
+                    showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR);
+                });
             }
         });
     }

@@ -27,6 +27,8 @@ public class BookDetailController {
     @FXML
     private Label publisherValueText;
     @FXML
+    private Label categoryValueText;
+    @FXML
     private Label locationValueText;
     @FXML
     private Label totalValueText;
@@ -69,6 +71,8 @@ public class BookDetailController {
         authorValueText.setText(book.getAuthor());
         publisherValueText.setText(book.getPublisher() == null || book.getPublisher().trim().isEmpty()
                 ? "--" : book.getPublisher());
+        categoryValueText.setText(book.getCategory() == null || book.getCategory().trim().isEmpty()
+                ? "未分类" : book.getCategory());
         locationValueText.setText(book.getLocation() == null || book.getLocation().trim().isEmpty()
                 ? "--" : book.getLocation());
         totalValueText.setText(String.valueOf(book.getTotalNum()));

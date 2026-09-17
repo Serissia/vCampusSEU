@@ -35,6 +35,7 @@
             </VBox>
             <TextField fx:id="searchField" promptText="输入书名 / 作者 / ISBN 检索" styleClass="modern-input-field"
                        HBox.hgrow="ALWAYS" onAction="#handleSearch" />
+            <ComboBox fx:id="filterCategoryComboBox" prefWidth="130.0" styleClass="lib-combo" />
             <Button text="检索" onAction="#handleSearch" styleClass="btn-primary-action" />
         </HBox>
 
@@ -72,6 +73,11 @@
                 <VBox spacing="4.0">
                     <Label text="出版社" styleClass="lib-form-label" />
                     <TextField fx:id="publisherField" promptText="出版社" styleClass="modern-input-field" />
+                </VBox>
+
+                <VBox spacing="6.0">
+                    <Label text="图书分类" styleClass="lib-form-label" />
+                    <ComboBox fx:id="categoryComboBox" maxWidth="Infinity" styleClass="lib-combo" />
                 </VBox>
 
                 <VBox spacing="4.0">

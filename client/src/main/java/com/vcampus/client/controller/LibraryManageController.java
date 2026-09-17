@@ -7,17 +7,21 @@ import com.vcampus.client.util.SvgIcons;
 import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
+import com.vcampus.common.vo.BookPageVO;
+import com.vcampus.common.vo.BookQueryVO;
 import com.vcampus.common.vo.BookVO;
 import com.vcampus.common.vo.ResourceFileVO;
 import com.vcampus.common.vo.UserVO;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -46,6 +50,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class LibraryManageController {
 
+    private static final int BOOK_PAGE_SIZE = 20;
+
     private static final ExecutorService THREAD_POOL = new ThreadPoolExecutor(
             2,
             4,
@@ -72,6 +78,8 @@ public class LibraryManageController {
     @FXML
     private TextField searchField;
     @FXML
+    private ComboBox<String> filterCategoryComboBox;
+    @FXML
     private TableView<BookVO> bookTable;
     @FXML
     private TextField isbnField;
@@ -87,6 +95,8 @@ public class LibraryManageController {
     private TextField totalNumField;
     @FXML
     private ComboBox<String> typeComboBox;
+    @FXML
+    private ComboBox<String> categoryComboBox;
     @FXML
     private Label resourceStatusLabel;
     @FXML
@@ -117,6 +127,12 @@ public class LibraryManageController {
     /** 进入编辑模式时书目原有的电子资源文件名（用于保存后清理被替换/清除的旧文件） */
     private String originalResourceName;
 
+    private String currentBookKeyword = "";
+    private String currentBookCategory;
+    private int currentBookPage = 0;
+    private boolean bookLoading;
+    private boolean bookHasMore = true;
+
     @FXML
     private void initialize() {
         if (rootScrollPane != null) {
@@ -125,6 +141,8 @@ public class LibraryManageController {
         backButton.setGraphic(SvgIcons.createIcon("arrow-left", 13, "back-icon"));
         backButton.setGraphicTextGap(6.0);
         setupTable();
+        setupCategoryFilters();
+        setupBookLazyLoading();
         typeComboBox.getItems().setAll("实体书", "纯电子书");
         resetForm();
     }
@@ -132,7 +150,8 @@ public class LibraryManageController {
     public void initData(UserVO user, Runnable backAction) {
         this.currentUser = user;
         this.backAction = backAction;
-        refreshBooks(searchField.getText() == null ? "" : searchField.getText().trim());
+        resetAndLoadBooks(searchField.getText() == null ? "" : searchField.getText().trim(),
+                filterCategoryComboBox.getValue());
     }
 
     @FXML
@@ -162,6 +181,11 @@ public class LibraryManageController {
         publisherCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getPublisher()));
         publisherCol.setPrefWidth(150);
 
+        TableColumn<BookVO, String> categoryCol = new TableColumn<>("分类");
+        categoryCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(
+                cd.getValue().getCategory() == null ? "未分类" : cd.getValue().getCategory()));
+        categoryCol.setPrefWidth(100);
+
         TableColumn<BookVO, String> locationCol = new TableColumn<>("存放位置");
         locationCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(cd.getValue().getLocation()));
         locationCol.setPrefWidth(160);
@@ -174,7 +198,7 @@ public class LibraryManageController {
         stockCol.setCellValueFactory(cd -> new ReadOnlyStringWrapper(String.valueOf(cd.getValue().getCurrentNum())));
         stockCol.setPrefWidth(80);
 
-        bookTable.getColumns().addAll(isbnCol, titleCol, authorCol, publisherCol, locationCol, totalCol, stockCol);
+        bookTable.getColumns().addAll(isbnCol, titleCol, authorCol, publisherCol, categoryCol, locationCol, totalCol, stockCol);
         bookTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         for (TableColumn<BookVO, ?> col : bookTable.getColumns()) {
             col.setMinWidth(80.0);
@@ -193,24 +217,89 @@ public class LibraryManageController {
     @FXML
     private void handleSearch() {
         String keyword = searchField.getText() == null ? "" : searchField.getText().trim();
-        refreshBooks(keyword);
+        resetAndLoadBooks(keyword, filterCategoryComboBox.getValue());
     }
 
-    private void refreshBooks(String keyword) {
+    /**
+     * 初始化分类筛选框与表单分类选择框。
+     */
+    private void setupCategoryFilters() {
+        filterCategoryComboBox.setItems(FXCollections.observableArrayList(
+                "全部类别", "未分类", "计算机", "数学", "外语", "经济管理", "人文社科", "文学艺术", "工程技术"));
+        filterCategoryComboBox.setValue("全部类别");
+        categoryComboBox.setItems(FXCollections.observableArrayList(
+                "未分类", "计算机", "数学", "外语", "经济管理", "人文社科", "文学艺术", "工程技术"));
+        categoryComboBox.setValue("未分类");
+    }
+
+    /**
+     * 监听馆藏表格的垂直滚动条，滚到底部时加载下一页。
+     */
+    private void setupBookLazyLoading() {
+        bookTable.skinProperty().addListener((obs, oldSkin, newSkin) -> {
+            if (newSkin != null) {
+                Platform.runLater(() -> {
+                    ScrollBar scrollBar = (ScrollBar) bookTable.lookup(".scroll-bar:vertical");
+                    if (scrollBar != null) {
+                        scrollBar.valueProperty().addListener((o, oldValue, newValue) -> {
+                            if (newValue.doubleValue() >= scrollBar.maxProperty().doubleValue() - 0.05) {
+                                loadNextBookPage();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 清空当前列表并重新加载第一页。
+     */
+    private void resetAndLoadBooks(String keyword, String selectedCategory) {
+        currentBookKeyword = keyword;
+        currentBookCategory = "全部类别".equals(selectedCategory) || selectedCategory == null
+                ? null : selectedCategory;
+        currentBookPage = 0;
+        bookHasMore = true;
+        bookLoading = false;
+        bookTable.getItems().clear();
+        loadNextBookPage();
+    }
+
+    /**
+     * 加载下一页馆藏数据。
+     */
+    private void loadNextBookPage() {
+        if (bookLoading || !bookHasMore) {
+            return;
+        }
+        bookLoading = true;
+        BookQueryVO query = new BookQueryVO(currentBookKeyword, currentBookCategory,
+                currentBookPage + 1, BOOK_PAGE_SIZE);
         THREAD_POOL.execute(() -> {
             try {
-                Message request = new Message(currentUser.getAccountNumber(), MessageType.BOOK_QUERY, null, keyword);
+                Message request = new Message(currentUser.getAccountNumber(), MessageType.BOOK_QUERY, null, query);
                 Message response = socketClient.send(request);
                 Platform.runLater(() -> {
-                    if (response != null && response.getCode() == ResponseCode.SUCCESS
-                            && response.getData() instanceof List) {
-                        @SuppressWarnings("unchecked")
-                        List<BookVO> books = (List<BookVO>) response.getData();
-                        bookTable.getItems().setAll(books);
+                    try {
+                        if (response != null && response.getCode() == ResponseCode.SUCCESS
+                                && response.getData() instanceof BookPageVO) {
+                            BookPageVO page = (BookPageVO) response.getData();
+                            bookTable.getItems().addAll(page.getItems());
+                            currentBookPage = page.getPage();
+                            bookHasMore = page.isHasMore();
+                        } else {
+                            bookHasMore = false;
+                        }
+                    } finally {
+                        bookLoading = false;
                     }
                 });
             } catch (Exception e) {
-                Platform.runLater(() -> showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR));
+                Platform.runLater(() -> {
+                    bookLoading = false;
+                    showAlert("网络错误", "无法连接服务器: " + e.getMessage(), Alert.AlertType.ERROR);
+                });
             }
         });
     }
@@ -269,6 +358,7 @@ public class LibraryManageController {
         book.setTitle(title);
         book.setAuthor(author);
         book.setPublisher(publisherField.getText() == null ? "" : publisherField.getText().trim());
+        book.setCategory(categoryComboBox.getValue() == null ? "未分类" : categoryComboBox.getValue());
         book.setLocation(locationField.getText() == null ? "" : locationField.getText().trim());
         book.setType(isEbook ? "EBOOK" : "PHYSICAL");
         book.setTotalNum(totalNum);
@@ -329,7 +419,8 @@ public class LibraryManageController {
                         editingBook = null;
                         resetForm();
                         isbnField.setDisable(false);
-                        refreshBooks(searchField.getText() == null ? "" : searchField.getText().trim());
+                        resetAndLoadBooks(searchField.getText() == null ? "" : searchField.getText().trim(),
+                                filterCategoryComboBox.getValue());
                     } else {
                         showMsg(isAdd ? "新增失败，ISBN 可能已存在" : "保存失败", false);
                     }
@@ -389,7 +480,8 @@ public class LibraryManageController {
                         showMsg("删除成功", true);
                         resetForm();
                         isbnField.setDisable(false);
-                        refreshBooks(searchField.getText() == null ? "" : searchField.getText().trim());
+                        resetAndLoadBooks(searchField.getText() == null ? "" : searchField.getText().trim(),
+                                filterCategoryComboBox.getValue());
                     } else {
                         showMsg("删除失败", false);
                     }
@@ -443,6 +535,8 @@ public class LibraryManageController {
         titleField.setText(book.getTitle());
         authorField.setText(book.getAuthor());
         publisherField.setText(book.getPublisher());
+        categoryComboBox.setValue(book.getCategory() == null || book.getCategory().trim().isEmpty()
+                ? "未分类" : book.getCategory());
         locationField.setText(book.getLocation());
         totalNumField.setText(String.valueOf(book.getTotalNum()));
         typeComboBox.setValue("EBOOK".equals(book.getType()) ? "纯电子书" : "实体书");
@@ -464,6 +558,7 @@ public class LibraryManageController {
         titleField.clear();
         authorField.clear();
         publisherField.clear();
+        categoryComboBox.setValue("未分类");
         locationField.clear();
         totalNumField.clear();
         typeComboBox.setValue("实体书");

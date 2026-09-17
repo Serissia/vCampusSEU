@@ -62,15 +62,20 @@
                 </VBox>
 
                 <VBox spacing="3.0" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                    <Label text="分类" styleClass="lib-detail-label" />
+                    <Label fx:id="categoryValueText" text="--" styleClass="lib-detail-value" />
+                </VBox>
+                <VBox spacing="3.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
                     <Label text="馆藏总数" styleClass="lib-detail-label" />
                     <Label fx:id="totalValueText" text="--" styleClass="lib-detail-value" />
                 </VBox>
-                <VBox spacing="3.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
+
+                <VBox spacing="3.0" GridPane.columnIndex="0" GridPane.rowIndex="3">
                     <Label text="可借余量" styleClass="lib-detail-label" />
                     <Label fx:id="currentValueText" text="--" styleClass="lib-detail-value" />
                 </VBox>
 
-                <VBox spacing="3.0" GridPane.columnIndex="0" GridPane.rowIndex="3" GridPane.columnSpan="2">
+                <VBox spacing="3.0" GridPane.columnIndex="0" GridPane.rowIndex="4" GridPane.columnSpan="2">
                     <Label text="借阅状态" styleClass="lib-detail-label" />
                     <Label fx:id="statusValueText" text="--" styleClass="lib-detail-value" />
                 </VBox>
