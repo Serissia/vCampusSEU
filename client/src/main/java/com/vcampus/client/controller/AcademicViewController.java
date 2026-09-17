@@ -656,6 +656,9 @@ public class AcademicViewController {
         Button refreshBtn = button("刷新成绩", "btn-primary-action");
         refreshBtn.setOnAction(e -> fetchGrades(() -> academicController.queryMyGrades()));
         headerControls.getChildren().add(refreshBtn);
+
+        // 进入页面即自动加载成绩，无需先点“刷新成绩”
+        fetchGrades(() -> academicController.queryMyGrades());
     }
 
     /**
@@ -1999,6 +2002,9 @@ public class AcademicViewController {
                 formRow(labeledField("上课地点", locationField), saveLocationBtn),
                 scheduleRows,
                 formRow(addSlotBtn, saveScheduleBtn));
+
+        // 进入页面即自动加载全校课程，无需先点“全部课程”
+        fetchCourses(() -> academicController.listAllCourses());
     }
 
     /**
@@ -2241,6 +2247,9 @@ public class AcademicViewController {
         });
 
         headerControls.getChildren().addAll(refreshBtn, approveBtn, rejectBtn);
+
+        // 进入页面即自动加载待审批课程，无需先点“刷新”
+        fetchCourses(() -> academicController.listPendingCourses());
     }
 
     /**
