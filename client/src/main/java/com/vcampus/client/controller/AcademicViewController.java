@@ -129,6 +129,12 @@ public class AcademicViewController {
     private ComboBox<String> selectFullBox;
     private ComboBox<String> selectConflictBox;
     private TextField selectKeywordField;
+    private List<CourseVO> reviewCourseSource = new ArrayList<>();
+    private ComboBox<String> reviewSemesterBox;
+    private ComboBox<String> reviewNatureBox;
+    private TextField reviewKeywordField;
+    private ComboBox<String> reviewStarBox;
+    private List<CourseReviewVO> currentReviews = new ArrayList<>();
     private List<CourseVO> allCourses = new ArrayList<>();
     private List<CourseVO> myCourses = new ArrayList<>();
     private boolean onlyMy;
@@ -444,12 +450,29 @@ public class AcademicViewController {
             if (mine.getCourseCode() != null && mine.getCourseCode().equals(course.getCourseCode())) {
                 continue;
             }
+            // 不同学期的课程时间互不影响，只有同学期的课程才需要比较
+            if (!sameSemester(course, mine)) {
+                continue;
+            }
             List<CourseTimeSlotVO> mineSlots = effectiveSlots(mine);
             if (slotsOverlap(slots, mineSlots)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * 判断两门课程是否属于同一学期；不同学期的课程上课时间互不影响。
+     * 任一方学期缺失时按同一学期处理，避免漏判冲突。
+     */
+    private boolean sameSemester(CourseVO first, CourseVO second) {
+        String left = first == null ? null : first.getSemester();
+        String right = second == null ? null : second.getSemester();
+        if (left == null || left.trim().isEmpty() || right == null || right.trim().isEmpty()) {
+            return true;
+        }
+        return left.trim().equals(right.trim());
     }
 
     private boolean slotsOverlap(List<CourseTimeSlotVO> a, List<CourseTimeSlotVO> b) {
@@ -490,6 +513,10 @@ public class AcademicViewController {
                 List<CourseVO> teacherCourses = academicController.queryByTeacher(course.getTeacherId());
                 for (CourseVO other : teacherCourses) {
                     if (course.getCourseCode().equals(other.getCourseCode())) {
+                        continue;
+                    }
+                    // 只检查同一学期内的课程，跨学期同一时间不算冲突
+                    if (!sameSemester(course, other)) {
                         continue;
                     }
                     if (slotsOverlap(newSlots, effectiveSlots(other))) {
@@ -1049,6 +1076,18 @@ public class AcademicViewController {
 
         VBox reviewsBox = new VBox(8);
 
+        ComboBox<String> starFilterBox = new ComboBox<>(
+                FXCollections.observableArrayList("全部", "5星", "4星", "3星", "2星", "1星"));
+        starFilterBox.setValue("全部");
+        starFilterBox.getStyleClass().add("academic-combo");
+        starFilterBox.setPrefWidth(100);
+        starFilterBox.setOnAction(e -> renderCourseReviews(reviewsBox, currentReviews));
+        reviewStarBox = starFilterBox;
+        Label starFilterLabel = new Label("评价星级");
+        starFilterLabel.getStyleClass().add("lib-form-label");
+        HBox starFilterRow = new HBox(8, starFilterLabel, starFilterBox);
+        starFilterRow.setAlignment(Pos.CENTER_LEFT);
+
         Button submitBtn = button("提交评价", "btn-primary-action");
         submitBtn.setOnAction(e -> {
             CourseVO course = selectedCourse();
@@ -1082,9 +1121,39 @@ public class AcademicViewController {
             loadCourseReviews(course.getCourseCode(), reviewsBox);
         });
 
+        // 课程搜索与筛选：第 X 学期 + 课程性质 + 关键词
+        reviewSemesterBox = new ComboBox<>();
+        reviewSemesterBox.getStyleClass().add("academic-combo");
+        reviewSemesterBox.setPrefWidth(150);
+        reviewSemesterBox.setPromptText("选择学期");
+        reviewSemesterBox.valueProperty().addListener((obs, oldValue, newValue) -> applyReviewFilters());
+        Label semesterPrefix = new Label("第");
+        semesterPrefix.getStyleClass().add("lib-form-label");
+        Label semesterSuffix = new Label("学期");
+        semesterSuffix.getStyleClass().add("lib-form-label");
+        HBox semesterGroup = new HBox(4, semesterPrefix, reviewSemesterBox, semesterSuffix);
+        semesterGroup.setAlignment(Pos.CENTER_LEFT);
+
+        reviewNatureBox = new ComboBox<>(FXCollections.observableArrayList("全部", "必修", "选修"));
+        reviewNatureBox.setValue("全部");
+        reviewNatureBox.getStyleClass().add("academic-combo");
+        reviewNatureBox.setPrefWidth(100);
+        reviewNatureBox.setPromptText("课程性质");
+        reviewNatureBox.valueProperty().addListener((obs, oldValue, newValue) -> applyReviewFilters());
+
+        reviewKeywordField = new TextField();
+        reviewKeywordField.setPromptText("课程名称 / 课程代码 / 教师姓名");
+        reviewKeywordField.getStyleClass().add("modern-input-field");
+        reviewKeywordField.setPrefWidth(220);
+        reviewKeywordField.textProperty().addListener((obs, oldValue, newValue) -> applyReviewFilters());
+
+        Button searchBtn = button("搜索", "btn-primary-action");
+        searchBtn.setOnAction(e -> applyReviewFilters());
+
         Button loadBtn = button("加载全部课程", "btn-recharge-preset");
-        loadBtn.setOnAction(e -> fetchCourses(() -> academicController.listAllCourses()));
-        headerControls.getChildren().add(loadBtn);
+        loadBtn.setOnAction(e -> loadReviewCourses());
+        headerControls.getChildren().addAll(semesterGroup, reviewNatureBox,
+                reviewKeywordField, searchBtn, loadBtn);
 
         Label formTitle = new Label("发表评价");
         formTitle.getStyleClass().add("lib-section-title");
@@ -1099,9 +1168,79 @@ public class AcademicViewController {
                 labeledField("评论", commentArea),
                 anonymousBox,
                 listTitle,
+                starFilterRow,
                 reviewsBox);
 
-        fetchCourses(() -> academicController.listAllCourses());
+        loadReviewCourses();
+    }
+
+    /**
+     * 加载可评价的全部课程，并刷新学期选项与当前筛选结果。
+     */
+    private void loadReviewCourses() {
+        THREAD_POOL.execute(() -> {
+            try {
+                List<CourseVO> courses = academicController.listAllCourses();
+                Platform.runLater(() -> {
+                    reviewCourseSource = courses == null ? new ArrayList<CourseVO>() : courses;
+                    refreshReviewSemesters();
+                    applyReviewFilters();
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> showError("加载课程失败：" + e.getMessage()));
+            }
+        });
+    }
+
+    /**
+     * 根据课程列表刷新评价页的学期下拉框，尽量保留当前选择。
+     */
+    private void refreshReviewSemesters() {
+        if (reviewSemesterBox == null) {
+            return;
+        }
+        List<String> semesters = collectSemesters(reviewCourseSource);
+        String previous = reviewSemesterBox.getValue();
+        reviewSemesterBox.setItems(FXCollections.observableArrayList(semesters));
+        if (previous != null && semesters.contains(previous)) {
+            reviewSemesterBox.setValue(previous);
+        } else {
+            reviewSemesterBox.setValue(semesters.isEmpty() ? null : semesters.get(0));
+        }
+    }
+
+    /**
+     * 按学期、课程性质与关键词过滤评价页的课程列表。
+     */
+    private void applyReviewFilters() {
+        if (dataTable == null) {
+            return;
+        }
+        String semester = reviewSemesterBox == null ? null : reviewSemesterBox.getValue();
+        String nature = reviewNatureBox == null || reviewNatureBox.getValue() == null
+                ? "全部" : reviewNatureBox.getValue();
+        String keyword = reviewKeywordField == null || reviewKeywordField.getText() == null
+                ? "" : reviewKeywordField.getText().trim().toLowerCase();
+
+        List<CourseVO> filtered = new ArrayList<>();
+        for (CourseVO course : reviewCourseSource) {
+            if (semester != null && !semester.equals(course.getSemester())) {
+                continue;
+            }
+            if (("必修".equals(nature) || "选修".equals(nature)) && !nature.equals(course.getNature())) {
+                continue;
+            }
+            if (!keyword.isEmpty()) {
+                String target = (course.getDisplayCode() == null ? "" : course.getDisplayCode())
+                        + (course.getCourseName() == null ? "" : course.getCourseName())
+                        + (course.getTeacherName() == null ? "" : course.getTeacherName());
+                if (!target.toLowerCase().contains(keyword)) {
+                    continue;
+                }
+            }
+            filtered.add(course);
+        }
+        dataTable.getItems().setAll(filtered);
     }
 
     /**
@@ -1111,7 +1250,13 @@ public class AcademicViewController {
         THREAD_POOL.execute(() -> {
             try {
                 List<CourseReviewVO> reviews = academicController.listReviews(courseCode);
-                Platform.runLater(() -> renderCourseReviews(reviewsBox, reviews));
+                Platform.runLater(() -> {
+                    currentReviews = reviews == null ? new ArrayList<CourseReviewVO>() : reviews;
+                    if (reviewStarBox != null) {
+                        reviewStarBox.setValue("全部");
+                    }
+                    renderCourseReviews(reviewsBox, currentReviews);
+                });
             } catch (Exception e) {
                 Platform.runLater(() -> showError("加载评价失败：" + e.getMessage()));
             }
@@ -1119,7 +1264,7 @@ public class AcademicViewController {
     }
 
     /**
-     * 渲染课程评价列表与总评分。
+     * 渲染课程评价列表与总评分；总评分始终按全部评价计算，列表按所选星级筛选。
      */
     private void renderCourseReviews(VBox reviewsBox, List<CourseReviewVO> reviews) {
         reviewsBox.getChildren().clear();
@@ -1139,7 +1284,15 @@ public class AcademicViewController {
         summary.getStyleClass().add("review-summary");
         reviewsBox.getChildren().add(summary);
 
-        for (CourseReviewVO review : reviews) {
+        List<CourseReviewVO> shownReviews = filterReviewsByStar(reviews);
+        if (shownReviews.isEmpty()) {
+            Label empty = new Label("没有符合所选星级的评价");
+            empty.getStyleClass().add("lib-subtitle");
+            reviewsBox.getChildren().add(empty);
+            return;
+        }
+
+        for (CourseReviewVO review : shownReviews) {
             VBox item = new VBox(3);
             item.getStyleClass().add("review-item");
             String reviewerName = review.isAnonymous() ? "匿名学生" : nvl(review.getStudentName());
@@ -1163,6 +1316,25 @@ public class AcademicViewController {
             item.getChildren().addAll(headRow, comment, time);
             reviewsBox.getChildren().add(item);
         }
+    }
+
+    /**
+     * 按“评价星级”下拉框筛选评价列表，选择“全部”时返回原始列表。
+     */
+    private List<CourseReviewVO> filterReviewsByStar(List<CourseReviewVO> reviews) {
+        List<CourseReviewVO> shown = new ArrayList<>();
+        int star = 0;
+        if (reviewStarBox != null && reviewStarBox.getValue() != null
+                && !"全部".equals(reviewStarBox.getValue())
+                && !reviewStarBox.getValue().isEmpty()) {
+            star = reviewStarBox.getValue().charAt(0) - '0';
+        }
+        for (CourseReviewVO review : reviews) {
+            if (star == 0 || review.getRating() == star) {
+                shown.add(review);
+            }
+        }
+        return shown;
     }
 
     /**

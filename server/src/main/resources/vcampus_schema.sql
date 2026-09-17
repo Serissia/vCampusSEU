@@ -304,7 +304,7 @@ INSERT INTO `tbl_course` (`course_id`, `course_name`, `display_code`, `course_na
 ('CS101WANG', 'Java程序设计', 'CS101', '必修', '100002', '王教授', 3.0, '2026-2027-1', 'ACTIVE', 50, 0, '周一 第1-2节', '九龙湖计算机楼', 1, 4),
 ('CS102', '数据结构与算法', 'CS102', '必修', '100001', '李教授', 4.0, '2026-2027-1', 'ACTIVE', 40, 0, '周三 第3-4节', '九龙湖计算机楼203', 1, 4),
 ('DB101', '数据库原理', 'DB101', '必修', '100001', '李教授', 3.0, '2026-2027-1', 'ACTIVE', 60, 0, '1-4周 周一 第3-5节', '教三-302', 1, 4),
-('CC101', '编译原理', 'CC101', '必修', '100002', '王教授', 3.0, '2026-2027-1', 'ACTIVE', 60, 0, '1-4周 周三 第3-5节;1-4周 周二 第8-9节', '教六-302', 1, 4),
+('CC101', '编译原理', 'CC101', '必修', '100002', '王教授', 3.0, '2026-2027-1', 'ACTIVE', 60, 0, '1-4周 周二 第8-9节', '教六-302', 1, 4),
 ('ML101', '机器学习(研讨)', 'ML101', '选修', '100002', '王教授', 2.0, '2026-2027-1', 'ACTIVE', 40, 0, '1-4周 周五 第3-5节', '教三-403', 1, 4),
 ('AD101', '智能汽车与自动驾驶(全英文)(研讨)', 'AD101', '选修', '100002', '王教授', 2.0, '2026-2027-1', 'ACTIVE', 40, 0, '1-4周 周一 第6-7节', '教二-303', 1, 4),
 ('VA101', '虚拟现实与增强现实(研讨)', 'VA101', '选修', '100002', '王教授', 2.0, '2026-2027-1', 'ACTIVE', 40, 0, '1-4周 周四 第3-5节', '教五-402', 1, 4),
@@ -497,3 +497,75 @@ INSERT INTO `tbl_second_hand` (`seller_id`, `seller_name`, `title`, `description
 
 INSERT INTO `tbl_course_review` (`student_id`, `course_id`, `rating`, `comment`, `anonymous`, `review_time`) VALUES
 ('213000002', 'CS101WANG', 5, '夯', 0, NOW());
+
+-- 5. 张三（213000001）的固定选课与成绩记录
+-- 说明：以下数据用于演示“我的课表 / 我的成绩 / 学生名单 / 成绩登记”等模块，语句可重复执行。
+INSERT IGNORE INTO `tbl_course_select` (`student_id`, `course_id`, `select_time`, `status`) VALUES
+('213000001', 'AD101', '2026-09-16 11:56:11', 'SELECTED'),
+('213000001', 'CC101', '2026-09-16 11:56:11', 'SELECTED'),
+('213000001', 'CS101', '2026-09-16 11:56:12', 'SELECTED'),
+('213000001', 'CS102', '2026-09-16 11:56:13', 'SELECTED'),
+('213000001', 'CSA101', '2026-09-16 11:56:14', 'SELECTED'),
+('213000001', 'DB101', '2026-09-16 11:56:15', 'SELECTED'),
+('213000001', 'ML101', '2026-09-16 11:56:16', 'SELECTED'),
+('213000001', 'SE101', '2026-09-16 11:56:16', 'SELECTED'),
+('213000001', 'VA101', '2026-09-16 11:56:17', 'SELECTED');
+
+-- 课程已选人数与选课记录保持一致
+UPDATE `tbl_course` c
+SET c.`current_num` = (SELECT COUNT(*) FROM `tbl_course_select` cs WHERE cs.`course_id` = c.`course_id`);
+
+-- 研讨类课程补齐成绩组成（此前缺失，会导致这些课程无法登记成绩）
+INSERT IGNORE INTO `tbl_course_score_component` (`course_id`, `component_name`, `weight`) VALUES
+('MA101', '课堂表现', 0.300), ('MA101', '课程报告', 0.300), ('MA101', '期末成绩', 0.400),
+('SE101', '课堂表现', 0.300), ('SE101', '课程报告', 0.300), ('SE101', '期末成绩', 0.400),
+('VA101', '课堂表现', 0.300), ('VA101', '课程报告', 0.300), ('VA101', '期末成绩', 0.400);
+
+-- 各任课教师给张三登记的成绩（最终成绩=各组成按比例折算后四舍五入，绩点按学校标准换算）
+INSERT INTO `tbl_grade` (`student_id`, `course_id`, `course_name`, `final_score`, `gpa`, `status`) VALUES
+('213000001', 'AD101', '智能汽车与自动驾驶(全英文)(研讨)', 90.00, 4.00, 'SUBMITTED'),
+('213000001', 'CC101', '编译原理', 81.00, 3.00, 'SUBMITTED'),
+('213000001', 'CS101', 'Java程序设计', 100.00, 4.80, 'SUBMITTED'),
+('213000001', 'CS102', '数据结构与算法', 87.00, 3.80, 'SUBMITTED'),
+('213000001', 'CSA101', '计算机系统结构', 88.00, 3.80, 'SUBMITTED'),
+('213000001', 'DB101', '数据库原理', 93.00, 4.50, 'SUBMITTED'),
+('213000001', 'ML101', '机器学习(研讨)', 85.00, 3.50, 'SUBMITTED'),
+('213000001', 'SE101', '软件工程(研讨)', 85.00, 3.50, 'SUBMITTED'),
+('213000001', 'VA101', '虚拟现实与增强现实(研讨)', 80.00, 3.00, 'SUBMITTED')
+ON DUPLICATE KEY UPDATE
+    `course_name` = VALUES(`course_name`),
+    `final_score` = VALUES(`final_score`),
+    `gpa` = VALUES(`gpa`),
+    `status` = VALUES(`status`);
+
+-- 各成绩组成的具体得分
+INSERT INTO `tbl_grade_score` (`grade_id`, `component_name`, `score`)
+SELECT g.`id`, v.`component_name`, v.`score`
+FROM `tbl_grade` g
+JOIN (
+    SELECT 'AD101' AS `course_id`, '课堂表现' AS `component_name`, 92.00 AS `score`
+    UNION ALL SELECT 'AD101', '课程报告', 90.00
+    UNION ALL SELECT 'AD101', '期末成绩', 88.00
+    UNION ALL SELECT 'CC101', '平时成绩', 85.00
+    UNION ALL SELECT 'CC101', '期末成绩', 78.00
+    UNION ALL SELECT 'CS101', '平时成绩', 100.00
+    UNION ALL SELECT 'CS101', '期末成绩', 100.00
+    UNION ALL SELECT 'CS102', '平时成绩', 88.00
+    UNION ALL SELECT 'CS102', '实验成绩', 92.00
+    UNION ALL SELECT 'CS102', '期末成绩', 84.00
+    UNION ALL SELECT 'CSA101', '平时成绩', 90.00
+    UNION ALL SELECT 'CSA101', '期末成绩', 86.00
+    UNION ALL SELECT 'DB101', '平时成绩', 95.00
+    UNION ALL SELECT 'DB101', '期末成绩', 91.00
+    UNION ALL SELECT 'ML101', '课堂表现', 88.00
+    UNION ALL SELECT 'ML101', '课程报告', 85.00
+    UNION ALL SELECT 'ML101', '期末成绩', 82.00
+    UNION ALL SELECT 'SE101', '课堂表现', 86.00
+    UNION ALL SELECT 'SE101', '课程报告', 90.00
+    UNION ALL SELECT 'SE101', '期末成绩', 80.00
+    UNION ALL SELECT 'VA101', '课堂表现', 80.00
+    UNION ALL SELECT 'VA101', '课程报告', 84.00
+    UNION ALL SELECT 'VA101', '期末成绩', 76.00
+) v ON v.`course_id` = g.`course_id`
+WHERE g.`student_id` = '213000001'
+ON DUPLICATE KEY UPDATE `score` = VALUES(`score`);

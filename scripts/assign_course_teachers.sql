@@ -1,0 +1,54 @@
+-- 由 scripts/assign_course_teachers.py 生成：重新分配任课教师（已通过冲突自检）
+-- 学期：2026-2027-2, 2026-2027-3
+
+UPDATE `tbl_course` SET `teacher_id` = '100082', `teacher_name` = '张讲师' WHERE `course_id` = 'AI229';
+UPDATE `tbl_course` SET `teacher_id` = '100093', `teacher_name` = '卢讲师' WHERE `course_id` = 'AI245';
+UPDATE `tbl_course` SET `teacher_id` = '100002', `teacher_name` = '王教授' WHERE `course_id` = 'AI263';
+UPDATE `tbl_course` SET `teacher_id` = '100053', `teacher_name` = '范讲师' WHERE `course_id` = 'AI327';
+UPDATE `tbl_course` SET `teacher_id` = '100019', `teacher_name` = '尤讲师' WHERE `course_id` = 'AI339';
+UPDATE `tbl_course` SET `teacher_id` = '100085', `teacher_name` = '冯副教授' WHERE `course_id` = 'AI347';
+UPDATE `tbl_course` SET `teacher_id` = '100042', `teacher_name` = '和副教授' WHERE `course_id` = 'AI351';
+UPDATE `tbl_course` SET `teacher_id` = '100011', `teacher_name` = '毛副教授' WHERE `course_id` = 'CG226';
+UPDATE `tbl_course` SET `teacher_id` = '100094', `teacher_name` = '鲍助教' WHERE `course_id` = 'CG240';
+UPDATE `tbl_course` SET `teacher_id` = '100099', `teacher_name` = '周助教' WHERE `course_id` = 'CG256';
+UPDATE `tbl_course` SET `teacher_id` = '100001', `teacher_name` = '李教授' WHERE `course_id` = 'CG321';
+UPDATE `tbl_course` SET `teacher_id` = '100029', `teacher_name` = '米副教授' WHERE `course_id` = 'CG338';
+UPDATE `tbl_course` SET `teacher_id` = '100018', `teacher_name` = '管副教授' WHERE `course_id` = 'CG374';
+UPDATE `tbl_course` SET `teacher_id` = '100027', `teacher_name` = '郑副教授' WHERE `course_id` = 'CG393';
+UPDATE `tbl_course` SET `teacher_id` = '100076', `teacher_name` = '罗副教授' WHERE `course_id` = 'CS211';
+UPDATE `tbl_course` SET `teacher_id` = '100051', `teacher_name` = '范教授' WHERE `course_id` = 'CS251';
+UPDATE `tbl_course` SET `teacher_id` = '100026', `teacher_name` = '江讲师' WHERE `course_id` = 'CS263';
+UPDATE `tbl_course` SET `teacher_id` = '100095', `teacher_name` = '祝讲师' WHERE `course_id` = 'CS367';
+UPDATE `tbl_course` SET `teacher_id` = '100024', `teacher_name` = '祁讲师' WHERE `course_id` = 'CS392';
+UPDATE `tbl_course` SET `teacher_id` = '100052', `teacher_name` = '蓝讲师' WHERE `course_id` = 'DB258';
+UPDATE `tbl_course` SET `teacher_id` = '100069', `teacher_name` = '奚讲师' WHERE `course_id` = 'DB274';
+UPDATE `tbl_course` SET `teacher_id` = '100010', `teacher_name` = '熊助教' WHERE `course_id` = 'DB298';
+UPDATE `tbl_course` SET `teacher_id` = '100002', `teacher_name` = '王教授' WHERE `course_id` = 'DB327';
+UPDATE `tbl_course` SET `teacher_id` = '100102', `teacher_name` = '殷助教' WHERE `course_id` = 'DB328';
+UPDATE `tbl_course` SET `teacher_id` = '100083', `teacher_name` = '于讲师' WHERE `course_id` = 'DB395';
+UPDATE `tbl_course` SET `teacher_id` = '100017', `teacher_name` = '葛教授' WHERE `course_id` = 'DS230';
+UPDATE `tbl_course` SET `teacher_id` = '100043', `teacher_name` = '杨讲师' WHERE `course_id` = 'DS240';
+UPDATE `tbl_course` SET `teacher_id` = '100016', `teacher_name` = '孙教授' WHERE `course_id` = 'DS272';
+UPDATE `tbl_course` SET `teacher_id` = '100081', `teacher_name` = '喻助教' WHERE `course_id` = 'DS322';
+UPDATE `tbl_course` SET `teacher_id` = '100068', `teacher_name` = '柏教授' WHERE `course_id` = 'DS344';
+UPDATE `tbl_course` SET `teacher_id` = '100040', `teacher_name` = '邵教授' WHERE `course_id` = 'DS379';
+UPDATE `tbl_course` SET `teacher_id` = '100033', `teacher_name` = '蓝副教授' WHERE `course_id` = 'IS275';
+UPDATE `tbl_course` SET `teacher_id` = '100067', `teacher_name` = '贾讲师' WHERE `course_id` = 'IS326';
+UPDATE `tbl_course` SET `teacher_id` = '100078', `teacher_name` = '狄讲师' WHERE `course_id` = 'NET212';
+UPDATE `tbl_course` SET `teacher_id` = '100091', `teacher_name` = '苏副教授' WHERE `course_id` = 'NET247';
+UPDATE `tbl_course` SET `teacher_id` = '100056', `teacher_name` = '黄助教' WHERE `course_id` = 'NET253';
+UPDATE `tbl_course` SET `teacher_id` = '100020', `teacher_name` = '周副教授' WHERE `course_id` = 'NET271';
+UPDATE `tbl_course` SET `teacher_id` = '100006', `teacher_name` = '杨副教授' WHERE `course_id` = 'NET274';
+UPDATE `tbl_course` SET `teacher_id` = '100074', `teacher_name` = '廉教授' WHERE `course_id` = 'NET289';
+UPDATE `tbl_course` SET `teacher_id` = '100023', `teacher_name` = '于教授' WHERE `course_id` = 'NET358';
+UPDATE `tbl_course` SET `teacher_id` = '100012', `teacher_name` = '祁教授' WHERE `course_id` = 'NET392';
+UPDATE `tbl_course` SET `teacher_id` = '100039', `teacher_name` = '王讲师' WHERE `course_id` = 'NET399';
+UPDATE `tbl_course` SET `teacher_id` = '100048', `teacher_name` = '闵讲师' WHERE `course_id` = 'SE244';
+UPDATE `tbl_course` SET `teacher_id` = '100025', `teacher_name` = '贾讲师' WHERE `course_id` = 'SE246';
+UPDATE `tbl_course` SET `teacher_id` = '100015', `teacher_name` = '孔助教' WHERE `course_id` = 'SE260';
+UPDATE `tbl_course` SET `teacher_id` = '100035', `teacher_name` = '李讲师' WHERE `course_id` = 'SE338';
+UPDATE `tbl_course` SET `teacher_id` = '100007', `teacher_name` = '祁讲师' WHERE `course_id` = 'SE345';
+UPDATE `tbl_course` SET `teacher_id` = '100003', `teacher_name` = '席副教授' WHERE `course_id` = 'SE347';
+UPDATE `tbl_course` SET `teacher_id` = '100001', `teacher_name` = '李教授' WHERE `course_id` = 'SE357';
+UPDATE `tbl_course` SET `teacher_id` = '100049', `teacher_name` = '萧副教授' WHERE `course_id` = 'SE384';
+
