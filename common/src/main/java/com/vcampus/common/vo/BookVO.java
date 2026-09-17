@@ -19,6 +19,8 @@ public class BookVO implements Serializable {
     private String author;
     /** 出版社 */
     private String publisher;
+    /** 图书分类 */
+    private String category;
     /** 存放位置 / 书架 */
     private String location;
     /** 电子资源文件名（服务器端存储索引，为空表示未录入） */
@@ -63,6 +65,14 @@ public class BookVO implements Serializable {
 
     public void setPublisher(String publisher) {
         this.publisher = publisher;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     public String getLocation() {

@@ -4,6 +4,7 @@ import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.BookVO;
+import com.vcampus.common.vo.BookQueryVO;
 import com.vcampus.common.vo.CartVO;
 import com.vcampus.common.vo.ChatMessageVO;
 import com.vcampus.common.vo.CourseVO;
@@ -287,7 +288,11 @@ public class Dispatcher {
                             String.valueOf(request.getData())));
                     break;
                 case BOOK_QUERY:
-                    response.setData(bookService.queryBooks(String.valueOf(request.getData())));
+                    if (request.getData() instanceof BookQueryVO) {
+                        response.setData(bookService.queryBooks((BookQueryVO) request.getData()));
+                    } else {
+                        response.setData(bookService.queryBooks(String.valueOf(request.getData())));
+                    }
                     response.setCode(ResponseCode.SUCCESS);
                     break;
                 case BOOK_ADD:

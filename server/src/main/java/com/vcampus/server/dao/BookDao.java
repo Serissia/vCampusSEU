@@ -1,5 +1,7 @@
 package com.vcampus.server.dao;
 
+import com.vcampus.common.vo.BookPageVO;
+import com.vcampus.common.vo.BookQueryVO;
 import com.vcampus.common.vo.BookVO;
 
 import java.sql.SQLException;
@@ -16,6 +18,11 @@ public interface BookDao {
      * 按 ISBN、书名或作者进行模糊查询。
      */
     List<BookVO> queryBooks(String keyword) throws SQLException;
+
+    /**
+     * 按关键字和分类分页查询图书。
+     */
+    BookPageVO queryBooks(BookQueryVO query) throws SQLException;
 
     /**
      * 按 ISBN 精确查询图书。

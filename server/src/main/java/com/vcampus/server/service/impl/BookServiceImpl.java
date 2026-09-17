@@ -1,5 +1,7 @@
 package com.vcampus.server.service.impl;
 
+import com.vcampus.common.vo.BookPageVO;
+import com.vcampus.common.vo.BookQueryVO;
 import com.vcampus.common.vo.BookVO;
 import com.vcampus.server.dao.BookDao;
 import com.vcampus.server.dao.impl.BookDaoImpl;
@@ -33,6 +35,18 @@ public class BookServiceImpl implements BookService {
     }
 
     /**
+     * 分页查询图书，并兼容空查询对象。
+     */
+    @Override
+    public BookPageVO queryBooks(BookQueryVO query) {
+        try {
+            return bookDao.queryBooks(query == null ? new BookQueryVO() : query);
+        } catch (SQLException e) {
+            throw new RuntimeException("分页查询图书失败", e);
+        }
+    }
+
+    /**
      * 新增图书，新增时确保余量与总数一致。
      */
     @Override
@@ -51,6 +65,9 @@ public class BookServiceImpl implements BookService {
                     book.setCurrentNum(book.getTotalNum());
                 }
             }
+            if (book.getCategory() == null || book.getCategory().trim().isEmpty()) {
+                book.setCategory("未分类");
+            }
             return bookDao.insertBook(book);
         } catch (SQLException e) {
             throw new RuntimeException("新增图书失败", e);
@@ -63,6 +80,9 @@ public class BookServiceImpl implements BookService {
     @Override
     public boolean updateBook(BookVO book) {
         try {
+            if (book != null && (book.getCategory() == null || book.getCategory().trim().isEmpty())) {
+                book.setCategory("未分类");
+            }
             return book != null && bookDao.updateBook(book);
         } catch (SQLException e) {
             throw new RuntimeException("更新图书失败", e);
