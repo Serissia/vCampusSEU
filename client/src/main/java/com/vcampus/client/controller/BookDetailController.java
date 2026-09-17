@@ -3,6 +3,7 @@ package com.vcampus.client.controller;
 import com.vcampus.client.net.ClientSession;
 import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.SvgIcons;
+import com.vcampus.client.util.ToastBannerUtil;
 import com.vcampus.common.message.Message;
 import com.vcampus.common.message.MessageType;
 import com.vcampus.common.message.ResponseCode;
@@ -10,9 +11,10 @@ import com.vcampus.common.vo.BookVO;
 import com.vcampus.common.vo.ResourceFileVO;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.ScrollPane;
 import javafx.stage.FileChooser;
 
 import java.io.File;
@@ -77,6 +79,10 @@ public class BookDetailController {
     @FXML
     private Button downloadButton;
     @FXML
+    private ProgressIndicator downloadProgress;
+    @FXML
+    private ScrollPane rootScrollPane;
+    @FXML
     private Button backButton;
 
     private BookVO book;
@@ -128,10 +134,14 @@ public class BookDetailController {
             onlineReadButton.setText("在线浏览");
             onlineReadButton.setDisable(false);
             downloadButton.setDisable(false);
+            downloadProgress.setVisible(false);
+            downloadProgress.setManaged(false);
         } else {
             onlineReadButton.setText("暂无在线资源");
             onlineReadButton.setDisable(true);
             downloadButton.setDisable(true);
+            downloadProgress.setVisible(false);
+            downloadProgress.setManaged(false);
         }
     }
 
@@ -174,6 +184,11 @@ public class BookDetailController {
             return;
         }
 
+        downloadButton.setDisable(true);
+        downloadProgress.setVisible(true);
+        downloadProgress.setManaged(true);
+        ToastBannerUtil.showToastBanner(rootScrollPane, "开始下载电子资源...", 2);
+
         String resourceName = book.getResourceFile().trim();
         THREAD_POOL.execute(() -> {
             try {
@@ -183,26 +198,41 @@ public class BookDetailController {
                 Message response = socketClient.send(request);
                 if (response == null || response.getCode() != ResponseCode.SUCCESS
                         || !(response.getData() instanceof ResourceFileVO)) {
-                    Platform.runLater(() -> showDownloadAlert("下载失败", "服务器未返回有效的电子资源。"));
+                    Platform.runLater(() -> {
+                        resetDownloadUi();
+                        ToastBannerUtil.showToastBanner(rootScrollPane, "下载失败：服务器未返回有效的电子资源", 1);
+                    });
                     return;
                 }
 
                 ResourceFileVO file = (ResourceFileVO) response.getData();
                 Files.write(target.toPath(), file.getData());
-                Platform.runLater(() -> showDownloadAlert("下载成功", "电子资源已保存到：" + target.getAbsolutePath()));
+                Platform.runLater(() -> {
+                    resetDownloadUi();
+                    ToastBannerUtil.showToastBanner(rootScrollPane, "下载完成", 0);
+                });
             } catch (IOException e) {
-                Platform.runLater(() -> showDownloadAlert("下载失败", "保存文件失败：" + e.getMessage()));
+                Platform.runLater(() -> {
+                    resetDownloadUi();
+                    ToastBannerUtil.showToastBanner(rootScrollPane, "下载失败：" + e.getMessage(), 1);
+                });
             } catch (Exception e) {
-                Platform.runLater(() -> showDownloadAlert("网络错误", "无法连接服务器：" + e.getMessage()));
+                Platform.runLater(() -> {
+                    resetDownloadUi();
+                    ToastBannerUtil.showToastBanner(rootScrollPane, "下载失败：" + e.getMessage(), 1);
+                });
             }
         });
     }
 
-    private void showDownloadAlert(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
+    /**
+     * 下载结束后恢复下载按钮并隐藏进度指示器。
+     */
+    private void resetDownloadUi() {
+        boolean hasOnline = book != null && book.getResourceFile() != null
+                && !book.getResourceFile().trim().isEmpty();
+        downloadButton.setDisable(!hasOnline);
+        downloadProgress.setVisible(false);
+        downloadProgress.setManaged(false);
     }
 }
