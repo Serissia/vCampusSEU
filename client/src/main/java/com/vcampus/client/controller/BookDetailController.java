@@ -1,22 +1,58 @@
 package com.vcampus.client.controller;
 
+import com.vcampus.client.net.ClientSession;
+import com.vcampus.client.net.SocketClient;
 import com.vcampus.client.util.SvgIcons;
+import com.vcampus.common.message.Message;
+import com.vcampus.common.message.MessageType;
+import com.vcampus.common.message.ResponseCode;
 import com.vcampus.common.vo.BookVO;
+import com.vcampus.common.vo.ResourceFileVO;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.stage.FileChooser;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
 /**
  * 图书详细信息页控制器。
  *
- * <p>展示图书完整信息，并提供在线浏览入口：无在线资源时按钮置灰并显示「暂无在线资源」。
- * 返回与在线浏览动作由父级（LibraryController）通过回调处理。</p>
+ * <p>展示图书完整信息，并提供在线浏览与电子资源下载入口。</p>
  *
  * @author GGbongy
  */
 public class BookDetailController {
+
+    private static final ExecutorService THREAD_POOL = new ThreadPoolExecutor(
+            1,
+            2,
+            60L,
+            TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(20),
+            new ThreadFactory() {
+                private final AtomicInteger threadNumber = new AtomicInteger(1);
+
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread thread = new Thread(r, "BookDetail-Download-" + threadNumber.getAndIncrement());
+                    thread.setDaemon(true);
+                    return thread;
+                }
+            },
+            new ThreadPoolExecutor.CallerRunsPolicy()
+    );
 
     @FXML
     private Label detailTitleText;
@@ -39,9 +75,13 @@ public class BookDetailController {
     @FXML
     private Button onlineReadButton;
     @FXML
+    private Button downloadButton;
+    @FXML
     private Button backButton;
 
     private BookVO book;
+    /** 全局共享连接：下载电子资源时与服务端保持同一条长连接 */
+    private final SocketClient socketClient = ClientSession.client();
     private Runnable backAction;
     private BiConsumer<String, String> browseAction;
 
@@ -56,7 +96,7 @@ public class BookDetailController {
      *
      * @param book         图书实体
      * @param backAction   返回上一层动作
-     * @param browseAction 跳转在线浏览动作（参数为 url、书名）
+     * @param browseAction 跳转在线浏览动作（参数为 resourceFile、书名）
      */
     public void initData(BookVO book, Runnable backAction, BiConsumer<String, String> browseAction) {
         this.book = book;
@@ -83,14 +123,15 @@ public class BookDetailController {
         statusValueText.getStyleClass().removeAll("status-borrowed", "status-unavailable");
         statusValueText.getStyleClass().add(available ? "status-borrowed" : "status-unavailable");
 
-        // 在线浏览按钮：有在线资源可点击，否则置灰并提示暂无在线资源
         boolean hasOnline = book.getResourceFile() != null && !book.getResourceFile().trim().isEmpty();
         if (hasOnline) {
             onlineReadButton.setText("在线浏览");
             onlineReadButton.setDisable(false);
+            downloadButton.setDisable(false);
         } else {
             onlineReadButton.setText("暂无在线资源");
             onlineReadButton.setDisable(true);
+            downloadButton.setDisable(true);
         }
     }
 
@@ -113,5 +154,55 @@ public class BookDetailController {
                 && browseAction != null) {
             browseAction.accept(book.getResourceFile().trim(), book.getTitle());
         }
+    }
+
+    /**
+     * 下载当前图书的电子资源到用户选择的本地文件。
+     */
+    @FXML
+    private void handleDownload() {
+        if (book == null || book.getResourceFile() == null || book.getResourceFile().trim().isEmpty()) {
+            return;
+        }
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("保存电子图书资源");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF 文件", "*.pdf"));
+        chooser.setInitialFileName(book.getResourceFile().trim());
+        File target = chooser.showSaveDialog(downloadButton.getScene().getWindow());
+        if (target == null) {
+            return;
+        }
+
+        String resourceName = book.getResourceFile().trim();
+        THREAD_POOL.execute(() -> {
+            try {
+                String uid = ClientSession.getInstance().getCurrentUser() == null
+                        ? "" : ClientSession.getInstance().getCurrentUser().getAccountNumber();
+                Message request = new Message(uid, MessageType.BOOK_RESOURCE_DOWNLOAD, null, resourceName);
+                Message response = socketClient.send(request);
+                if (response == null || response.getCode() != ResponseCode.SUCCESS
+                        || !(response.getData() instanceof ResourceFileVO)) {
+                    Platform.runLater(() -> showDownloadAlert("下载失败", "服务器未返回有效的电子资源。"));
+                    return;
+                }
+
+                ResourceFileVO file = (ResourceFileVO) response.getData();
+                Files.write(target.toPath(), file.getData());
+                Platform.runLater(() -> showDownloadAlert("下载成功", "电子资源已保存到：" + target.getAbsolutePath()));
+            } catch (IOException e) {
+                Platform.runLater(() -> showDownloadAlert("下载失败", "保存文件失败：" + e.getMessage()));
+            } catch (Exception e) {
+                Platform.runLater(() -> showDownloadAlert("网络错误", "无法连接服务器：" + e.getMessage()));
+            }
+        });
+    }
+
+    private void showDownloadAlert(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
     }
 }
